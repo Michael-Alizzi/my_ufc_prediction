@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.~lock.*
+
+# Large generated artifacts (reproducible from the notebook pipeline)
+*.joblib
+*.parquet
+data.csv
+raw_fight_data.csv
+raw_fighter_details.csv
+.claude/*.tmp.*
