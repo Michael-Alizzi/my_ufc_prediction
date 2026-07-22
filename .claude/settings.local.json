@@ -6,7 +6,9 @@
       "Bash(.venv/bin/python -c \"import pandas, sklearn, xgboost; print\\('libs ok'\\)\")",
       "Bash(.venv/bin/python -c ' *)",
       "Bash(mkdir -p /tmp/claude-1000/-home-michael-Documents-Python-my-ufc-prediction/364bac34-8827-43a2-8a6d-64af7a77baa4/scratchpad)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

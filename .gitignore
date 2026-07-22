@@ -9,3 +9,4 @@ __pycache__/
 data.csv
 raw_fight_data.csv
 raw_fighter_details.csv
+.claude/*.tmp.*
