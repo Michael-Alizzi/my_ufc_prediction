@@ -1,0 +1,30 @@
+# Data manipulation
+pandas
+numpy
+
+# Visualization
+matplotlib
+seaborn
+plotly
+missingno
+
+# Statistics
+scipy
+statsmodels
+
+# Machine Learning
+scikit-learn
+xgboost
+lightgbm
+imbalanced-learn
+fairlearn
+
+# Hyperparameter Optimization
+optuna
+
+# Explainability
+shap
+
+# App
+streamlit
+pyarrow
