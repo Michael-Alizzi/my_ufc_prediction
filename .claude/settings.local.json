@@ -1,4 +1,17 @@
 {
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/michael/Documents/Python/my_ufc_prediction && git add -A && git diff --cached --quiet || (git commit -m \"Automated commit via Claude Code Stop hook\" -m \"Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\" && git push origin HEAD)",
+            "statusMessage": "Auto-committing and pushing changes..."
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(python3 -c ' *)",
