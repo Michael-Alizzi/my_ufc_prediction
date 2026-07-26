@@ -23,7 +23,9 @@
       "Bash(python3 *)",
       "Bash(claude --version)",
       "Read(//home/michael/**)",
-      "Read(//home/michael/.config/Claude/**)"
+      "Read(//home/michael/.config/Claude/**)",
+      "Bash(kill -TERM 13188)",
+      "Bash(kill -KILL 13188)"
     ]
   },
   "hooks": {
