@@ -6,28 +6,45 @@ from predict import list_fighters, load_artifacts, load_history, predict_winner
 st.set_page_config(page_title="UFC Fight Predictor", page_icon="\U0001F94A")
 st.title("UFC Fight Predictor")
 
-# Keep the corner picker side by side even below Streamlit's ~640px column-
-# stacking breakpoint, and tint each corner red/blue to match the octagon.
+# Keep each row's columns side by side even below Streamlit's ~640px column-
+# stacking breakpoint, and tint them fight-card style. Each row lives in its
+# own st.container(key=...) -- Streamlit stamps that key as a CSS class
+# (st-key-<key>) on the wrapper div, which is what actually scopes these
+# rules per-row (nth-of-type on stHorizontalBlock doesn't work: each row's
+# block is the *only* child of its own wrapper, so every row is "1st of
+# type" and nth-of-type(2) never matches anything).
 st.markdown(
     """
     <style>
     [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; }
     [data-testid="stColumn"] { flex: 1 1 0% !important; min-width: 0 !important; }
-    [data-testid="stColumn"]:nth-of-type(1) [data-baseweb="select"] > div {
-        border-color: #e10600 !important;
+
+    /* Row 1: red corner / weight class / blue corner */
+    .st-key-corner_row [data-testid="stColumn"]:nth-of-type(1) [data-baseweb="select"] > div {
+        border-color: #e63946 !important;
     }
-    [data-testid="stColumn"]:nth-of-type(2) [data-baseweb="select"] > div {
-        border-color: #ffd60a !important;
+    .st-key-corner_row [data-testid="stColumn"]:nth-of-type(2) [data-baseweb="select"] > div {
+        border-color: #f1faee !important;
     }
-    [data-testid="stColumn"]:nth-of-type(3) [data-baseweb="select"] > div {
+    .st-key-corner_row [data-testid="stColumn"]:nth-of-type(3) [data-baseweb="select"] > div {
         border-color: #0072ce !important;
     }
-    [data-testid="stColumn"]:nth-of-type(1) label p { color: #e10600 !important; font-weight: 700; }
-    [data-testid="stColumn"]:nth-of-type(2) label p {
-        color: #ffd60a !important; font-weight: 700; text-align: center; display: block;
+    .st-key-corner_row [data-testid="stColumn"]:nth-of-type(1) label p { color: #e63946 !important; font-weight: 700; }
+    .st-key-corner_row [data-testid="stColumn"]:nth-of-type(2) label p {
+        color: #f1faee !important; font-weight: 700; text-align: center; display: block;
     }
-    [data-testid="stColumn"]:nth-of-type(3) label p { color: #0072ce !important; font-weight: 700; }
-    [data-testid="stColumn"]:nth-of-type(2) [data-baseweb="select"] { text-align: center; }
+    .st-key-corner_row [data-testid="stColumn"]:nth-of-type(2) [data-baseweb="select"] { text-align: center; }
+    .st-key-corner_row [data-testid="stColumn"]:nth-of-type(3) label p { color: #0072ce !important; font-weight: 700; }
+
+    /* Row 2: rounds / title fight -- both centered within their column */
+    .st-key-rules_row [data-testid="stColumn"] label p {
+        text-align: center; display: block; font-weight: 700;
+    }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) label p { color: #f77f00 !important; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) [role="radiogroup"] { justify-content: center; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) label p { color: #ffd60a !important; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] svg { fill: #ffd60a !important; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] > label { justify-content: center; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -38,25 +55,38 @@ history = load_history()
 fighters = list_fighters(history)
 
 # Fight-card layout: red corner, weight class, blue corner.
-red_col, weight_col, blue_col = st.columns(3)
-with red_col:
-    red = st.selectbox("\U0001F534 Red corner", fighters, index=None, placeholder="Select fighter")
-with weight_col:
-    weight_classes = artifacts["dtypes"]["weight_class"].categories.tolist()
-    weight_class = st.selectbox(
-        "\U0001F3C6 Weight class", weight_classes, index=None, placeholder="Select weight class"
-    )
-with blue_col:
-    # Same-fighter constraint enforced by excluding red from blue's options,
-    # rather than validating after the fact.
-    blue_options = [f for f in fighters if f != red]
-    blue = st.selectbox("\U0001F535 Blue corner", blue_options, index=None, placeholder="Select fighter")
-title_fight = st.checkbox("Title fight")
-total_round_number = st.radio("Rounds", [3, 5], horizontal=True)
+with st.container(key="corner_row"):
+    red_col, weight_col, blue_col = st.columns(3)
+    with red_col:
+        red = st.selectbox("\U0001F534 Red corner", fighters, index=None, placeholder="Select fighter")
+    with weight_col:
+        weight_classes = artifacts["dtypes"]["weight_class"].categories.tolist()
+        weight_class = st.selectbox(
+            "\U00002696\U0000FE0F Weight class", weight_classes, index=None, placeholder="Select weight class"
+        )
+    with blue_col:
+        # Same-fighter constraint enforced by excluding red from blue's options,
+        # rather than validating after the fact.
+        blue_options = [f for f in fighters if f != red]
+        blue = st.selectbox("\U0001F535 Blue corner", blue_options, index=None, placeholder="Select fighter")
+
+with st.container(key="rules_row"):
+    rounds_col, title_col = st.columns(2)
+    with title_col:
+        title_fight = st.checkbox("\U0001F451 Title fight")
+    with rounds_col:
+        # Title fights are always 5 rounds -- force and lock it rather than
+        # letting an invalid 3-round title fight be submitted.
+        total_round_number = st.radio(
+            "\U0001F514 Rounds", [3, 5],
+            index=1 if title_fight else None,
+            horizontal=True,
+            disabled=title_fight,
+        )
 
 if st.button("Predict", type="primary"):
-    if not red or not blue or not weight_class:
-        st.warning("Pick both fighters and a weight class first.")
+    if not red or not blue or not weight_class or not total_round_number:
+        st.warning("Pick both fighters, a weight class, and rounds first.")
     else:
         try:
             winner, proba = predict_winner(
