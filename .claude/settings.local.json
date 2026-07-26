@@ -20,7 +20,10 @@
       "Bash(.venv/bin/pytest test_pipeline_logic.py -q)",
       "Bash(code *)",
       "Bash(ssh *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(claude --version)",
+      "Read(//home/michael/**)",
+      "Read(//home/michael/.config/Claude/**)"
     ]
   },
   "hooks": {
