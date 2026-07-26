@@ -19,7 +19,8 @@
       "Bash(.venv/bin/pytest test_pipeline_logic.py -v)",
       "Bash(.venv/bin/pytest test_pipeline_logic.py -q)",
       "Bash(code *)",
-      "Bash(ssh *)"
+      "Bash(ssh *)",
+      "Bash(python3 *)"
     ]
   },
   "hooks": {
