@@ -29,5 +29,8 @@ shap
 streamlit
 pyarrow
 
+# Headless notebook execution (weekly retrain pipeline)
+jupyter
+
 # Testing
 pytest

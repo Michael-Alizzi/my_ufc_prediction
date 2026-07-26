@@ -34,8 +34,8 @@ if st.button("Predict", type="primary"):
         st.success(f"**{winner}** wins")
         st.metric(f"Confidence ({winner})", f"{confidence:.1%}")
         st.caption(
-            "Raw ensemble probability, not calibrated — treat as a ranking "
-            "signal, not a literal win frequency."
+            "Calibrated via Platt scaling on pooled walk-forward CV "
+            "predictions — tracks real win frequency, not just ranking."
         )
     except ValueError as e:
         st.error(str(e))

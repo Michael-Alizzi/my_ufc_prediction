@@ -25,6 +25,11 @@ repo does not scrape data itself.
 # retrain many XGBoost models). Prefer restarting the kernel and running
 # interactively in VS Code/Jupyter so you can watch progress; use nbconvert
 # only when a headless run is actually wanted.
+#
+# When running this in the background (Claude Code), check on progress at
+# most once an hour, not every 15-20 minutes. `nbconvert` only writes any
+# output at the very end, so there is nothing new to see on a shorter cadence
+# regardless -- more frequent polling just burns context for no signal.
 .venv/bin/python -m jupyter nbconvert --to notebook --execute --inplace \
   --ExecutePreprocessor.timeout=-1 ufc_prediction_claude.ipynb
 
