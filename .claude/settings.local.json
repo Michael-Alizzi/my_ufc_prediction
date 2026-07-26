@@ -25,7 +25,8 @@
       "Read(//home/michael/**)",
       "Read(//home/michael/.config/Claude/**)",
       "Bash(kill -TERM 13188)",
-      "Bash(kill -KILL 13188)"
+      "Bash(kill -KILL 13188)",
+      "Bash(git -C /home/michael/Documents/Python/my_ufc_prediction remote -v)"
     ]
   },
   "hooks": {
