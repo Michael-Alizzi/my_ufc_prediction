@@ -36,15 +36,29 @@ st.markdown(
     .st-key-corner_row [data-testid="stColumn"]:nth-of-type(2) [data-baseweb="select"] { text-align: center; }
     .st-key-corner_row [data-testid="stColumn"]:nth-of-type(3) label p { color: #0072ce !important; font-weight: 700; }
 
-    /* Row 2: rounds / title fight -- both centered within their column */
+    /* Row 2: rounds / title fight -- both centered within their column.
+       stWidgetLabel/stRadio/stCheckbox wrappers size to their content by
+       default, so text-align/justify-content have no room to act until
+       those wrappers are stretched to the column's full width. */
+    .st-key-rules_row [data-testid="stColumn"] { text-align: center; }
+    .st-key-rules_row [data-testid="stColumn"] [data-testid="stElementContainer"],
+    .st-key-rules_row [data-testid="stColumn"] [data-testid="stWidgetLabel"],
+    .st-key-rules_row [data-testid="stColumn"] [data-testid="stRadio"],
+    .st-key-rules_row [data-testid="stColumn"] [data-testid="stCheckbox"] {
+        width: 100% !important;
+    }
     .st-key-rules_row [data-testid="stColumn"] label p {
         text-align: center; display: block; font-weight: 700;
     }
     .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) label p { color: #f77f00 !important; }
-    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) [role="radiogroup"] { justify-content: center; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) [role="radiogroup"] {
+        display: flex !important; justify-content: center; width: 100%;
+    }
     .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) label p { color: #ffd60a !important; }
     .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] svg { fill: #ffd60a !important; }
-    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] > label { justify-content: center; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] > label {
+        display: flex !important; justify-content: center; width: 100%;
+    }
     </style>
     """,
     unsafe_allow_html=True,
