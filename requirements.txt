@@ -28,3 +28,6 @@ shap
 # App
 streamlit
 pyarrow
+
+# Testing
+pytest

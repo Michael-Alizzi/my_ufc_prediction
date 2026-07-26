@@ -21,7 +21,7 @@ repo does not scrape data itself.
 .venv/bin/pip install -r requirements.txt
 
 # run the full modeling pipeline non-interactively (multi-hour: dominated by the
-# rolling-window CV grid search and the 60-trial Optuna search, both of which
+# rolling-window CV grid search and the 100-trial Optuna search, both of which
 # retrain many XGBoost models). Prefer restarting the kernel and running
 # interactively in VS Code/Jupyter so you can watch progress; use nbconvert
 # only when a headless run is actually wanted.
@@ -94,3 +94,17 @@ automatically.
   deltas.
 - **GPU usage (`device="cuda"`) is hardcoded** in `create_xgb_model()`, the Optuna objective, and the
   final refit. If running without a GPU, all three need to change together.
+
+## ML Guidelines (rules; see Architecture and Gotchas above for the concrete implementation)
+
+- **Never use a random/shuffled train-test split** (`train_test_split(..., shuffle=True)`, k-fold CV,
+  etc.) anywhere in this pipeline. All validation is chronological: rolling-window walk-forward CV
+  (`train_test_windows_by_month`) for model/window/hyperparameter selection, then a single
+  chronological holdout (validation slice + test slice) scored once.
+- **The ensemble is XGBoost + LightGBM**, not a swappable algorithm choice: top-3 Optuna-tuned XGBoost
+  trials blended with one LightGBM model at a validation-selected mixing weight. Extend it by adding
+  trials or one more diverse model, not by replacing the algorithm family.
+- **Minimalist style**: prefer one parameterized function over near-duplicate cells (e.g. an
+  `agg`/`prefix` argument instead of separate avg/median blocks), and build column lists
+  programmatically from `stat_cols` rather than hand-typing every `avg_r_*`/`med_b_*` name. Don't add
+  config knobs with no caller.
