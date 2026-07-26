@@ -3,9 +3,11 @@ __pycache__/
 *.pyc
 .~lock.*
 
-# Large generated artifacts (reproducible from the notebook pipeline)
-*.joblib
-*.parquet
+# Large generated artifacts (reproducible from the notebook pipeline).
+# ensemble.joblib and fighter_history.parquet are the exception: app.py
+# (and Streamlit Community Cloud, which only sees what's on GitHub) needs
+# them checked in to serve predictions.
+ensemble_baseline.joblib
 data.csv
 raw_fight_data.csv
 raw_fighter_details.csv
