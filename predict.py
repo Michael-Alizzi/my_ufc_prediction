@@ -142,7 +142,10 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
         X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"]
     )[0])
     winner = red if raw_proba >= artifacts["best_th"] else blue
+    # Calibrator is fit on the score centered at 0.5 (fit_intercept=False)
+    # so raw=0.5 always maps to calibrated=0.5 -- the decision above and the
+    # displayed confidence can never disagree about who's favored.
     calibrated_proba = float(
-        artifacts["calibrator"].predict_proba([[raw_proba]])[0, 1]
+        artifacts["calibrator"].predict_proba([[raw_proba - 0.5]])[0, 1]
     )
     return winner, calibrated_proba
