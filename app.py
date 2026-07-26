@@ -42,23 +42,43 @@ st.markdown(
        those wrappers are stretched to the column's full width. */
     .st-key-rules_row [data-testid="stColumn"] { text-align: center; }
     .st-key-rules_row [data-testid="stColumn"] [data-testid="stElementContainer"],
-    .st-key-rules_row [data-testid="stColumn"] [data-testid="stWidgetLabel"],
-    .st-key-rules_row [data-testid="stColumn"] [data-testid="stRadio"],
-    .st-key-rules_row [data-testid="stColumn"] [data-testid="stCheckbox"] {
+    .st-key-rules_row [data-testid="stColumn"] [data-testid="stRadio"] {
         width: 100% !important;
     }
-    .st-key-rules_row [data-testid="stColumn"] label p {
+    /* Center the checkbox as a single opaque unit from OUTSIDE it, via its
+       parent -- not by resizing/reflowing anything inside its own <label>.
+       stCheckbox's internal icon/input/text are laid out by BaseWeb in a
+       way that isn't safe to restyle piecemeal: forcing width/justify-
+       content on pieces inside that label (tried twice) detached the
+       invisible native <input> from its visible icon, silently breaking
+       the click target while still looking fine on screen. */
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stElementContainer"] {
+        display: flex; justify-content: center;
+    }
+    /* stWidgetLabel is itself a flex box (justify-content:normal by default)
+       -- widening it isn't enough, its flex child still hugs the left edge
+       unless the box's own justify-content is centered too. Scoped to the
+       Rounds column only: the checkbox's own stWidgetLabel wraps just its
+       text as ONE sibling of the checkbox icon/input inside a shared flex
+       row, and stretching it to 100% blew that row apart, displacing the
+       invisible input off of its visible icon (checkbox became unclickable). */
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) [data-testid="stWidgetLabel"] {
+        width: 100% !important; justify-content: center !important;
+    }
+    /* stWidgetLabel's <p> (Rounds' standalone title) is safe to force
+       block+centered. stCheckbox's <p> must NOT get display:block -- it
+       sits inline next to the checkbox icon in the same flex row, and
+       forcing it to block broke that layout badly enough to visually
+       overlap and eat the checkbox's click target entirely. */
+    .st-key-rules_row [data-testid="stColumn"] [data-testid="stWidgetLabel"] p {
         text-align: center; display: block; font-weight: 700;
     }
-    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) label p { color: #f77f00 !important; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) [data-testid="stWidgetLabel"] p { color: #f77f00 !important; }
     .st-key-rules_row [data-testid="stColumn"]:nth-of-type(1) [role="radiogroup"] {
         display: flex !important; justify-content: center; width: 100%;
     }
-    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) label p { color: #ffd60a !important; }
+    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] p { color: #ffd60a !important; font-weight: 700; }
     .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] svg { fill: #ffd60a !important; }
-    .st-key-rules_row [data-testid="stColumn"]:nth-of-type(2) [data-testid="stCheckbox"] > label {
-        display: flex !important; justify-content: center; width: 100%;
-    }
     </style>
     """,
     unsafe_allow_html=True,
