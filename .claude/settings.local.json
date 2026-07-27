@@ -26,7 +26,8 @@
       "Read(//home/michael/.config/Claude/**)",
       "Bash(kill -TERM 13188)",
       "Bash(kill -KILL 13188)",
-      "Bash(git -C /home/michael/Documents/Python/my_ufc_prediction remote -v)"
+      "Bash(git -C /home/michael/Documents/Python/my_ufc_prediction remote -v)",
+      "Bash(gh pr create --base master --head retrain/jul28 --title 'Retrain on fresh UFC data \\(Jul 28, 2026\\)' --body ' *)"
     ]
   },
   "hooks": {
