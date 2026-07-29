@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Fetch next UFC event, make predictions, and email results.
 
-Run weekly via a scheduled task. Expects these env vars:
+Run weekly via a scheduled task. Credentials from .env file or env vars:
   GMAIL_ADDRESS: Gmail account to send from (e.g., myeckal123@gmail.com)
   GMAIL_APP_PASSWORD: Gmail app-specific password (not your regular password)
   RECIPIENT_EMAIL: Email to send predictions to (defaults to GMAIL_ADDRESS)
 
+Setup: Create .env file in repo root with GMAIL_ADDRESS and GMAIL_APP_PASSWORD.
 Usage: python send_weekly_predictions.py
 """
 import os
@@ -18,8 +19,11 @@ from email.mime.multipart import MIMEMultipart
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+from dotenv import load_dotenv
 
 from predict import load_artifacts, load_history, predict_winner
+
+load_dotenv()  # Load .env file if it exists
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
