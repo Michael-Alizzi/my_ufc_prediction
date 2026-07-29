@@ -34,3 +34,8 @@ jupyter
 
 # Testing
 pytest
+
+# Web scraping and email
+requests
+beautifulsoup4
+python-dotenv
