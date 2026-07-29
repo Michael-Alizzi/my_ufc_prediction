@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .~lock.*
+.env
 
 # Large generated artifacts (reproducible from the notebook pipeline).
 # ensemble.joblib and fighter_history.parquet are the exception: app.py
