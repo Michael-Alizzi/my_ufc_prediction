@@ -7,8 +7,19 @@ Run weekly via a scheduled task. Credentials from .env file or env vars:
   RECIPIENT_EMAIL: Email to send predictions to (defaults to GMAIL_ADDRESS)
 
 Setup: Create .env file in repo root with GMAIL_ADDRESS and GMAIL_APP_PASSWORD.
-Usage: python send_weekly_predictions.py
+
+Usage:
+  python send_weekly_predictions.py
+      Scrape ufc.com for the next event, predict, email (needs open network + SMTP).
+  python send_weekly_predictions.py --fights-json card.json --event-title "UFC ..."
+      Predict a known card instead of scraping. card.json is a list of
+      {"fighter1", "fighter2", "weight_class", "title_fight"?, "rounds"?} dicts.
+      Prints a markdown table and writes predictions_output.md; email is attempted
+      only if SMTP is reachable (it is not from the Claude cloud environment,
+      where the runner delivers results via its own notification email instead).
 """
+import argparse
+import json
 import os
 import smtplib
 import logging
@@ -97,45 +108,56 @@ def fetch_event_fights(event_url):
 
 
 def make_predictions(fights, history, artifacts):
-    """Make predictions for a list of fights."""
+    """Make predictions for a list of fights.
+
+    Each fight dict: fighter1, fighter2, weight_class, and optionally
+    title_fight (bool) and rounds (3 or 5, defaults to 3).
+    """
     predictions = []
+    known = set(pd.concat([history["r_fighter"], history["b_fighter"]]).unique())
 
     for fight in fights:
         try:
             fighter1 = fight["fighter1"].lower().strip()
             fighter2 = fight["fighter2"].lower().strip()
             weight_class = fight.get("weight_class", "Middleweight")
+            title_fight = bool(fight.get("title_fight", False))
+            rounds = 5 if title_fight else int(fight.get("rounds", 3))
 
-            # Skip if fighters not in training data
-            all_fighters = pd.concat([
-                history["r_fighter"],
-                history["b_fighter"]
-            ]).unique()
-
-            if fighter1 not in all_fighters or fighter2 not in all_fighters:
-                logger.warning(f"Fighter(s) not in training data: {fighter1} vs {fighter2}")
+            missing = [f for f in (fighter1, fighter2) if f not in known]
+            if missing:
+                logger.warning(f"Skipping {fighter1} vs {fighter2}: no history for {missing}")
+                predictions.append({
+                    "fighter1": fight["fighter1"], "fighter2": fight["fighter2"],
+                    "weight_class": weight_class, "prediction": "no data",
+                    "confidence": "-",
+                })
                 continue
 
             winner, proba = predict_winner(
-                fighter1.title(),
-                fighter2.title(),
-                weight_class,
-                title_fight=False,
-                total_round_number=3,
+                fighter1, fighter2, weight_class,
+                title_fight=title_fight,
+                total_round_number=rounds,
                 history=history,
                 artifacts=artifacts,
             )
 
-            confidence = proba if winner == fighter1.title() else 1 - proba
+            confidence = proba if winner == fighter1 else 1 - proba
 
             predictions.append({
                 "fighter1": fight["fighter1"],
                 "fighter2": fight["fighter2"],
-                "prediction": winner,
+                "weight_class": weight_class,
+                "prediction": winner.title(),
                 "confidence": f"{confidence:.1%}",
             })
         except Exception as e:
             logger.error(f"Prediction failed for {fight['fighter1']} vs {fight['fighter2']}: {e}")
+            predictions.append({
+                "fighter1": fight["fighter1"], "fighter2": fight["fighter2"],
+                "weight_class": fight.get("weight_class", "?"),
+                "prediction": "error", "confidence": "-",
+            })
             continue
 
     return predictions
@@ -189,6 +211,27 @@ def format_predictions_html(event_title, predictions):
     return html
 
 
+def format_predictions_markdown(event_title, predictions):
+    """Format predictions as a markdown table (for logs / notification email)."""
+    lines = [
+        f"## UFC Predictions: {event_title}",
+        f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
+        "",
+        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence |",
+        "|---|---|---|---|---|",
+    ]
+    for p in predictions:
+        lines.append(
+            f"| {p['fighter1']} | {p['fighter2']} | {p.get('weight_class', '?')} "
+            f"| **{p['prediction']}** | {p['confidence']} |"
+        )
+    lines += [
+        "",
+        "_XGBoost + LightGBM ensemble; confidence calibrated on walk-forward CV._",
+    ]
+    return "\n".join(lines)
+
+
 def send_email(recipient, subject, html_content):
     """Send email with HTML content via Gmail."""
     gmail_address = os.getenv("GMAIL_ADDRESS")
@@ -226,8 +269,44 @@ def send_email(recipient, subject, html_content):
         raise
 
 
+def run_card(fights, event_title):
+    """Predict a known card: print + save a markdown table, email if possible."""
+    artifacts = load_artifacts()
+    history = load_history()
+    predictions = make_predictions(fights, history, artifacts)
+    if not predictions:
+        raise SystemExit("No predictions produced")
+
+    md = format_predictions_markdown(event_title, predictions)
+    with open("predictions_output.md", "w") as f:
+        f.write(md)
+    print(md)
+    logger.info("Wrote predictions_output.md")
+
+    gmail_address = os.getenv("GMAIL_ADDRESS")
+    if gmail_address and os.getenv("GMAIL_APP_PASSWORD"):
+        recipient = os.getenv("RECIPIENT_EMAIL", gmail_address)
+        try:
+            html = format_predictions_html(event_title, predictions)
+            send_email(recipient, f"UFC Predictions: {event_title}", html)
+        except OSError as e:
+            logger.warning(f"SMTP unavailable here ({e}); markdown output is the deliverable")
+    return predictions
+
+
 def main():
     """Fetch events, make predictions, and send email."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fights-json", help="JSON file with the fight card")
+    parser.add_argument("--event-title", default="Upcoming UFC Event")
+    args = parser.parse_args()
+
+    if args.fights_json:
+        with open(args.fights_json) as f:
+            fights = json.load(f)
+        run_card(fights, args.event_title)
+        return
+
     logger.info("=" * 60)
     logger.info("UFC Weekly Predictions Email Job Starting")
     logger.info("=" * 60)
