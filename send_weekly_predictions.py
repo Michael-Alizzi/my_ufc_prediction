@@ -32,16 +32,18 @@ logger = logging.getLogger(__name__)
 def fetch_upcoming_events():
     """Fetch upcoming UFC events from ufc.com."""
     try:
+        logger.info("Attempting to fetch from https://www.ufc.com/events")
         response = requests.get(
             "https://www.ufc.com/events",
             headers={"User-Agent": "Mozilla/5.0"},
-            timeout=10
+            timeout=15
         )
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
 
         # Look for event cards - these are typically in event link containers
         event_links = soup.find_all("a", {"data-testid": "internal-link"})
+        logger.info(f"Found {len(event_links)} links on UFC events page")
 
         upcoming_events = []
         for link in event_links:
@@ -53,9 +55,10 @@ def fetch_upcoming_events():
                     "url": f"https://www.ufc.com{href}" if href.startswith("/") else href
                 })
 
+        logger.info(f"Extracted {len(upcoming_events)} upcoming events")
         return upcoming_events
     except Exception as e:
-        logger.error(f"Failed to fetch events: {e}")
+        logger.error(f"Failed to fetch events: {e}", exc_info=True)
         return []
 
 
@@ -192,8 +195,11 @@ def send_email(recipient, subject, html_content):
     gmail_password = os.getenv("GMAIL_APP_PASSWORD")
 
     if not gmail_address or not gmail_password:
+        logger.error("Missing credentials. Set GMAIL_ADDRESS and GMAIL_APP_PASSWORD in environment or .env file.")
         raise ValueError(
-            "Missing email credentials. Set GMAIL_ADDRESS and GMAIL_APP_PASSWORD env vars."
+            f"Missing email credentials.\n"
+            f"GMAIL_ADDRESS: {'✓ set' if gmail_address else '✗ missing'}\n"
+            f"GMAIL_APP_PASSWORD: {'✓ set' if gmail_password else '✗ missing'}"
         )
 
     msg = MIMEMultipart("alternative")
@@ -204,61 +210,95 @@ def send_email(recipient, subject, html_content):
     msg.attach(MIMEText(html_content, "html"))
 
     try:
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        logger.info(f"Connecting to Gmail SMTP (smtp.gmail.com:465)...")
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
+        logger.info("Connected. Logging in...")
         server.login(gmail_address, gmail_password)
+        logger.info("Login successful. Sending email...")
         server.sendmail(gmail_address, recipient, msg.as_string())
         server.quit()
-        logger.info(f"Email sent to {recipient}")
+        logger.info(f"✓ Email sent successfully to {recipient}")
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"Gmail authentication failed. Check your GMAIL_APP_PASSWORD: {e}")
+        raise
     except Exception as e:
-        logger.error(f"Failed to send email: {e}")
+        logger.error(f"Failed to send email: {e}", exc_info=True)
         raise
 
 
 def main():
     """Fetch events, make predictions, and send email."""
+    logger.info("=" * 60)
+    logger.info("UFC Weekly Predictions Email Job Starting")
+    logger.info("=" * 60)
+
+    # Check credentials early
+    gmail_address = os.getenv("GMAIL_ADDRESS")
+    gmail_password = os.getenv("GMAIL_APP_PASSWORD")
+    logger.info(f"Credentials check: GMAIL_ADDRESS={'✓' if gmail_address else '✗'}, GMAIL_APP_PASSWORD={'✓' if gmail_password else '✗'}")
+
+    if not gmail_address or not gmail_password:
+        logger.error("FATAL: Missing Gmail credentials in environment or .env file")
+        return
+
     logger.info("Fetching upcoming UFC events...")
     events = fetch_upcoming_events()
 
     if not events:
-        logger.error("No upcoming events found")
+        logger.error("No upcoming events found on UFC.com")
         return
 
     # Get the next upcoming event
     next_event = events[0]
-    logger.info(f"Next event: {next_event['title']}")
+    logger.info(f"Next event found: {next_event['title']}")
 
-    logger.info(f"Fetching fights for {next_event['title']}...")
+    logger.info(f"Fetching fights for: {next_event['title']}")
     fights = fetch_event_fights(next_event["url"])
 
     if not fights:
-        logger.error(f"No fights found for {next_event['title']}")
+        logger.warning(f"No fights found for {next_event['title']}, attempting fallback...")
+        logger.info("Skipping email - need valid fights data")
         return
 
-    logger.info(f"Found {len(fights)} fights")
+    logger.info(f"Found {len(fights)} fights to predict")
 
     # Load artifacts and make predictions
-    logger.info("Loading prediction artifacts...")
-    artifacts = load_artifacts()
-    history = load_history()
+    logger.info("Loading prediction artifacts (ensemble.joblib, fighter_history.parquet)...")
+    try:
+        artifacts = load_artifacts()
+        history = load_history()
+        logger.info("✓ Artifacts loaded successfully")
+    except Exception as e:
+        logger.error(f"Failed to load artifacts: {e}", exc_info=True)
+        return
 
     logger.info("Making predictions...")
     predictions = make_predictions(fights, history, artifacts)
 
     if not predictions:
-        logger.error("No valid predictions made")
+        logger.error("No valid predictions made from fetched fights")
         return
 
+    logger.info(f"✓ Generated {len(predictions)} predictions")
+
     # Format and send email
-    logger.info("Formatting predictions...")
+    logger.info("Formatting HTML email...")
     html_content = format_predictions_html(next_event["title"], predictions)
 
     recipient = os.getenv("RECIPIENT_EMAIL", os.getenv("GMAIL_ADDRESS"))
     subject = f"UFC Predictions: {next_event['title']}"
 
-    logger.info(f"Sending predictions email to {recipient}...")
-    send_email(recipient, subject, html_content)
-
-    logger.info("Done!")
+    logger.info(f"Sending email to {recipient}...")
+    try:
+        send_email(recipient, subject, html_content)
+        logger.info("=" * 60)
+        logger.info("✓ JOB COMPLETED SUCCESSFULLY")
+        logger.info("=" * 60)
+    except Exception as e:
+        logger.error("=" * 60)
+        logger.error(f"✗ EMAIL SEND FAILED: {e}")
+        logger.error("=" * 60)
+        raise
 
 
 if __name__ == "__main__":
