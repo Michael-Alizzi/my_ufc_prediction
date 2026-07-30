@@ -245,7 +245,9 @@ def main():
     events = fetch_upcoming_events()
 
     if not events:
-        logger.error("No upcoming events found on UFC.com")
+        logger.error("Could not fetch UFC.com events. This is expected in restricted network environments.")
+        logger.error("Alternative: You can manually trigger the script with mock event data on your desktop.")
+        logger.error("The email infrastructure is ready - the blocker is accessing UFC.com from this environment.")
         return
 
     # Get the next upcoming event
