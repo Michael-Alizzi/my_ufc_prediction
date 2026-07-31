@@ -111,7 +111,13 @@ def make_predictions(fights, history, artifacts):
     """Make predictions for a list of fights.
 
     Each fight dict: fighter1, fighter2, weight_class, and optionally
-    title_fight (bool) and rounds (3 or 5, defaults to 3).
+    title_fight (bool), rounds (3 or 5, defaults to 3), and odds1/odds2
+    (decimal bookmaker odds for fighter1/fighter2, used to size a bet).
+
+    Bet sizing: quarter-Kelly on a $100 bankroll against the predicted
+    winner's odds, capped at $15/fight. $0 means the model's probability is
+    below the odds' implied probability (no value at that price); "-" means
+    odds weren't provided or the fight couldn't be predicted.
     """
     predictions = []
     known = set(pd.concat([history["r_fighter"], history["b_fighter"]]).unique())
@@ -144,12 +150,23 @@ def make_predictions(fights, history, artifacts):
 
             confidence = proba if winner == fighter1 else 1 - proba
 
+            odds = fight.get("odds1") if winner == fighter1 else fight.get("odds2")
+            stake = "-"
+            if odds:
+                edge = confidence * float(odds) - 1
+                if edge <= 0:
+                    stake = "$0"
+                else:
+                    kelly = edge / (float(odds) - 1)
+                    stake = f"${min(15, max(1, round(100 * kelly / 4)))}"
+
             predictions.append({
                 "fighter1": fight["fighter1"],
                 "fighter2": fight["fighter2"],
                 "weight_class": weight_class,
                 "prediction": winner.title(),
                 "confidence": f"{confidence:.1%}",
+                "stake": stake,
             })
         except Exception as e:
             logger.error(f"Prediction failed for {fight['fighter1']} vs {fight['fighter2']}: {e}")
@@ -183,6 +200,7 @@ def format_predictions_html(event_title, predictions):
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">{pred['fighter2']}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold; color: #e63946;">{pred['prediction']}</td>
             <td style="padding: 10px; border-bottom: 1px solid #ddd;">{pred['confidence']}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">{pred.get('stake', '-')}</td>
         </tr>
         """
 
@@ -197,6 +215,7 @@ def format_predictions_html(event_title, predictions):
                 <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Fighter 2</th>
                 <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Prediction</th>
                 <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Confidence</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Bet (of $100)</th>
             </tr>
             {rows}
         </table>
@@ -217,17 +236,20 @@ def format_predictions_markdown(event_title, predictions):
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence |",
-        "|---|---|---|---|---|",
+        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Bet (of $100) |",
+        "|---|---|---|---|---|---|",
     ]
     for p in predictions:
         lines.append(
             f"| {p['fighter1']} | {p['fighter2']} | {p.get('weight_class', '?')} "
-            f"| **{p['prediction']}** | {p['confidence']} |"
+            f"| **{p['prediction']}** | {p['confidence']} | {p.get('stake', '-')} |"
         )
     lines += [
         "",
         "_XGBoost + LightGBM ensemble; confidence calibrated on walk-forward CV._",
+        "_Bets are quarter-Kelly vs the listed odds, capped at $15/fight. $0 = no "
+        "value at the offered price; the model's betting edge is unproven, so "
+        "treat stakes as entertainment sizing, not investment advice._",
     ]
     return "\n".join(lines)
 
