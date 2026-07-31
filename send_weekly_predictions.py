@@ -114,10 +114,12 @@ def make_predictions(fights, history, artifacts):
     title_fight (bool), rounds (3 or 5, defaults to 3), and odds1/odds2
     (decimal bookmaker odds for fighter1/fighter2, used to size a bet).
 
-    Bet sizing: quarter-Kelly on a $100 bankroll against the predicted
-    winner's odds, capped at $15/fight. $0 means the model's probability is
-    below the odds' implied probability (no value at that price); "-" means
-    odds weren't provided or the fight couldn't be predicted.
+    Bet sizing: the whole $100 bankroll is split across every side of every
+    fight where the model's probability beats the odds' implied probability,
+    proportionally to Kelly fraction. The value side can be the fighter the
+    model predicts to LOSE (a narrow pick priced by the market as a lock).
+    "$0 (no value)" = odds given but neither side is mispriced enough;
+    "-" = no odds provided or the fight couldn't be predicted.
     """
     predictions = []
     known = set(pd.concat([history["r_fighter"], history["b_fighter"]]).unique())
@@ -150,15 +152,18 @@ def make_predictions(fights, history, artifacts):
 
             confidence = proba if winner == fighter1 else 1 - proba
 
-            odds = fight.get("odds1") if winner == fighter1 else fight.get("odds2")
-            stake = "-"
-            if odds:
-                edge = confidence * float(odds) - 1
-                if edge <= 0:
-                    stake = "$0"
-                else:
-                    kelly = edge / (float(odds) - 1)
-                    stake = f"${min(15, max(1, round(100 * kelly / 4)))}"
+            # Find the value side, if any: at most one side of a fight can
+            # have model probability above the odds' implied probability.
+            bet_on, bet_odds, kelly = None, None, 0.0
+            has_odds = False
+            for name, p, o in ((fight["fighter1"], proba, fight.get("odds1")),
+                               (fight["fighter2"], 1 - proba, fight.get("odds2"))):
+                if not o:
+                    continue
+                has_odds = True
+                edge = p * float(o) - 1
+                if edge > 0:
+                    bet_on, bet_odds, kelly = name, float(o), edge / (float(o) - 1)
 
             predictions.append({
                 "fighter1": fight["fighter1"],
@@ -166,7 +171,10 @@ def make_predictions(fights, history, artifacts):
                 "weight_class": weight_class,
                 "prediction": winner.title(),
                 "confidence": f"{confidence:.1%}",
-                "stake": stake,
+                "stake": "$0 (no value)" if has_odds else "-",
+                "bet_on": bet_on,
+                "bet_odds": bet_odds,
+                "kelly": kelly,
             })
         except Exception as e:
             logger.error(f"Prediction failed for {fight['fighter1']} vs {fight['fighter2']}: {e}")
@@ -176,6 +184,22 @@ def make_predictions(fights, history, artifacts):
                 "prediction": "error", "confidence": "-",
             })
             continue
+
+    # Split the $100 bankroll across all value bets, proportional to Kelly.
+    value = [p for p in predictions if p.get("kelly", 0) > 0]
+    if value:
+        total = sum(p["kelly"] for p in value)
+        for p in value:
+            p["stake_amt"] = round(100 * p["kelly"] / total)
+        max(value, key=lambda p: p["kelly"])["stake_amt"] += 100 - sum(
+            p["stake_amt"] for p in value
+        )
+        for p in value:
+            payout = round(p["stake_amt"] * p["bet_odds"])
+            p["stake"] = (
+                f"${p['stake_amt']} on {p['bet_on'].title()} "
+                f"(@{p['bet_odds']:.2f}, returns ~${payout})"
+            )
 
     return predictions
 
@@ -236,7 +260,7 @@ def format_predictions_markdown(event_title, predictions):
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Bet (of $100) |",
+        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | $100 split |",
         "|---|---|---|---|---|---|",
     ]
     for p in predictions:
@@ -247,9 +271,11 @@ def format_predictions_markdown(event_title, predictions):
     lines += [
         "",
         "_XGBoost + LightGBM ensemble; confidence calibrated on walk-forward CV._",
-        "_Bets are quarter-Kelly vs the listed odds, capped at $15/fight. $0 = no "
-        "value at the offered price; the model's betting edge is unproven, so "
-        "treat stakes as entertainment sizing, not investment advice._",
+        "_$100 split across every side of every fight priced below the model's "
+        "probability, proportional to Kelly edge. The bet can be on the fighter "
+        "the model predicts to lose: a near-coin-flip the market prices as a "
+        "lock is value on the underdog. The model's edge over bookmakers is "
+        "unproven — bet only what you're happy to lose._",
     ]
     return "\n".join(lines)
 
