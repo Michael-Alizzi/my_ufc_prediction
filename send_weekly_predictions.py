@@ -123,7 +123,7 @@ def format_predictions_markdown(event_title, predictions):
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | $100 split |",
+        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking $100 total) |",
         "|---|---|---|---|---|---|",
     ]
     for p in predictions:
@@ -134,11 +134,13 @@ def format_predictions_markdown(event_title, predictions):
     lines += [
         "",
         "_XGBoost + LightGBM ensemble; confidence calibrated on walk-forward CV._",
-        "_$100 split across every side of every fight priced below the model's "
-        "probability, proportional to Kelly edge. The bet can be on the fighter "
-        "the model predicts to lose: a near-coin-flip the market prices as a "
-        "lock is value on the underdog. The model's edge over bookmakers is "
-        "unproven — bet only what you're happy to lose._",
+        "_Bet column: how to place a total of $100 — your maximum possible loss "
+        "— across the card. The $100 is split over every side priced below the "
+        "model's probability, proportional to Kelly edge; stakes always sum to "
+        "$100. The bet can be on the fighter the model predicts to lose: a "
+        "near-coin-flip the market prices as a lock is value on the underdog. "
+        "The model's edge over bookmakers is unproven — only risk what you're "
+        "happy to lose._",
     ]
     return "\n".join(lines)
 
