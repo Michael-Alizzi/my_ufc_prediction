@@ -2,28 +2,20 @@
 pandas
 numpy
 
-# Visualization
+# Visualization (notebook EDA cells)
 matplotlib
 seaborn
-plotly
-missingno
 
 # Statistics
-scipy
 statsmodels
 
 # Machine Learning
 scikit-learn
 xgboost
 lightgbm
-imbalanced-learn
-fairlearn
 
 # Hyperparameter Optimization
 optuna
-
-# Explainability
-shap
 
 # App
 streamlit
@@ -34,8 +26,3 @@ jupyter
 
 # Testing
 pytest
-
-# Web scraping and email
-requests
-beautifulsoup4
-python-dotenv
