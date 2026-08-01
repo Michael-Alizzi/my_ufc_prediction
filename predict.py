@@ -118,6 +118,13 @@ def build_features(red, blue, weight_class, title_fight, total_round_number,
     return X_pred
 
 
+def kelly_edge(p, odds):
+    """Kelly fraction for backing a side at decimal `odds` given model
+    probability `p`, or 0.0 when the market price offers no edge."""
+    edge = p * odds - 1
+    return edge / (odds - 1) if edge > 0 else 0.0
+
+
 def blend_proba(X, models, lgbm, lgbm_weight):
     xgb_p = np.mean([m.predict_proba(X)[:, 1] for m in models], axis=0)
     lgb_p = lgbm.predict_proba(X)[:, 1]

@@ -2,12 +2,18 @@
 Requires ensemble.joblib and fighter_history.parquet (produced by the
 notebook's "Export for Streamlit App" cell).
 """
-from predict import load_artifacts, load_history, predict_winner
+from predict import kelly_edge, load_artifacts, load_history, predict_winner
 
 SYMMETRY_TOLERANCE = 0.05
 
 
 def demo():
+    # Money path: edge only when model probability beats implied probability.
+    assert abs(kelly_edge(0.6, 2.0) - 0.2) < 1e-9   # p*o-1 = 0.2, /(o-1) = 0.2
+    assert kelly_edge(0.5, 2.0) == 0.0               # fair price, no bet
+    assert kelly_edge(0.4, 2.0) == 0.0               # negative edge, no bet
+    print("OK: kelly_edge")
+
     artifacts = load_artifacts()
     history = load_history()
 

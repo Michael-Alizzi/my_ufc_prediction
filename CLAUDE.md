@@ -5,10 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this repo is
 
 A UFC fight-outcome predictor: an XGBoost + LightGBM ensemble trained on engineered fighter/fight
-history, served through a small Streamlit app. `ufc_prediction_claude.ipynb` is the single source of
-truth for the modeling pipeline — `ufc_prediction.ipynb` is an earlier, superseded version (kept for
-reference only) and `ufc_analysis.ipynb` is an unrelated exploratory-analysis notebook, not part of
-the prediction pipeline.
+history, served through a small Streamlit app and a weekly predictions job. `ufc_prediction_claude.ipynb`
+is the single source of truth for the modeling pipeline. (Two superseded notebooks,
+`ufc_prediction.ipynb` and `ufc_analysis.ipynb`, were removed in the Aug 2026 cleanup — recover from
+git history if ever needed.)
 
 Raw data (`raw_fight_data.csv`, `raw_fighter_details.csv`) is produced by a separate sibling scraper
 project at `../UFC-Predictions` (its own `src/createdata/` pipeline) and copied into this repo — this
@@ -39,9 +39,16 @@ repo does not scrape data itself.
 
 # sanity-check the serving logic (assert-based, no framework)
 .venv/bin/python test_predict.py
+
+# pipeline-shape / data-leak guards (pytest)
+.venv/bin/pytest test_pipeline_logic.py -v
+
+# predict a fight card with betting odds (used by the weekly Routine; writes
+# predictions_output.md with a value-bet $100 Kelly split when odds are given)
+.venv/bin/python send_weekly_predictions.py --fights-json card.json --event-title "UFC ..."
 ```
 
-There is no lint/build config or test framework in this repo beyond `test_predict.py`.
+There is no lint/build config; tests are `test_predict.py` and `test_pipeline_logic.py`.
 
 ## Architecture
 
@@ -62,6 +69,14 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
 5. Ensemble: top-3 Optuna trials + one LightGBM model, blended at whichever mixing weight scores best
    on validation.
 6. Decision layer, stability checks, and export — see gotchas below for why several of these exist.
+
+**Weekly automation**: one claude.ai Routine (Thursday 13:00 UTC, self-bound session) retrains via
+`scripts/weekly_pipeline.sh` (scrape → CPU retrain → push master), then predicts the upcoming card
+with bookmaker odds via `send_weekly_predictions.py` and pushes the result table to the
+`weekly-predictions-log` branch — that push is the delivery mechanism; there is deliberately no email
+path (SMTP is unreachable from the cloud environment, and a Gmail app password was leaked into git
+history doing it the old way — revoke-and-avoid, don't reintroduce). Betting maths lives in
+`predict.py:kelly_edge` and is shared by the weekly job and the app's optional odds inputs.
 
 **Serving path** (`predict.py` + `app.py`): reimplements the notebook's single-fight-prediction cell
 against two exported artifacts — `ensemble.joblib` (trained models, blend weight, threshold, feature

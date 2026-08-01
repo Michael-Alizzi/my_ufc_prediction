@@ -1,7 +1,7 @@
 """UFC fight predictor. Run with: streamlit run app.py"""
 import streamlit as st
 
-from predict import list_fighters, load_artifacts, load_history, predict_winner
+from predict import kelly_edge, list_fighters, load_artifacts, load_history, predict_winner
 
 st.set_page_config(page_title="UFC Fight Predictor", page_icon="\U0001F94A")
 st.title("UFC Fight Predictor")
@@ -118,6 +118,13 @@ with st.container(key="rules_row"):
             disabled=title_fight,
         )
 
+with st.expander("\U0001F4B0 Bookmaker odds (optional)"):
+    odds_red_col, odds_blue_col = st.columns(2)
+    with odds_red_col:
+        odds_red = st.number_input("Decimal odds — red", min_value=1.01, value=None, placeholder="e.g. 1.85")
+    with odds_blue_col:
+        odds_blue = st.number_input("Decimal odds — blue", min_value=1.01, value=None, placeholder="e.g. 2.10")
+
 if st.button("Predict", type="primary"):
     if not red or not blue or not weight_class or not total_round_number:
         st.warning("Pick both fighters, a weight class, and rounds first.")
@@ -134,5 +141,22 @@ if st.button("Predict", type="primary"):
                 "Calibrated via Platt scaling on pooled walk-forward CV "
                 "predictions — tracks real win frequency, not just ranking."
             )
+            # Value bet: at most one side's model probability can beat the
+            # market's implied probability. Same maths as the weekly job.
+            bets = [
+                (name, o, kelly_edge(p, o))
+                for name, p, o in ((red, proba, odds_red), (blue, 1 - proba, odds_blue))
+                if o
+            ]
+            value = [(n, o, k) for n, o, k in bets if k > 0]
+            if value:
+                name, o, k = value[0]
+                st.info(
+                    f"Value bet: **{name}** @ {o:.2f} — Kelly stake "
+                    f"{k:.1%} of bankroll. The model's edge over bookmakers "
+                    f"is unproven; bet only what you're happy to lose."
+                )
+            elif bets:
+                st.info("No value at these odds — the market prices both sides at or above the model's probabilities.")
         except ValueError as e:
             st.error(str(e))
