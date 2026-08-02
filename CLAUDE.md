@@ -68,9 +68,12 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
    one non-paired feature; pinned to the current era at predict time in both the notebook's
    prediction cell and `predict.py`), home-crowd flags (fighter's Wikidata citizenship vs. the
    event location's country — supplied per-prediction via `event_country`, never inherited from a
-   fighter's last fight row), and Elo rating (the one feature computed via a
+   fighter's last fight row), judge-scorecard history (prior-decision margin/closeness/dominance from
+   the vendored `data/SCORECARDS.csv`, UFC-DataLab, MIT — NaN outside its mid-2020→late-2024
+   coverage), and Elo rating (the one feature computed via a
    sequential chronological loop rather than a vectorised cumsum, since each fight's rating depends
-   on both fighters' evolving state).
+   on both fighters' evolving state). Full definitions with math + plain explanations:
+   `docs/METHODOLOGY.md` and `docs/DATA_DICTIONARY.md`; run history: `EXPERIMENTS.md`.
 3. Target/feature selection → correlation check → **rolling-window grid search** to pick how much
    trailing history to train on → **Optuna** hyperparameter search evaluated with the same
    walk-forward CV scheme (never a plain train/test split).

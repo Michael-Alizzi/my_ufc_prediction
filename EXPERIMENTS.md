@@ -59,3 +59,38 @@ were produced by the corrupted path and should be read accordingly.
 Gate: content-based serving test added (never-met pair, every feature checked
 against the fighter's own history); no retrain required.
 Decision: ACCEPTED (bug fix).
+
+---
+
+## Queued (implemented, awaiting user retrains — fill each in from the run)
+
+### 1. Baseline v2 — leak-free window search, OOF gate        (retrain #1)
+Change: window search restricted to pre-holdout data; HOLDOUT_START pinned
+at latest−6mo (reproduces the current 120/110 split, so the Jul-28 baseline
+stays comparable); LightGBM subsample activated (subsample_freq); DEVICE
+auto-probe. Window re-searched this once — pin `BEST_WINDOW` to the chosen
+pair afterwards.
+Expectation (written before the run): hygiene, not a metric mover — the old
+leak touched ~1 fold of the winning combo. This run's export becomes the
+first artifact carrying `oof`/`diff_pairs`/`train_end`; snapshot it as the
+baseline for everything below.
+
+### 2. Judge-scorecard features        (retrain #2)
+Change: + r_/b_avg_dec_margin, close_dec_rate, dominant_dec_rate (+diffs).
+Expectation (written before the run): SMALL effect. Coverage is ~1,000
+scored decisions (mid-2020→late-2024, frozen thereafter — static vendored
+file); holdout fights are 2026, where career aggregates carry late-2024
+values for established fighters and NaN for newcomers. Gate on pooled OOF;
+revert fully if it loses.
+
+### 3–6. Queued experiments (one retrain each, in order)
+decay (wall-clock EWM halflife replaces fight-count) → shrinkage
+(finish rates toward weight-class priors) → absorbed/defensive stats →
+opponent-adjusted performance. Implemented one at a time only after the
+previous entry is decided; specs in docs/METHODOLOGY.md as they land.
+
+### 7. Historical odds backtest (gated)
+mma-ai's BestFightOdds dump: ~2.5 GB on Hugging Face, repo carries NO
+license → download privately on your own machine only; nothing from it gets
+committed here. Deliverable: accuracy vs closing line + $100 Kelly ROI over
+history, aggregated numbers only in this log.
