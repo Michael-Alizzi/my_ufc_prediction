@@ -28,10 +28,15 @@ fi
 python3 -m venv .venv 2>/dev/null || true
 .venv/bin/pip install -q -r requirements.txt
 
-# device="cpu" throughout + the Optuna cell's Postgres->in-process fallback
-# (see ufc_prediction_claude.ipynb) make this safe to run GPU-less.
+# Headless-safe: Optuna storage is env-gated (unset here -> in-process),
+# the laptop dispatch, baseline comparison and prediction demo cells all
+# skip cleanly when their inputs are missing, and raw CSV paths are
+# repo-relative.
 .venv/bin/python -m jupyter nbconvert --to notebook --execute --inplace \
   --ExecutePreprocessor.timeout=-1 ufc_prediction_claude.ipynb
+
+# Fail the run loudly if the fresh artifacts break the serving contract
+.venv/bin/python -m pytest -q test_pipeline_logic.py test_predict.py
 
 sha256sum raw_fight_data.csv raw_fighter_details.csv > raw_data.sha256
 echo "Retrain complete: ensemble.joblib + fighter_history.parquet refreshed."

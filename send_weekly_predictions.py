@@ -18,6 +18,8 @@ the delivery mechanism; there is no email path.
 import argparse
 import json
 import logging
+import os
+import shutil
 from datetime import datetime
 
 import pandas as pd
@@ -168,8 +170,13 @@ def main():
     md = format_predictions_markdown(args.event_title, predictions)
     with open("predictions_output.md", "w") as f:
         f.write(md)
+    # card.json goes to weekly-predictions-log beside predictions_output.md so
+    # any future model can replay the same card+odds (the $100 replay metric
+    # in EXPERIMENTS.md).
+    if os.path.abspath(args.fights_json) != os.path.abspath("card.json"):
+        shutil.copy(args.fights_json, "card.json")
     print(md)
-    logger.info("Wrote predictions_output.md")
+    logger.info("Wrote predictions_output.md and card.json")
 
 
 if __name__ == "__main__":

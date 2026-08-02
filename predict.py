@@ -1,9 +1,10 @@
-"""Prediction logic shared by the Streamlit app and its self-check.
-
-Reimplements the notebook's single-fight prediction cell (ufc_prediction_claude.ipynb,
-"Single Fight Prediction" section) against the artifacts it exports:
-ensemble.joblib (trained models) and fighter_history.parquet (engineered fight
-history, for per-fighter lookups and head-to-head).
+"""Single-fight serving logic: the ONE implementation used by the Streamlit
+app, the weekly predictions job, and the notebook's Single Fight Prediction
+cell (which imports build_features from here rather than keeping a copy --
+a diverged copy is how half the serving features once came from the wrong
+fighter). Consumes the notebook's exports: ensemble.joblib (models, blend
+weight, threshold, feature schema, diff_pairs) and fighter_history.parquet
+(engineered fight history for per-fighter lookups and head-to-head).
 """
 import joblib
 import numpy as np
@@ -83,10 +84,65 @@ def last_row(fighter, history):
     matches = history[(history["r_fighter"] == f) | (history["b_fighter"] == f)]
     if matches.empty:
         raise ValueError(f"No fight history for {fighter!r}")
-    row = matches.sort_values("date_d", ascending=False).iloc[0]
+    # History is exported date-sorted (asserted by test_pipeline_logic), so
+    # the last match IS the most recent fight -- no per-call re-sort.
+    row = matches.iloc[-1]
     if row["b_fighter"] == f:
         row = _reorient_to_red(row)
     return row
+
+
+def own_value(row, col):
+    """Read `col` as the value belonging to the fighter this row was
+    reoriented FOR. last_row() guarantees the r_/avg_r_/med_r_ side describes
+    that fighter, so b_-named features must be read from the r_-named partner
+    -- reading them directly returns the fighter's LAST OPPONENT's stats,
+    which is exactly the serving bug this function exists to prevent."""
+    for b_prefix, r_prefix in (("avg_b_", "avg_r_"), ("med_b_", "med_r_"), ("b_", "r_")):
+        if col.startswith(b_prefix):
+            return row[r_prefix + col[len(b_prefix):]]
+    return row[col]
+
+
+def build_diff_pairs(feature_names, columns):
+    """Map every *_diff feature to its exact (r_col, b_col) source pair.
+
+    The notebook verifies this map numerically at export time and stores it
+    in ensemble.joblib; this builder doubles as the fallback for artifacts
+    that predate the stored map. Raises on any diff it cannot resolve --
+    silently serving 0 for unresolved diffs is how 25 features went dead in
+    production."""
+    # Diffs whose source names aren't derivable by prefixing alone
+    # (unit suffixes dropped, plural "wins")
+    special = {
+        "height_diff": ("r_height_cm", "b_height_cm"),
+        "weight_diff": ("r_weight_kg", "b_weight_kg"),
+        "reach_diff": ("r_reach_cm", "b_reach_cm"),
+        "h2h_win_diff": ("r_h2h_wins", "b_h2h_wins"),
+    }
+    cols = set(columns)
+    pairs = {}
+    for feat in feature_names:
+        if not feat.endswith("_diff"):
+            continue
+        if feat in special:
+            pairs[feat] = special[feat]
+            continue
+        base = feat[: -len("_diff")]
+        candidates = [(f"r_{base}", f"b_{base}")]
+        for stat_prefix in ("avg_", "med_"):
+            if base.startswith(stat_prefix):
+                stat = base[len(stat_prefix):]
+                candidates.append(
+                    (f"{stat_prefix}r_{stat}", f"{stat_prefix}b_{stat}")
+                )
+        match = next(
+            ((r, b) for r, b in candidates if r in cols and b in cols), None
+        )
+        if match is None:
+            raise ValueError(f"Cannot resolve source columns for {feat!r}")
+        pairs[feat] = match
+    return pairs
 
 
 def head_to_head(red, blue, history):
@@ -102,11 +158,14 @@ def head_to_head(red, blue, history):
 
 
 def build_features(red, blue, weight_class, title_fight, total_round_number,
-                    history, feature_names, dtypes, event_country=None):
+                    history, feature_names, dtypes, event_country=None,
+                    diff_pairs=None):
     red, blue = red.lower().strip(), blue.lower().strip()
     r_last = last_row(red, history)
     b_last = last_row(blue, history)
     n_prev, r_h2h, b_h2h = head_to_head(red, blue, history)
+    if diff_pairs is None:
+        diff_pairs = build_diff_pairs(feature_names, history.columns)
 
     predict_dict = {
         "title_fight": int(title_fight),
@@ -132,22 +191,22 @@ def build_features(red, blue, weight_class, title_fight, total_round_number,
         predict_dict["r_home_crowd"] - predict_dict["b_home_crowd"]
     )
 
+    # Both last-fight rows are reoriented so their r_/avg_r_/med_r_ side is
+    # that fighter's own value. Red-side features read straight off r_last;
+    # blue-side features read the r_-named partner off b_last (own_value);
+    # diffs are red's own minus blue's own via the exact diff_pairs map.
     for col in feature_names:
         if col in predict_dict:
             continue
-        if col.startswith("r_"):
+        if col.endswith("_diff"):
+            r_col, b_col = diff_pairs[col]
+            predict_dict[col] = r_last[r_col] - own_value(b_last, b_col)
+        elif col.startswith(("r_", "avg_r_", "med_r_")):
             predict_dict[col] = r_last[col]
-        elif col.startswith("b_"):
-            predict_dict[col] = b_last[col]
-        elif col.endswith("_diff"):
-            base = col[:-5]
-            r_cands = [c for c in r_last.index if c.startswith("r_") and base in c]
-            b_cands = [c for c in b_last.index if c.startswith("b_") and base in c]
-            predict_dict[col] = (
-                r_last[r_cands[0]] - b_last[b_cands[0]]
-                if len(r_cands) == 1 and len(b_cands) == 1 else 0
-            )
+        elif col.startswith(("b_", "avg_b_", "med_b_")):
+            predict_dict[col] = own_value(b_last, col)
         else:
+            # Shared fight-context columns (e.g. gender) from red's last fight
             predict_dict[col] = r_last.get(col, 0)
 
     X_pred = pd.DataFrame([predict_dict]).reindex(columns=feature_names, fill_value=0)
@@ -187,6 +246,7 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
         red, blue, weight_class, title_fight, total_round_number,
         history, artifacts["feature_names"], artifacts["dtypes"],
         event_country=event_country,
+        diff_pairs=artifacts.get("diff_pairs"),
     )
     raw_proba = float(blend_proba(
         X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"]

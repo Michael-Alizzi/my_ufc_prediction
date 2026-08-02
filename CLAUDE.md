@@ -105,10 +105,18 @@ automatically.
   fit Platt scaling and a tuned threshold on the ~120-fight validation slice and it cost 6 points of
   test accuracy from overfitting that small a sample. Don't reintroduce calibration without pooling
   many out-of-fold predictions first (see the `ponytail:` comment in the Threshold Selection cell).
-- **`last_row()`** (in both the notebook and `predict.py`) must reorient a fighter's most recent fight
-  row when they fought in the blue corner last time — otherwise the `r_`-prefixed columns silently
-  describe their opponent instead of them. This was a real bug, only caught by `test_predict.py`'s
-  corner-swap symmetry check.
+- **`last_row()`** (`predict.py`) must reorient a fighter's most recent fight row when they fought in
+  the blue corner last time — otherwise the `r_`-prefixed columns silently describe their opponent
+  instead of them. This was a real bug, only caught by `test_predict.py`'s corner-swap symmetry check.
+- **Serving reads every feature through `own_value()`/`diff_pairs`, never raw `b_*` columns.** A
+  reoriented last-fight row's `b_*` side is by construction the fighter's LAST OPPONENT; reading it
+  directly once served ~half the feature vector from the wrong fighter, and substring-matching diff
+  sources zero-filled all 25 `avg_*`/`med_*` diffs (EXPERIMENTS.md entry 0). `build_features` in
+  `predict.py` is the single serving implementation — the notebook's prediction cell imports it;
+  never re-inline a copy. The corner-swap symmetry test cannot catch this class of bug (its fighters
+  last fought each other, so contamination self-cancels); the content-based serving test in
+  `test_pipeline_logic.py` (never-met pair, every feature checked against the fighter's own history)
+  is the guard.
 - **Duplicate fight rows**: 1990s multi-fight tournament nights create many-to-many merge artifacts
   (~950 phantom duplicate rows). The pipeline explicitly deduplicates on `(r_fighter, b_fighter,
   date)` before computing head-to-head/Elo features — don't skip it.
@@ -121,8 +129,27 @@ automatically.
   of roughly ±9 points. Compare experiments using the notebook's Test Set Stability Check (CLT
   interval + monthly-batch breakdown) and Paired Comparison / McNemar cells, not raw point-estimate
   deltas.
-- **GPU usage (`device="cuda"`) is hardcoded** in `create_xgb_model()`, the Optuna objective, and the
-  final refit. If running without a GPU, all three need to change together.
+- **Device is `"cpu"` everywhere right now** (`create_xgb_model()`, the Optuna objective, the top-3
+  refits, the calibration OOF refits) — the desktop GPU was broken by an OS driver update. The
+  laptop's eGPU still runs CUDA trials via `scripts/shared_study_worker.py` (dispatched by the Optuna
+  cell over ssh; needs `OPTUNA_STORAGE_URL` + `OPTUNA_WORKER_STORAGE_URL` in the environment —
+  credentials are never committed). If you change the device story, change all sites together.
+
+## Experiment protocol (mandatory for any feature or algorithm change)
+
+- **Retrain and log every change.** Any change to features or the algorithm gets a full pipeline run
+  (Restart + Run All) and an entry in `EXPERIMENTS.md` — window, validation/test accuracy + AUC with
+  the CLT interval, monthly-batch stats, and the paired McNemar comparison against the snapshotted
+  baseline (`cp ensemble.joblib ensemble_baseline.joblib` BEFORE retraining). One variable per run;
+  rejected changes are fully reverted, never left in because they "don't hurt".
+- **The $100 replay metric**: each entry also records how the new model would have used the $100
+  bankroll on the last UFC event versus what was actually logged. Always score the LOGGED pre-event
+  predictions from the `weekly-predictions-log` branch — never re-predict a past event through
+  current history (its outcome is already inside `head_to_head` and the fighters' last rows). The
+  weekly job commits `card.json` next to `predictions_output.md` to make this mechanical.
+- **Docs move with the code.** `docs/METHODOLOGY.md` and `docs/DATA_DICTIONARY.md` are updated in the
+  same commit as any change to features, data, or algorithm — each concept explained mathematically
+  first, then in plain terms with a worked example (write for a data-science undergrad).
 
 ## ML Guidelines (rules; see Architecture and Gotchas above for the concrete implementation)
 

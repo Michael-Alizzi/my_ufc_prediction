@@ -84,9 +84,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-artifacts = load_artifacts()
-history = load_history()
-fighters = list_fighters(history)
+# Streamlit reruns this whole script on every widget interaction; without
+# caching, each click re-unpickled 7MB of models and re-read a 7MB parquet.
+@st.cache_resource
+def _load():
+    artifacts = load_artifacts()
+    history = load_history()
+    return artifacts, history, list_fighters(history)
+
+
+artifacts, history, fighters = _load()
 
 # Fight-card layout: red corner, weight class, blue corner.
 with st.container(key="corner_row"):
