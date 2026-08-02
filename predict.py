@@ -88,6 +88,11 @@ def build_features(red, blue, weight_class, title_fight, total_round_number,
         "h2h_win_diff": r_h2h - b_h2h,
         "weight_class": weight_class,
         "total_round_number": total_round_number,
+        # Upcoming fights are always contested under the current ruleset;
+        # without this the generic fallback below would inherit rules_era
+        # from the fighter's last fight row. Dropped by reindex if the
+        # loaded artifacts predate the feature.
+        "rules_era": 2,
     }
 
     for col in feature_names:

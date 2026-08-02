@@ -58,8 +58,11 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
 1. Load raw CSVs → clean/normalize columns → merge fighter details onto fight rows by
    lowercased/trimmed name.
 2. Feature engineering, each producing `r_*`/`b_*` paired columns computed from **prior fights only**
-   (no lookahead): career avg/median stats, win/loss streaks, fight frequency, matchup diffs,
-   head-to-head record, KO/submission finish rates, and Elo rating (the one feature computed via a
+   (no lookahead): career avg/median stats, win/loss streaks, fight frequency/layoff, matchup diffs,
+   head-to-head record, KO/submission finish rates, first-round wins, average time-into-the-fight
+   for wins/losses, a shared `rules_era` ordinal (pre-unified / unified-2001 / 2017-revision — the
+   one non-paired feature; pinned to the current era at predict time in both the notebook's
+   prediction cell and `predict.py`), and Elo rating (the one feature computed via a
    sequential chronological loop rather than a vectorised cumsum, since each fight's rating depends
    on both fighters' evolving state).
 3. Target/feature selection → correlation check → **rolling-window grid search** to pick how much
