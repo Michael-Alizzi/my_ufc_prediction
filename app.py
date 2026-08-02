@@ -105,7 +105,7 @@ with st.container(key="corner_row"):
         blue = st.selectbox("\U0001F535 Blue corner", blue_options, index=None, placeholder="Select fighter")
 
 with st.container(key="rules_row"):
-    rounds_col, title_col = st.columns(2)
+    rounds_col, title_col, country_col = st.columns(3)
     with title_col:
         title_fight = st.checkbox("\U0001F451 Title fight")
     with rounds_col:
@@ -117,6 +117,9 @@ with st.container(key="rules_row"):
             horizontal=True,
             disabled=title_fight,
         )
+    with country_col:
+        # Feeds the home-crowd features; empty = unknown (features go NaN).
+        event_country = st.text_input("\U0001F30D Event country", value="USA")
 
 with st.expander("\U0001F4B0 Bookmaker odds (optional)"):
     odds_red_col, odds_blue_col = st.columns(2)
@@ -133,6 +136,7 @@ if st.button("Predict", type="primary"):
             winner, proba = predict_winner(
                 red, blue, weight_class, title_fight, total_round_number,
                 history, artifacts,
+                event_country=event_country.strip() or None,
             )
             confidence = proba if winner == red else 1 - proba
             st.success(f"**{winner}** wins")

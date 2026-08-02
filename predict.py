@@ -10,6 +10,34 @@ import numpy as np
 import pandas as pd
 
 
+# Serving-side copy of the notebook's country aliasing (Feature: Home Crowd
+# cell): Wikidata's formal country labels vs. ufcstats' location spellings.
+COUNTRY_ALIASES = {
+    "united states of america": "usa",
+    "united states": "usa",
+    "people's republic of china": "china",
+    "kingdom of the netherlands": "netherlands",
+    "czechia": "czech republic",
+    "republic of ireland": "ireland",
+}
+
+
+def home_crowd_flag(fighter_country, event_country):
+    """1.0 if any of the fighter's citizenship countries matches the event's
+    host country, 0.0 if none do, NaN when either side is unknown."""
+    if event_country is None or fighter_country is None or pd.isna(fighter_country):
+        return np.nan
+    countries = {
+        COUNTRY_ALIASES.get(c.strip().lower(), c.strip().lower())
+        for c in str(fighter_country).split(";")
+        if c.strip()
+    }
+    if not countries:
+        return np.nan
+    ec = str(event_country).strip().lower()
+    return float(COUNTRY_ALIASES.get(ec, ec) in countries)
+
+
 def load_artifacts(path="ensemble.joblib"):
     return joblib.load(path)
 
@@ -74,7 +102,7 @@ def head_to_head(red, blue, history):
 
 
 def build_features(red, blue, weight_class, title_fight, total_round_number,
-                    history, feature_names, dtypes):
+                    history, feature_names, dtypes, event_country=None):
     red, blue = red.lower().strip(), blue.lower().strip()
     r_last = last_row(red, history)
     b_last = last_row(blue, history)
@@ -88,7 +116,21 @@ def build_features(red, blue, weight_class, title_fight, total_round_number,
         "h2h_win_diff": r_h2h - b_h2h,
         "weight_class": weight_class,
         "total_round_number": total_round_number,
+        # Upcoming fights are always contested under the current ruleset;
+        # without this the generic fallback below would inherit rules_era
+        # from the fighter's last fight row. Dropped by reindex if the
+        # loaded artifacts predate the feature.
+        "rules_era": 2,
+        # Home-crowd depends on the UPCOMING event's country -- never inherit
+        # it from where each fighter's last fight happened. NaN (unknown) when
+        # no event_country is given or the history predates the country
+        # column; like rules_era, dropped by reindex on older artifacts.
+        "r_home_crowd": home_crowd_flag(r_last.get("r_country"), event_country),
+        "b_home_crowd": home_crowd_flag(b_last.get("b_country"), event_country),
     }
+    predict_dict["home_crowd_diff"] = (
+        predict_dict["r_home_crowd"] - predict_dict["b_home_crowd"]
+    )
 
     for col in feature_names:
         if col in predict_dict:
@@ -132,7 +174,7 @@ def blend_proba(X, models, lgbm, lgbm_weight):
 
 
 def predict_winner(red, blue, weight_class, title_fight, total_round_number,
-                    history, artifacts):
+                    history, artifacts, event_country=None):
     """Returns (winner_name, calibrated_probability_red_wins).
 
     The winner is decided on the raw ensemble score at best_th (a dedicated
@@ -144,6 +186,7 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
     X_pred = build_features(
         red, blue, weight_class, title_fight, total_round_number,
         history, artifacts["feature_names"], artifacts["dtypes"],
+        event_country=event_country,
     )
     raw_proba = float(blend_proba(
         X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"]
