@@ -65,21 +65,17 @@ Decision: ACCEPTED (bug fix).
 ## Queued (implemented, awaiting user retrains — fill each in from the run)
 
 Both queued changes are on the branch; keep the comparisons one-variable by
-running each retrain AT ITS COMMIT:
+running each retrain at its commit. **One command does the whole protocol**
+(snapshots, both retrains, window pinning, auto-logged entries, tests,
+commit + push) — run it from the repo root on the desktop and walk away:
 
 ```bash
-# retrain #1 (baseline v2, pre-scorecards)
-cp ensemble.joblib ensemble_baseline.joblib     # snapshot the Jul-28 model
-git checkout 5cb0a9b -- ufc_prediction_claude.ipynb
-# Restart + Run All (or nbconvert); record entry 1; then:
-cp ensemble.joblib ensemble_baseline.joblib     # v2 becomes the baseline
-# pin the window: set BEST_WINDOW in the Rolling Window Size Search cell
-# to the pair this run chose
-
-# retrain #2 (scorecard features)
-git checkout claude/ufc-prediction-features-at7ht2 -- ufc_prediction_claude.ipynb
-# Restart + Run All; record entry 2 (pooled-OOF McNemar decides)
+bash scripts/run_experiments.sh
 ```
+
+It refuses to start without the Optuna env vars (so the laptop eGPU joins);
+override with `--allow-no-laptop` for desktop-only tuning. Run-1 artifacts
+are stashed in `.experiment_runs/` in case entry 2 gets reverted.
 
 
 ### 1. Baseline v2 — leak-free window search, OOF gate        (retrain #1)
