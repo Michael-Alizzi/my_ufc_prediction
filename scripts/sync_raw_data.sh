@@ -16,14 +16,21 @@ SCRAPER_DIR="$(cd "$TARGET_DIR/.." && pwd)/UFC-Predictions"
 }
 
 cd "$SCRAPER_DIR"
-if ! .venv/bin/python -c '' 2>/dev/null; then
-  # venv missing, or broken by a folder move (venvs bake absolute paths), or
-  # on a filesystem without symlinks (exFAT/FAT USB drives) -- rebuild
-  rm -rf .venv
-  python3 -m venv .venv 2>/dev/null || python3 -m venv --copies .venv
-  .venv/bin/pip install -q -r requirements.txt
+# exFAT/FAT drives can't hold the symlink a Linux venv requires -- fall back
+# to a venv on the internal drive. Moved venvs are rebuilt (absolute paths).
+VENV=.venv
+if ln -s . .symlink_test 2>/dev/null; then
+  rm -f .symlink_test
+else
+  VENV="$HOME/.cache/ufc_scraper_venv"
+  echo "scraper drive can't hold symlinks (exFAT?) -- venv lives at $VENV"
 fi
-.venv/bin/python -m src.create_ufc_data
+if ! "$VENV/bin/python" -c '' 2>/dev/null; then
+  rm -rf "$VENV"
+  python3 -m venv "$VENV"
+  "$VENV/bin/pip" install -q -r requirements.txt
+fi
+"$VENV/bin/python" -m src.create_ufc_data
 
 cp "$SCRAPER_DIR/data/raw_total_fight_data.csv" "$TARGET_DIR/raw_fight_data.csv"
 cp "$SCRAPER_DIR/data/raw_fighter_details.csv" "$TARGET_DIR/raw_fighter_details.csv"

@@ -41,17 +41,26 @@ if [ -z "${OPTUNA_STORAGE_URL:-}" ] || [ -z "${OPTUNA_WORKER_STORAGE_URL:-}" ]; 
   echo "WARNING: running desktop-only (no laptop worker)."
 fi
 
-# A moved repo carries a broken venv (venvs bake absolute paths), and
-# exFAT/FAT USB drives can't hold symlinks -- rebuild with copies if needed.
-if ! .venv/bin/python -c '' 2>/dev/null; then
-  rm -rf .venv
-  python3 -m venv .venv 2>/dev/null || python3 -m venv --copies .venv
+# Venv location: exFAT/FAT drives cannot hold symlinks at all, and a Linux
+# venv REQUIRES one (lib64 -> lib), so if this filesystem can't symlink the
+# venv lives on the internal drive instead. Moved venvs are also rebuilt
+# (they bake absolute paths).
+VENV=.venv
+if ln -s . .symlink_test 2>/dev/null; then
+  rm -f .symlink_test
+else
+  VENV="$HOME/.cache/ufc_prediction_venv"
+  echo "repo drive can't hold symlinks (exFAT?) -- venv lives at $VENV"
 fi
-.venv/bin/pip install -q -r requirements.txt
+if ! "$VENV/bin/python" -c '' 2>/dev/null; then
+  rm -rf "$VENV"
+  python3 -m venv "$VENV"
+fi
+"$VENV/bin/pip" install -q -r requirements.txt
 
 # ── GPU status up front, so a still-broken driver is visible immediately ──
 nvidia-smi -L 2>/dev/null || echo "(nvidia-smi unavailable)"
-.venv/bin/python - <<'PY'
+"$VENV/bin/python" - <<'PY'
 import subprocess, sys
 code = ("import numpy as np; from xgboost import XGBClassifier; "
         "XGBClassifier(n_estimators=2, tree_method='hist', device='cuda').fit("
@@ -69,9 +78,9 @@ mkdir -p "$RUNDIR"
 
 retrain () {  # retrain <slug> <entry title>
   echo "=== retrain $1 started $(date) ==="
-  .venv/bin/python -m jupyter nbconvert --to notebook --execute --inplace \
+  "$VENV/bin/python" -m jupyter nbconvert --to notebook --execute --inplace \
     --ExecutePreprocessor.timeout=-1 "$NB"
-  .venv/bin/python scripts/log_run_metrics.py log "$NB" "$2" | tee "$RUNDIR/$1.log"
+  "$VENV/bin/python" scripts/log_run_metrics.py log "$NB" "$2" | tee "$RUNDIR/$1.log"
   cp ensemble.joblib "$RUNDIR/$1.ensemble.joblib"
   cp fighter_history.parquet "$RUNDIR/$1.fighter_history.parquet"
 }
@@ -86,14 +95,14 @@ cp ensemble.joblib ensemble_baseline.joblib
 git checkout "$BRANCH" -- "$NB"
 WINDOW=$(grep -oP 'PARSED_WINDOW=\K.*' "$RUNDIR/run1-baseline-v2.log" || true)
 if [ -n "$WINDOW" ]; then
-  .venv/bin/python scripts/log_run_metrics.py pin "$NB" ${WINDOW/,/ }
+  "$VENV/bin/python" scripts/log_run_metrics.py pin "$NB" ${WINDOW/,/ }
 else
   echo "WARNING: run-1 window not parsed -- run 2 will re-search (slower, still valid)"
 fi
 retrain run2-scorecards "2. Judge-scorecard features"
 
 # ── verify + ship ──
-.venv/bin/python -m pytest -q test_pipeline_logic.py test_predict.py
+"$VENV/bin/python" -m pytest -q test_pipeline_logic.py test_predict.py
 
 git add "$NB" ensemble.joblib fighter_history.parquet EXPERIMENTS.md
 git commit -m "Retrain runs 1-2: baseline v2 + scorecard experiment (auto-logged in EXPERIMENTS.md)"
