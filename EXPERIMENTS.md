@@ -64,6 +64,24 @@ Decision: ACCEPTED (bug fix).
 
 ## Queued (implemented, awaiting user retrains — fill each in from the run)
 
+Both queued changes are on the branch; keep the comparisons one-variable by
+running each retrain AT ITS COMMIT:
+
+```bash
+# retrain #1 (baseline v2, pre-scorecards)
+cp ensemble.joblib ensemble_baseline.joblib     # snapshot the Jul-28 model
+git checkout 5cb0a9b -- ufc_prediction_claude.ipynb
+# Restart + Run All (or nbconvert); record entry 1; then:
+cp ensemble.joblib ensemble_baseline.joblib     # v2 becomes the baseline
+# pin the window: set BEST_WINDOW in the Rolling Window Size Search cell
+# to the pair this run chose
+
+# retrain #2 (scorecard features)
+git checkout claude/ufc-prediction-features-at7ht2 -- ufc_prediction_claude.ipynb
+# Restart + Run All; record entry 2 (pooled-OOF McNemar decides)
+```
+
+
 ### 1. Baseline v2 — leak-free window search, OOF gate        (retrain #1)
 Change: window search restricted to pre-holdout data; HOLDOUT_START pinned
 at latest−6mo (reproduces the current 120/110 split, so the Jul-28 baseline
