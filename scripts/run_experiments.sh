@@ -18,6 +18,9 @@ NB=ufc_prediction_claude.ipynb
 RUNDIR=.experiment_runs   # gitignored; keeps run-1 artifacts for possible revert
 
 # ── preconditions ──
+# FAT-family filesystems (exFAT USB drives) report every file's mode as
+# changed; set this before the dirty-tree check or it always trips there.
+git config core.filemode false
 [ -f raw_fight_data.csv ] && [ -f raw_fighter_details.csv ] || {
   echo "raw CSVs missing -- run scripts/sync_raw_data.sh once first"; exit 1; }
 git diff --quiet && git diff --cached --quiet || {
@@ -38,7 +41,12 @@ if [ -z "${OPTUNA_STORAGE_URL:-}" ] || [ -z "${OPTUNA_WORKER_STORAGE_URL:-}" ]; 
   echo "WARNING: running desktop-only (no laptop worker)."
 fi
 
-python3 -m venv .venv 2>/dev/null || true
+# A moved repo carries a broken venv (venvs bake absolute paths), and
+# exFAT/FAT USB drives can't hold symlinks -- rebuild with copies if needed.
+if ! .venv/bin/python -c '' 2>/dev/null; then
+  rm -rf .venv
+  python3 -m venv .venv 2>/dev/null || python3 -m venv --copies .venv
+fi
 .venv/bin/pip install -q -r requirements.txt
 
 # ── GPU status up front, so a still-broken driver is visible immediately ──
