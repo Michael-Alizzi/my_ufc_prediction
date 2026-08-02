@@ -18,7 +18,8 @@ def demo():
     history = load_history()
 
     a, b = "Ilia Topuria", "Justin Gaethje"
-    winner, proba = predict_winner(a, b, "Lightweight", True, 5, history, artifacts)
+    winner, proba = predict_winner(a, b, "Lightweight", True, 5, history, artifacts,
+                                   event_country="USA")
     assert winner in (a, b)
     assert 0.0 <= proba <= 1.0
     print(f"{a} vs {b} -> {winner} ({proba:.1%} {a} wins)")

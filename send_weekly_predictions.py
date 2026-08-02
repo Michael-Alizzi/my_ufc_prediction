@@ -2,11 +2,14 @@
 """Predict a UFC fight card and write a markdown results table.
 
 Usage:
-  python send_weekly_predictions.py --fights-json card.json --event-title "UFC ..."
+  python send_weekly_predictions.py --fights-json card.json --event-title "UFC ..." \
+      [--event-country USA]
 
 card.json is a list of {"fighter1", "fighter2", "weight_class"} dicts, each
 optionally with title_fight (bool), rounds (3 or 5, defaults to 3), and
 odds1/odds2 (decimal bookmaker odds for fighter1/fighter2, used to size bets).
+--event-country is the card's host country (feeds the home-crowd features);
+omit it if unknown and they fall back to NaN.
 
 Prints the markdown table and writes it to predictions_output.md. The weekly
 Routine commits that file to the weekly-predictions-log branch — that push is
@@ -25,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def make_predictions(fights, history, artifacts):
+def make_predictions(fights, history, artifacts, event_country=None):
     """Predict each fight and size bets.
 
     Bet sizing: the whole $100 bankroll is split across every side of every
@@ -62,6 +65,7 @@ def make_predictions(fights, history, artifacts):
                 total_round_number=rounds,
                 history=history,
                 artifacts=artifacts,
+                event_country=event_country,
             )
 
             confidence = proba if winner == fighter1 else 1 - proba
@@ -149,12 +153,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fights-json", required=True, help="JSON file with the fight card")
     parser.add_argument("--event-title", default="Upcoming UFC Event")
+    parser.add_argument("--event-country", default=None,
+                        help="Host country of the card, e.g. USA (feeds home-crowd features)")
     args = parser.parse_args()
 
     with open(args.fights_json) as f:
         fights = json.load(f)
 
-    predictions = make_predictions(fights, load_history(), load_artifacts())
+    predictions = make_predictions(fights, load_history(), load_artifacts(),
+                                   event_country=args.event_country)
     if not predictions:
         raise SystemExit("No predictions produced")
 

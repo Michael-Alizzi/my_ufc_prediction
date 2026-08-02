@@ -12,7 +12,9 @@ git history if ever needed.)
 
 Raw data (`raw_fight_data.csv`, `raw_fighter_details.csv`) is produced by a separate sibling scraper
 project at `../UFC-Predictions` (its own `src/createdata/` pipeline) and copied into this repo — this
-repo does not scrape data itself.
+repo does not scrape data itself. Since Aug 2026 the fighter CSV includes a Wikidata-sourced
+`Country` column (citizenship; `;`-joined for dual citizens) feeding the home-crowd features —
+CSVs from before that change still run, the home-crowd features just come out all-NaN.
 
 ## Commands
 
@@ -44,8 +46,10 @@ repo does not scrape data itself.
 .venv/bin/pytest test_pipeline_logic.py -v
 
 # predict a fight card with betting odds (used by the weekly Routine; writes
-# predictions_output.md with a value-bet $100 Kelly split when odds are given)
-.venv/bin/python send_weekly_predictions.py --fights-json card.json --event-title "UFC ..."
+# predictions_output.md with a value-bet $100 Kelly split when odds are given;
+# --event-country feeds the home-crowd features, omit if unknown)
+.venv/bin/python send_weekly_predictions.py --fights-json card.json --event-title "UFC ..." \
+    --event-country USA
 ```
 
 There is no lint/build config; tests are `test_predict.py` and `test_pipeline_logic.py`.
@@ -62,7 +66,9 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
    head-to-head record, KO/submission finish rates, first-round wins, average time-into-the-fight
    for wins/losses, a shared `rules_era` ordinal (pre-unified / unified-2001 / 2017-revision — the
    one non-paired feature; pinned to the current era at predict time in both the notebook's
-   prediction cell and `predict.py`), and Elo rating (the one feature computed via a
+   prediction cell and `predict.py`), home-crowd flags (fighter's Wikidata citizenship vs. the
+   event location's country — supplied per-prediction via `event_country`, never inherited from a
+   fighter's last fight row), and Elo rating (the one feature computed via a
    sequential chronological loop rather than a vectorised cumsum, since each fight's rating depends
    on both fighters' evolving state).
 3. Target/feature selection → correlation check → **rolling-window grid search** to pick how much
