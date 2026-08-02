@@ -129,11 +129,14 @@ automatically.
   of roughly ±9 points. Compare experiments using the notebook's Test Set Stability Check (CLT
   interval + monthly-batch breakdown) and Paired Comparison / McNemar cells, not raw point-estimate
   deltas.
-- **Device is `"cpu"` everywhere right now** (`create_xgb_model()`, the Optuna objective, the top-3
-  refits, the calibration OOF refits) — the desktop GPU was broken by an OS driver update. The
-  laptop's eGPU still runs CUDA trials via `scripts/shared_study_worker.py` (dispatched by the Optuna
-  cell over ssh; needs `OPTUNA_STORAGE_URL` + `OPTUNA_WORKER_STORAGE_URL` in the environment —
-  credentials are never committed). If you change the device story, change all sites together.
+- **XGBoost device is `DEVICE`, probed once at startup** (settings cell: a tiny cuda fit in a
+  subprocess with a timeout, because a broken driver — the desktop's current state — can HANG CUDA
+  init rather than fail it). All four training sites (`create_xgb_model()`, the Optuna objective,
+  the top-3 refits, the calibration OOF refits) reference `DEVICE`; never hardcode a device at one
+  site. The laptop's eGPU joins tuning via `scripts/shared_study_worker.py` (dispatched over ssh;
+  runs the same probe on its own device) — requires `OPTUNA_STORAGE_URL` and
+  `OPTUNA_WORKER_STORAGE_URL` in the environment; credentials are never committed. LightGBM stays
+  CPU-only (a GPU build isn't worth the packaging).
 
 ## Experiment protocol (mandatory for any feature or algorithm change)
 

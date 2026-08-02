@@ -134,13 +134,12 @@ def test_debut_fights_have_no_prior_average_stats(history):
     fight being predicted, or one after it, leaking the outcome into its own
     feature.
 
-    Uses date_d rather than the exported fight_id column: fight_id is a
-    leftover from an earlier pipeline stage and never refreshed after Cell
-    30's dedup, so 5663/8310 rows are out of chronological order relative to
-    date_d -- unreliable for reconstructing "first fight" post export.
-    Fighters whose debut date has two fights (1990s tournament nights) are
-    excluded: which of that day's two fights came first isn't recoverable
-    from date_d alone, so the debut mask can't be checked unambiguously.
+    Uses date_d rather than fight_id: although the export cell now reassigns
+    fight_id in chronological order (it used to be stale pre-dedup garbage),
+    date_d keeps this test independent of that convention. Fighters whose
+    debut date has two fights (1990s tournament nights) are excluded: which
+    of that day's two fights came first isn't recoverable from date_d alone,
+    so the debut mask can't be checked unambiguously.
     """
     long = pd.concat([
         history[["r_fighter", "date_d"]].rename(columns={"r_fighter": "fighter"}),
