@@ -16,6 +16,7 @@ lightgbm
 
 # Hyperparameter Optimization
 optuna
+plotly  # optuna.visualization.plot_optimization_history
 # Shared-study Postgres storage (used only when OPTUNA_STORAGE_URL is set)
 psycopg2-binary
 
