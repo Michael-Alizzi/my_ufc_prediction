@@ -152,7 +152,15 @@ Prediction: Ilia Topuria wins
 Confidence: 64.37% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
+$100 replay (last event, UFC Belgrade — Medić vs Rodríguez): the LOGGED
+(deployed-model) predictions returned $100 → $49 (net −$51). Baseline v2
+re-weighted the same three losing sides and found no value on Musayev — the
+one logged bet that paid off — so it returns $100 → $0 (net −$100).
+Caveat: that card predates the commit-card.json rule, so odds were
+reconstructed from the logged markdown (bet sides only); 3 of 7 fights had
+no odds and no stake from any model (none were bet originally either).
+One-card sample — noise-level evidence, recorded for the protocol not the
+decision.
 Decision: ACCEPTED — hygiene release as pre-registered (1 fix / 0 breaks vs
 the Jul-28 model on the test set); becomes the reference baseline. First
 artifact carrying oof/diff_pairs/train_end.
@@ -191,7 +199,12 @@ Prediction: Ilia Topuria wins
 Confidence: 64.20% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
+$100 replay (last event, UFC Belgrade — Medić vs Rodríguez): identical
+behaviour to baseline v2 — same three losing sides (re-weighted), no value
+found on Musayev: $100 → $0 (net −$100) vs the deployed model's −$51. Since
+baseline v2 *without* scorecards made the same bets, the scorecard features
+are not the differentiator on this card; n=1, noise-level evidence either
+way (same caveats as entry 1).
 Profitability: PENDING — odds backtest queued (accuracy gate was a precise
 null: OOF 0.6171 vs 0.6176, p=0.8312 on 7,869 fights).
 Decision: PENDING the profitability tie-break — if scorecards don't win it,
