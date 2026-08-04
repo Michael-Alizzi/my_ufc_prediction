@@ -100,12 +100,13 @@ auto-log (`scripts/log_run_metrics.py`) → pooled-OOF McNemar gate with the
 profitability tie-break → full revert on rejection. The odds backtest still
 runs on the desktop only (that's where the odds DB lives).
 
-### 3–5. Feature queue        (one CPU retrain each, in order; #3 next up)
-**#3 decay** (wall-clock EWM halflife replaces fight-count) →
+### 4–5. Feature queue        (one CPU retrain each, in order; #4 next up)
 **#4 shrinkage** (finish rates toward weight-class priors) →
 **#5 absorbed/defensive stats**. Implemented one at a time only after the
 previous entry is decided; specs land in docs/METHODOLOGY.md with each.
 Each entry records the full market comparison, not just the paired McNemar.
+(#3 decay: DECIDED without a retrain — see entry 3 at the bottom of this
+log; the notes immediately below are the investigation's history.)
 
 Expectation for #3 (written before the run): `avg_*` halflife becomes 3
 years of wall-clock time instead of 5 fights. The two disagree mainly for
@@ -293,3 +294,41 @@ $100 Belgrade replay showed no advantage either. Static coverage (mid-2020
 →late-2024, frozen) only shrinks going forward; a scorecards-v2 sourced from
 ufcstats' own judge totals (~4x coverage, weekly-refreshed) is the queued
 successor idea.
+
+### 3. Career-average decay basis — two-round search, status quo kept        2026-08-04, decided WITHOUT a gating retrain
+Change investigated (one variable): the `avg_*` EWM decay basis — wall-clock
+halflife (round 1, desktop GPU), then fight-count halflives vs a flat career
+mean, every candidate pin-eligible (round 2, cloud CPU, committed CSVs).
+Round-1 results are recorded in the queue notes above. Round 2 (proxy CV:
+`avg_*_diff` block alone, default XGBoost, pinned 72/6 window, pre-holdout):
+
+```
+halflife 2 fights : AUC 0.5372
+halflife 3 fights : AUC 0.5307
+halflife 5 fights : AUC 0.5306   <- production formula
+halflife 8 fights : AUC 0.5355
+halflife 12 fights: AUC 0.5336
+halflife 20 fights: AUC 0.5383   <- nominal top
+flat (no decay)   : AUC 0.5333
+3.0y wall-clock   : AUC 0.5281   <- round-1 winner, now LAST
+```
+
+The ordering is erratic (2 and 20 fights on top, 3/5 at the bottom — no
+dose-response curve) and round 1's winner finished last in round 2:
+rankings that don't replicate are fold noise, not signal. Autocorrelation
+(both units, floor-decay fits): pooled correlations decay extremely slowly
+(0.177 → 0.119 over 6 years; 0.176 → 0.110 over 11 fights); fits mostly
+degenerate (floor pinned at 0), with `sig_str_frac` the one stat showing an
+identified fast form component over a real floor (a=0.105, h=1.23y).
+Finding: fighter stat profiles are highly persistent, and short-term form
+is already carried by dedicated features (`prev_win`, streaks,
+`days_since_last`, Elo) — the career-average decay formula is a non-factor
+for this model.
+Market comparison / McNemar / $100 replay: N/A — no candidate shipped; the
+model and artifacts are unchanged (baseline v2 remains current).
+Decision: KEEP the production 5-fight halflife (`AVG_SPEC` pinned
+`("fights", 5)`); the wall-clock change was REVERTED before ever training a
+gated model. The decay question is CLOSED — don't re-tune it without new
+evidence. (Possible far-future lead, not queued: `sig_str_frac`'s fast form
+component hints per-family decay could matter for accuracy-type stats
+specifically.)

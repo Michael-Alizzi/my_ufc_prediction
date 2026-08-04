@@ -61,30 +61,32 @@ cumsum pattern is group-safe.
 
 ## 4. Career averages (exponentially weighted)
 
-**Math.** For a stat sequence $x_1..x_{t-1}$ over a fighter's prior fights
-at dates $d_1..d_{t-1}$, the EWM mean with **wall-clock** halflife $h$ is
+**Math.** For a stat sequence $x_1..x_{t-1}$ over a fighter's prior fights,
+the EWM mean with fight-count halflife $h$ is
 $$\bar{x}_t = \frac{\sum_{i<t} w_i x_i}{\sum_{i<t} w_i},\qquad
-  w_i = 0.5^{(d_{t-1}-d_i)/h}$$
-Current setting: $h = 3$ years, chosen by a rolling-window CV grid search
-over `[1, 1.5, 2, 3, 4, 5, 7, 10, 15]` years plus a no-decay reference
-(previously a round-number guess; previously still $h = 5$ *fights* before
-that, i.e. $w_i = 0.5^{(t-1-i)/5}$) — full search results, an independent
-autocorrelation-based cross-check, and why the two only partly agree are in
-EXPERIMENTS.md entry 3. Medians (`med_*`) are rolling medians of the same
-fight sequences; near-duplicate medians (corr > 0.95 with their mean twin
-on pre-holdout data) are dropped.
+  w_i = 0.5^{(t-1-i)/h}$$
+Current setting: $h = 5$ fights — the original production formula, **kept**
+after a two-round data-driven search (wall-clock grids 1–15y, fight-count
+grids 2–20, a flat no-decay mean, and floor-decay autocorrelation
+diagnostics in both years and fights) found the decay basis to be a
+non-factor: every candidate within fold noise on the proxy CV, and rankings
+that did not replicate between rounds (round 1's winner finished last in
+round 2). Full record: EXPERIMENTS.md entry 3. Medians (`med_*`) are
+rolling medians of the same fight sequences; near-duplicate medians
+(corr > 0.95 with their mean twin on pre-holdout data) are dropped.
 
-**Plain.** A fighter's recent form says more about who they are today than
-fights from 2015, so recent fights get more weight — a performance three
-years before their latest fight counts half as much as the latest one.
-Decaying by *calendar time* rather than fight count matters exactly for
-inactive fighters: under the old 5-fight halflife, someone returning from a
-four-year layoff had their 2021 performances counted as "recent", while an
-active fighter's 18-month-old fights faded just as fast. Wall-clock decay
-makes "recent" mean the same thing for both. One served-value limitation
-(unchanged from before): the average decays to the fighter's *last-fight*
-date, not to today — a returning fighter's layoff shows up in
-`days_since_last`, not by further shrinking their averages.
+**Plain.** Recent fights get more weight — a performance five fights back
+counts half as much as the latest one. Whether "recent" should mean *fights*
+or *years* (they differ for fighters returning from long layoffs) was
+investigated and turned out not to matter: fighter stat profiles are highly
+persistent (the measured autocorrelation barely decays over six years), and
+the model already gets short-term form from dedicated features (`prev_win`,
+streaks, `days_since_last`, Elo), so the averages function as a stable
+description of *who the fighter is*, where the exact decay formula is
+inconsequential. One served-value limitation: the average decays to the
+fighter's *last-fight* position, not to today — a returning fighter's
+layoff shows up in `days_since_last`, not by further shrinking their
+averages.
 
 ## 5. Elo rating
 
