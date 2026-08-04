@@ -76,52 +76,50 @@ Decision: ACCEPTED (bug fix).
 
 ---
 
-## Queued (implemented, awaiting user retrains — fill each in from the run)
+## Queued (next experiments, in order)
 
-Both queued changes are on the branch; keep the comparisons one-variable by
-running each retrain at its commit. **One command does the whole protocol**
-(snapshots, both retrains, window pinning, auto-logged entries, tests,
-commit + push) — run it from the repo root on the desktop and walk away:
+**The bar is the market, not a coin flip** (see CLAUDE.md → What this repo
+is): closing favourites win 66.3% / log-loss 0.6089 on the 5,786 backtested
+fights vs the model's 61.2% / 0.642. An experiment that improves accuracy
+without closing that gap hasn't moved the needle that matters.
 
-```bash
-bash scripts/run_experiments.sh
-```
+**Compute note (2026-08-04):** retrains now run on **cloud CPU** (the same
+path as the weekly pipeline) rather than the desktop/laptop GPUs — the
+DEVICE probe falls back to cpu automatically; expect longer wall-clock. The
+per-run protocol is unchanged: snapshot baseline → one variable → full run →
+auto-log (`scripts/log_run_metrics.py`) → pooled-OOF McNemar gate with the
+profitability tie-break → full revert on rejection. The odds backtest still
+runs on the desktop only (that's where the odds DB lives).
 
-It refuses to start without the Optuna env vars (so the laptop eGPU joins);
-override with `--allow-no-laptop` for desktop-only tuning. Run-1 artifacts
-are stashed in `.experiment_runs/` in case entry 2 gets reverted.
+### 3. Beat-the-market betting rule        (next up — no retrain, decision layer)
+Change: use the market as an input to bet selection instead of betting
+against it. The current value-bet rule stakes wherever model probability
+beats implied probability — which concentrates bets exactly where the model
+disagrees with a better-calibrated market (84% underdogs, −9.5% ROI in the
+close-vs-onesided segment). Candidate replacement: bet only when the model
+agrees with the market's direction AND its edge over the implied probability
+exceeds the vig (ride the market selectively, never fade it); compare
+against a shrunk blend (model proba shrunk toward the vig-free implied
+probability) as the staking input. Evaluated on the same OOF-with-odds
+fights via `scripts/odds_backtest.py` on the desktop — model artifacts
+unchanged, so no McNemar gate; the gate IS the ROI comparison against the
+current rule on identical fights.
+Expectation (written before the run): flat/Kelly ROI improves mainly by
+*not betting* the worst segment; total bet count drops sharply. If no
+positive-ROI rule exists at closing odds, that finding gets recorded
+honestly — the model then needs to get better, not the staking cleverer.
 
-
-### 1. Baseline v2 — leak-free window search, OOF gate        (retrain #1)
-Change: window search restricted to pre-holdout data; HOLDOUT_START pinned
-at latest−6mo (reproduces the current 120/110 split, so the Jul-28 baseline
-stays comparable); LightGBM subsample activated (subsample_freq); DEVICE
-auto-probe. Window re-searched this once — pin `BEST_WINDOW` to the chosen
-pair afterwards.
-Expectation (written before the run): hygiene, not a metric mover — the old
-leak touched ~1 fold of the winning combo. This run's export becomes the
-first artifact carrying `oof`/`diff_pairs`/`train_end`; snapshot it as the
-baseline for everything below.
-
-### 2. Judge-scorecard features        (retrain #2)
-Change: + r_/b_avg_dec_margin, close_dec_rate, dominant_dec_rate (+diffs).
-Expectation (written before the run): SMALL effect. Coverage is ~1,000
-scored decisions (mid-2020→late-2024, frozen thereafter — static vendored
-file); holdout fights are 2026, where career aggregates carry late-2024
-values for established fighters and NaN for newcomers. Gate on pooled OOF;
-revert fully if it loses.
-
-### 3–6. Queued experiments (one retrain each, in order)
+### 4–7. Feature/algorithm queue (one CPU retrain each, in order)
 decay (wall-clock EWM halflife replaces fight-count) → shrinkage
 (finish rates toward weight-class priors) → absorbed/defensive stats →
 opponent-adjusted performance. Implemented one at a time only after the
-previous entry is decided; specs in docs/METHODOLOGY.md as they land.
+previous entry is decided; specs in docs/METHODOLOGY.md as they land. Each
+entry records the market-baseline comparison, not just the paired McNemar.
 
-### 7. Historical odds backtest (gated)
-mma-ai's BestFightOdds dump: ~2.5 GB on Hugging Face, repo carries NO
-license → download privately on your own machine only; nothing from it gets
-committed here. Deliverable: accuracy vs closing line + $100 Kelly ROI over
-history, aggregated numbers only in this log.
+### Later: scorecards v2 (successor to the reverted entry 2)
+Same three decision-margin features, sourced from ufcstats' own judge
+totals instead of the static UFC-DataLab CSV (~4× coverage, refreshed
+weekly by the scraper). Worth a retrain only after the queue above settles.
 
 ---
 

@@ -10,6 +10,13 @@ is the single source of truth for the modeling pipeline. (Two superseded noteboo
 `ufc_prediction.ipynb` and `ufc_analysis.ipynb`, were removed in the Aug 2026 cleanup — recover from
 git history if ever needed.)
 
+**The goal is to beat the betting market, not just to predict winners.** The 2026 odds backtest
+(EXPERIMENTS.md entries 1–2) measured the bar: closing favourites win 66.3% with log-loss 0.6089 on
+5,786 historical fights, while the model sits at 61.2% / 0.642 — so bets defined by disagreeing with
+the market lose (the "model close / bookies one-sided" segment ran −9.5% ROI). Every experiment is
+judged against the market baseline (`scripts/odds_backtest.py`), not against a coin flip, and the
+end-state is a model + staking rule with positive expected ROI at closing odds.
+
 Raw data (`raw_fight_data.csv`, `raw_fighter_details.csv`) is produced by a separate sibling scraper
 project at `../UFC-Predictions` (its own `src/createdata/` pipeline) and copied into this repo — this
 repo does not scrape data itself. Since Aug 2026 the fighter CSV includes a Wikidata-sourced
@@ -68,9 +75,7 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
    one non-paired feature; pinned to the current era at predict time in both the notebook's
    prediction cell and `predict.py`), home-crowd flags (fighter's Wikidata citizenship vs. the
    event location's country — supplied per-prediction via `event_country`, never inherited from a
-   fighter's last fight row), judge-scorecard history (prior-decision margin/closeness/dominance from
-   the vendored `data/SCORECARDS.csv`, UFC-DataLab, MIT — NaN outside its mid-2020→late-2024
-   coverage), and Elo rating (the one feature computed via a
+   fighter's last fight row), and Elo rating (the one feature computed via a
    sequential chronological loop rather than a vectorised cumsum, since each fight's rating depends
    on both fighters' evolving state). Full definitions with math + plain explanations:
    `docs/METHODOLOGY.md` and `docs/DATA_DICTIONARY.md`; run history: `EXPERIMENTS.md`.

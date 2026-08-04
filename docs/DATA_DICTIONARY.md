@@ -13,7 +13,6 @@ mean/median of a per-fight stat. Every corner feature exists as an
 |---|---|---|
 | `raw_fight_data.csv` (`;`-delimited) | one row per fight | fighter names, date, location, winner, win_by (method), last_round, last_round_time, format, referee, per-corner totals: KD, SIG_STR (x of y), TOTAL_STR, TD, SUB_ATT, REV, CTRL (m:ss), head/body/leg + distance/clinch/ground breakdowns |
 | `raw_fighter_details.csv` | one row per fighter | fighter_name, Height, Weight, Reach, Stance, DOB, **Country** (Wikidata citizenship, `;`-joined for dual citizens; added Aug 2026 — older CSVs lack it and home-crowd features go NaN) |
-| `data/SCORECARDS.csv` (vendored) | one row per scored fight | red/blue name (UPPERCASE), event_date (DD/MM/YYYY), three per-judge fight totals per corner (`"29 28 28"`); `- - -` = unpublished/failed OCR. Source: [UFC-DataLab](https://github.com/komaksym/UFC-DataLab), MIT license. Coverage ≈ 2020-05 → 2024-11 (UFC only publishes scorecards since mid-2020). Refresh by re-vendoring from upstream. |
 
 ## 2. Cleaned per-fight columns (notebook cells 6–12)
 
@@ -43,7 +42,6 @@ tournament nights are deduplicated on (r_fighter, b_fighter, date).
 | Elo | `r_/b_elo`, `elo_diff` | pre-fight Elo (K=32, start 1500), sequential update |
 | Rules era | `rules_era` | shared ordinal: 0 pre-unified, 1 unified rules (Apr 2001), 2 post-2017 revision; pinned to 2 at predict time |
 | Home crowd | `r_/b_home_crowd`, `home_crowd_diff` | 1 if any citizenship matches the event country, 0 if none, NaN unknown; supplied per-prediction via `event_country`, never inherited from a past fight |
-| **Scorecards** | `r_/b_avg_dec_margin`, `close_dec_rate`, `dominant_dec_rate` (+diffs) | prior-decision profile from judge totals: mean median-judge margin **per round** (fighter perspective); share of decisions within 1 point; share with margin > rounds (⇒ at least one 10-8 round). NaN outside scorecard coverage or before a fighter's first scored decision |
 
 Shared context columns (no r/b pair, untouched by mirroring): `gender`,
 `weight_class`, `title_fight`, `total_round_number`, `total_minutes`,

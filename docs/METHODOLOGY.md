@@ -95,33 +95,7 @@ $E \approx 0.24$, so they gain $32 \times 0.76 \approx +24$ points and the
 favourite loses 24. It summarises strength-of-schedule that raw win/loss
 records can't see.
 
-## 6. Judge-scorecard history (decision-quality profile)
-
-**Math.** For a scored decision with per-judge totals
-$(r_j, b_j)_{j=1..3}$, define the fighter-perspective margin
-$m = \operatorname{median}_j (r_j - b_j)$ (negated for the blue corner)
-over $n$ completed rounds. Three career, prior-decision aggregates:
-$$\text{avg\_dec\_margin} = \overline{m/n},\quad
-  \text{close\_dec\_rate} = \overline{\mathbb{1}[|m|\le 1]},\quad
-  \text{dominant\_dec\_rate} = \overline{\mathbb{1}[m > n]}$$
-The dominance test is a pigeonhole bound: if every round margin were $\le 1$
-(all 10-9), the total margin would be $\le n$; $m > n$ therefore implies at
-least one 10-8 (or wider) round. (Point deductions can also produce it —
-rare, accepted noise.)
-
-**Plain.** Two fighters can both be "3-0 in their last three" while one won
-three 30-27 sweeps and the other survived three split decisions — the win
-column can't tell them apart, the scorecards can. The median judge is used
-because with three judges the median always sides with the majority and is
-immune to one OCR-mangled or rogue card. Margins are per-round so a 50-45
-five-rounder (margin 5 over 5 rounds = 1.0/round) correctly outranks a
-29-28 (0.33/round). Close-decision rate flags fighters who "live on the
-judges' mercy"; dominance rate flags fighters who take rounds 10-8.
-Coverage caveat: the UFC only publishes scorecards since mid-2020 and the
-vendored file ends late-2024, so these are NaN outside that window — the
-models treat NaN as "unknown", exactly right here.
-
-## 7. Walk-forward cross-validation and window search
+## 6. Walk-forward cross-validation and window search
 
 **Math.** Folds slide over calendar months: fold $k$ trains on
 $[T_k - W_{tr},\ T_k)$ and tests on $[T_k,\ T_k + W_{te})$, stepping by
@@ -143,7 +117,7 @@ much history helps?" — too little is noisy, too much drags in a stale meta.
 The window is **pinned** between deliberate re-searches so experiments
 change one thing at a time.
 
-## 8. Hyperparameter search (Optuna / TPE)
+## 7. Hyperparameter search (Optuna / TPE)
 
 **Math.** The Tree-structured Parzen Estimator models
 $P(\text{params} \mid \text{score good})$ and
@@ -159,7 +133,7 @@ grid of recipes. The desktop and laptop each run trials against the same
 scoreboard, so the search is one coordinated 100-trial effort, not two
 blind 50s.
 
-## 9. The ensemble
+## 8. The ensemble
 
 **Math.** Final score
 $$p = (1-w)\cdot\tfrac{1}{3}\textstyle\sum_{k=1}^{3} p_{\text{xgb}_k} + w\cdot p_{\text{lgbm}}$$
@@ -170,9 +144,9 @@ $w \in \{0, 0.25, 0.5\}$ chosen by validation AUC.
 some of each one's individual quirks; LightGBM (a different algorithm
 family) is blended in only if the validation slice says it helps. Only
 three candidate weights are considered on ~120 validation fights — a finer
-grid would overfit the slice (see §11 for the same logic).
+grid would overfit the slice (see §10 for the same logic).
 
-## 10. Probability calibration (Platt, centered)
+## 9. Probability calibration (Platt, centered)
 
 **Math.** A logistic regression with no intercept fit on centered pooled-OOF
 scores: $\hat{p}_{\text{cal}} = \sigma(\beta (p_{\text{raw}} - 0.5))$, so
@@ -184,21 +158,21 @@ frequencies ("0.7" might win 65% or 80% of the time). Calibration reshapes
 the displayed confidence so that fights shown as 70% really win about 70%
 of the time — fit on thousands of pooled walk-forward predictions, never on
 the tiny validation slice. Pinning 0.5→0.5 guarantees the displayed
-favourite always matches the decision (§11). Example: raw 0.62 might
+favourite always matches the decision (§10). Example: raw 0.62 might
 display as 0.68 after calibration; raw 0.50 always displays as 0.50.
 
-## 11. The fixed 0.5 decision threshold
+## 10. The fixed 0.5 decision threshold
 
 **Math.** Winner $= \mathbb{1}[p \ge 0.5]$. Not tuned. Mirroring (§2) makes
 the training prior exactly 0.5, so 0.5 is the natural operating point.
 
 **Plain.** An earlier version tuned the threshold on ~120 validation fights
 and lost 6 points of test accuracy — a textbook case of fitting noise in a
-small sample (±9-point CI, §12). The threshold stays at the symmetric
+small sample (±9-point CI, §11). The threshold stays at the symmetric
 default; probability quality is handled by calibration, not by moving the
 cutoff.
 
-## 12. Evaluating a run
+## 11. Evaluating a run
 
 **Math.** Test accuracy $\hat{p}$ over $n \approx 110$ fights carries a CLT
 interval $\hat{p} \pm 1.96\sqrt{\hat{p}(1-\hat{p})/n} \approx \pm 9$ points.
@@ -219,7 +193,7 @@ is visible there, and invisible on 110. Example: baseline right / new wrong
 on 8 fights, reverse on 19 → McNemar $p \approx 0.05$; on the test set the
 same ratio would be 1-2 fights and meaningless.
 
-## 13. Betting layer (Kelly staking)
+## 12. Betting layer (Kelly staking)
 
 **Math.** For decimal odds $o$ and model probability $p$, edge $= po - 1$;
 the Kelly fraction is
@@ -235,7 +209,7 @@ the model expects to LOSE — a near-coin-flip priced as a lock is value on
 the underdog. Model edge over bookmakers is unproven; the $100 framing caps
 worst-case loss by design.
 
-## 14. Serving-time reconstruction
+## 13. Serving-time reconstruction
 
 **Math.** Serving builds a feature row from each fighter's most recent
 history row, reoriented so the `r_*` side always describes that fighter;
@@ -254,7 +228,7 @@ against each fighter's own history for a pair who never met (a pair who
 last fought *each other* hides this bug class — their "last opponent" is
 each other).
 
-## 15. Experiment protocol and the $100 replay
+## 14. Experiment protocol and the $100 replay
 
 See CLAUDE.md (protocol) and EXPERIMENTS.md (log + template). One variable
 per retrain; pooled-OOF McNemar decides; rejected changes are fully
@@ -263,7 +237,7 @@ predictions** from `weekly-predictions-log` — re-predicting a past event
 through current history is forbidden because the event's outcome is already
 inside `head_to_head` and both fighters' last rows (self-inclusion leak).
 
-## 16. Security notes
+## 15. Security notes
 
 - `ensemble.joblib` / `fighter_history.parquet` are pickle-family artifacts:
   loading them executes code by design. Only ever load the repo's own

@@ -22,7 +22,7 @@ INTERESTING = re.compile(
     r"^(XGBoost device:|Best window:|Training period:|Window pinned|"
     r"Shared study|Postgres unreachable|OPTUNA_STORAGE_URL not set|"
     r"Laptop eGPU joined|Laptop unreachable|Worker storage env vars|"
-    r"Scorecards joined|diff_pairs verified|Pooled OOF for export:|"
+    r"diff_pairs verified|Pooled OOF for export:|"
     r"Pooled test accuracy:|95% CI|Batch accuracy:|"
     r"No ensemble_baseline|Baseline accuracy:|This run accuracy:|"
     r"New fixes|New breaks|Test-set McNemar|McNemar p-value|"

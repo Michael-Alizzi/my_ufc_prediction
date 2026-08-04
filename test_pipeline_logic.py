@@ -128,28 +128,6 @@ def test_serving_features_come_from_the_named_fighter(artifacts, history):
         )
 
 
-def test_vendored_scorecards_parse(history):
-    """data/SCORECARDS.csv (vendored from UFC-DataLab, MIT) must keep
-    parsing: semicolon-delimited, three per-judge integer totals per corner,
-    DD/MM/YYYY dates. The notebook's scorecard cell has the full join QA;
-    this guards the vendored file itself against a bad refresh."""
-    sc = pd.read_csv("data/SCORECARDS.csv", sep=";")
-    assert list(sc.columns) == [
-        "red_fighter_name", "blue_fighter_name", "event_date",
-        "red_fighter_total_pts", "blue_fighter_total_pts",
-    ]
-    pd.to_datetime(sc["event_date"], format="%d/%m/%Y")  # raises on drift
-
-    def parses(s):
-        try:
-            return len([int(x) for x in str(s).split()]) == 3
-        except ValueError:
-            return False
-
-    valid = sc["red_fighter_total_pts"].map(parses) & sc["blue_fighter_total_pts"].map(parses)
-    assert valid.sum() > 1500, f"only {valid.sum()} parseable scorecard rows"
-
-
 def test_debut_fights_have_no_prior_average_stats(history):
     """avg_r_*/avg_b_* must be NaN on a fighter's true first-ever appearance
     (in either corner) -- otherwise the average would be computed using the
