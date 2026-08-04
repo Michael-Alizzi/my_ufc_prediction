@@ -77,5 +77,6 @@ the Paired Comparison cell reads it.
 `predictions_output.md` — the card's predictions, confidences, and the $100
 Kelly split. `card.json` — the exact card + odds used, committed beside it
 so any future model can replay the same card mechanically ($100 replay
-metric; see EXPERIMENTS.md). `raw_data.sha256` (master) — checksum state for
-skip-unchanged-retrain logic.
+metric; see EXPERIMENTS.md). Skip-unchanged-retrain logic diffs the freshly
+scraped CSVs against the committed copies (the raw CSVs are tracked in git
+since Aug 2026).

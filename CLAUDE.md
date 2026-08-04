@@ -19,7 +19,10 @@ end-state is a model + staking rule with positive expected ROI at closing odds.
 
 Raw data (`raw_fight_data.csv`, `raw_fighter_details.csv`) is produced by a separate sibling scraper
 project at `../UFC-Predictions` (its own `src/createdata/` pipeline) and copied into this repo — this
-repo does not scrape data itself. Since Aug 2026 the fighter CSV includes a Wikidata-sourced
+repo does not scrape data itself. The CSVs are **committed to git** (since Aug 2026; they were
+gitignored before): ufcstats blocks datacenter IPs so "re-scrape anytime" is false in most
+environments, and committed data pins every experiment to the exact rows it trained on. Refreshing
+data = a new scrape committed with the retrain it feeds. Since Aug 2026 the fighter CSV includes a Wikidata-sourced
 `Country` column (citizenship; `;`-joined for dual citizens) feeding the home-crowd features —
 CSVs from before that change still run, the home-crowd features just come out all-NaN.
 
