@@ -152,6 +152,12 @@ Prediction: Ilia Topuria wins
 Confidence: 64.37% that Ilia Topuria wins
 ```
 
+Profitability (OOF vs closing odds, scripts/odds_backtest.py; 5786/7869 OOF
+fights matched to odds, 74% coverage): flat ROI -0.5% (5368 bets, hit
+39.0%), kelly ROI +0.9%, close-vs-onesided segment ROI -9.5% (1637 bets, hit
+25.5%); market favourite wins 66.3% on the same fights (market log-loss
+0.6089 vs this model's 0.6422).
+
 $100 replay (last event, UFC Belgrade — Medić vs Rodríguez): the LOGGED
 (deployed-model) predictions returned $100 → $49 (net −$51). Baseline v2
 re-weighted the same three losing sides and found no value on Musayev — the
@@ -205,9 +211,16 @@ found on Musayev: $100 → $0 (net −$100) vs the deployed model's −$51. Sinc
 baseline v2 *without* scorecards made the same bets, the scorecard features
 are not the differentiator on this card; n=1, noise-level evidence either
 way (same caveats as entry 1).
-Profitability: PENDING — odds backtest queued (accuracy gate was a precise
-null: OOF 0.6171 vs 0.6176, p=0.8312 on 7,869 fights).
-Decision: PENDING the profitability tie-break — if scorecards don't win it,
-REVERT per protocol (static coverage only shrinks going forward; a
-scorecards-v2 sourced from ufcstats' own judge totals, ~4x coverage and
-weekly-refreshed, is the queued successor idea).
+Profitability (OOF vs closing odds, scripts/odds_backtest.py; 5786/7869 OOF
+fights matched to odds, 74% coverage): flat ROI -0.8% (5378 bets, hit
+38.7%), kelly ROI +0.6%, close-vs-onesided segment ROI -9.8% (1728 bets, hit
+25.5%); market favourite wins 66.3% on the same fights (market log-loss
+0.6089 vs this model's 0.6431). Baseline v2 leads on every metric here
+(higher flat ROI, higher kelly ROI, better segment ROI, better log-loss) —
+tie-break goes against scorecards.
+Decision: REVERTED — pooled-OOF McNemar was a statistical tie (p=0.8312);
+the profitability tie-break favors baseline v2 on every metric, and the
+$100 Belgrade replay showed no advantage either. Static coverage (mid-2020
+→late-2024, frozen) only shrinks going forward; a scorecards-v2 sourced from
+ufcstats' own judge totals (~4x coverage, weekly-refreshed) is the queued
+successor idea.
