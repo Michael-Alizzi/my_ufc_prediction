@@ -28,11 +28,25 @@ Test:       acc ... (n=..., 95% CI [..., ...]), AUC ...
 Monthly batches: ... ± ... over ... months
 Paired vs baseline: pooled-OOF McNemar p=... (fixes ..., breaks ...);
                     test-set McNemar p=...
+Profitability (OOF vs closing odds, scripts/odds_backtest.py): flat ROI ...,
+    kelly ROI ..., close-vs-onesided segment ROI ... (n bets ...);
+    market favourite wins ...% on the same fights.
 $100 replay (last event): scored the LOGGED pre-event predictions from
     weekly-predictions-log against results: old model $... -> $... return.
     New model's stakes on the same card: <table or one-liner>.
 Decision: ACCEPTED / REVERTED — why.
 ```
+
+**Profitability rule:** betting is the model's end use, so each entry also
+records value-bet profitability: both models' pooled-OOF predictions scored
+against historical closing odds (BestFightOdds via the locally-restored
+mma-ai dump — unlicensed upstream, so the odds DB lives ONLY on the desktop
+and only aggregate numbers appear here). `scripts/odds_backtest.py` reports
+flat and Kelly ROI, the "model-close / bookies-one-sided" segment (the
+strategy actually bet), and the market-favourite baseline. Role: the
+pooled-OOF McNemar remains the accuracy gate; **when that gate is a
+statistical tie, the profitability comparison on common fights breaks the
+tie** — equal accuracy does not mean equal betting value.
 
 **$100 replay rule:** always score the *logged* pre-event predictions
 (`weekly-predictions-log` branch) — never re-predict a past event through
@@ -139,7 +153,9 @@ Confidence: 64.37% that Ilia Topuria wins
 ```
 
 $100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Decision: ACCEPTED — hygiene release as pre-registered (1 fix / 0 breaks vs
+the Jul-28 model on the test set); becomes the reference baseline. First
+artifact carrying oof/diff_pairs/train_end.
 
 ---
 
@@ -176,4 +192,9 @@ Confidence: 64.20% that Ilia Topuria wins
 ```
 
 $100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Profitability: PENDING — odds backtest queued (accuracy gate was a precise
+null: OOF 0.6171 vs 0.6176, p=0.8312 on 7,869 fights).
+Decision: PENDING the profitability tie-break — if scorecards don't win it,
+REVERT per protocol (static coverage only shrinks going forward; a
+scorecards-v2 sourced from ufcstats' own judge totals, ~4x coverage and
+weekly-refreshed, is the queued successor idea).
