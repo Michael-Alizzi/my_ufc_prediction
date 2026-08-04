@@ -35,7 +35,7 @@ tournament nights are deduplicated on (r_fighter, b_fighter, date).
 | Record | `r_/b_current_wins/losses`, `current_win_frac` (+diff) | prior UFC record |
 | Activity | `r_/b_days_since_last`, `fights_last_365` (+diff) | layoff and fight frequency |
 | Physique | `height_cm`, `weight_kg`, `reach_cm`, `bmi`, `age`, `stance` (+diffs) | from fighter details; ages computed at fight date |
-| Finish profile | `r_/b_ko_win_rate`, `sub_win_rate`, `ko_loss_rate`, `sub_loss_rate` (+diffs) | share of prior fights won/lost by KO / submission |
+| Finish profile | `r_/b_ko_win_rate`, `sub_win_rate`, `ko_loss_rate`, `sub_loss_rate` (+diffs) | share of prior fights won/lost by KO / submission, **shrunk** toward the weight class's pre-holdout base rate with K=5 pseudo-fights (`(K·p_wc + count)/(K + n)`, METHODOLOGY §6); debuts get the pure class prior, so these are never NaN |
 | First-round wins | `r_/b_first_round_wins` (+diff) | career count of round-1 wins |
 | Fight-time profile | `r_/b_avg_win_time`, `avg_loss_time` (+diffs) | mean minutes-into-the-fight at which prior wins/losses arrived (full earlier rounds + final-round clock) |
 | Head-to-head | `h2h_fight_count`, `r_/b_h2h_wins`, `h2h_win_diff` | prior meetings of this exact pair |

@@ -108,6 +108,21 @@ Each entry records the full market comparison, not just the paired McNemar.
 (#3 decay: DECIDED without a retrain — see entry 3 at the bottom of this
 log; the notes immediately below are the investigation's history.)
 
+Expectation for #4 (written before the run, 2026-08-04): the 4 finish-rate
+stats (`ko_win_rate`, `sub_win_rate`, `ko_loss_rate`, `sub_loss_rate`, both
+corners + diffs) are REPLACED by empirical-Bayes shrunk versions —
+`(K·p_wc + count) / (K + n)` with K=5 pseudo-fights at the weight class's
+pre-holdout base rate `p_wc`; debuts get the pure class prior instead of
+NaN. Mechanism: raw rates scream on tiny samples (1 KO in 2 fights reads
+"50% finisher"), and trees split on those loud lies; shrinkage silences
+exactly the small-n rows while leaving veterans' rates almost untouched.
+Expect a small positive effect concentrated on fights involving
+short-record fighters; possible null if the trees were already routing
+around noisy rates via n-correlated features. Gate: pooled-OOF McNemar vs
+baseline v2, market comparison recorded, full revert if it loses. Same
+column names (values change, schema doesn't), so mirroring/selection/
+serving are untouched.
+
 Expectation for #3 (written before the run): `avg_*` halflife becomes 3
 years of wall-clock time instead of 5 fights. The two disagree mainly for
 fighters returning from long layoffs (their stale form now fades properly);
