@@ -65,10 +65,14 @@ cumsum pattern is group-safe.
 at dates $d_1..d_{t-1}$, the EWM mean with **wall-clock** halflife $h$ is
 $$\bar{x}_t = \frac{\sum_{i<t} w_i x_i}{\sum_{i<t} w_i},\qquad
   w_i = 0.5^{(d_{t-1}-d_i)/h}$$
-Current setting: $h = 3$ years (EXPERIMENTS.md entry 3; previously
-$h = 5$ *fights*, i.e. $w_i = 0.5^{(t-1-i)/5}$). Medians (`med_*`) are
-rolling medians of the same fight sequences; near-duplicate medians
-(corr > 0.95 with their mean twin on pre-holdout data) are dropped.
+Current setting: $h = 3$ years, chosen by a rolling-window CV grid search
+over `[1, 1.5, 2, 3, 4, 5, 7, 10, 15]` years plus a no-decay reference
+(previously a round-number guess; previously still $h = 5$ *fights* before
+that, i.e. $w_i = 0.5^{(t-1-i)/5}$) — full search results, an independent
+autocorrelation-based cross-check, and why the two only partly agree are in
+EXPERIMENTS.md entry 3. Medians (`med_*`) are rolling medians of the same
+fight sequences; near-duplicate medians (corr > 0.95 with their mean twin
+on pre-holdout data) are dropped.
 
 **Plain.** A fighter's recent form says more about who they are today than
 fights from 2015, so recent fights get more weight — a performance three

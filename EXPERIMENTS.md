@@ -114,6 +114,53 @@ active fighters' averages barely move. Expect a small effect concentrated
 on comeback fights; gate on pooled-OOF McNemar vs baseline v2 with the
 market comparison recorded, full revert if it loses.
 
+**Halflife selection (2026-08-04, notebook cells 14-15, desktop, pre-gating-retrain):**
+the 3-year figure above was originally a round-number guess ("3y ≈ 5 fights
+at a typical cadence", not tuned). Replaced with a data-driven pick plus an
+independent cross-check, both run on pre-holdout data only:
+
+- **CV grid search** (`avg_*_diff` feature block alone, default XGBoost,
+  pinned 72/6-month rolling window — the same harness as the window search,
+  not a full pipeline re-run per candidate): grid `[1, 1.5, 2, 3, 4, 5, 7,
+  10, 15]` years plus a flat/expanding-mean (no-decay) reference. AUC
+  clustered tightly across every candidate (0.5284-0.5375) — **3.0y won
+  narrowly** (0.5359) but the **no-decay reference beat every single
+  numeric halflife** (0.5375). Extending the grid to 7/10/15y found nothing
+  better than 3.0y (7y was in fact the worst numeric candidate). Read
+  honestly: halflife choice barely moves this feature block's own CV
+  signal at all; 3.0y is "best of a flat curve," not a confident optimum.
+- **Autocorrelation cross-check** (independent of the CV metric entirely —
+  estimates how long raw per-fight stats stay correlated with a fighter's
+  own future performance, straight from the data): every fighter's fight
+  pairs, z-scored **within weight class** (a first pass that z-scored
+  globally conflated division identity with persistence and was
+  discarded), correlation of z-scores bucketed by gap and fit to
+  `corr(Δt) = a + b·0.5^(Δt/h)` (floor `a` = permanent identity/division/
+  physique the model gets elsewhere; `h` = the form halflife that's
+  actually comparable to `AVG_HALFLIFE`), weighted least squares via
+  `scipy.optimize.curve_fit`. Result: pooled `h = 9.62y`, but **the fit is
+  degenerate** — `a` lands pinned at its 0 lower bound for the pooled fit
+  and 3 of 4 per-stat fits (only `sig_str_frac` identifies a real floor:
+  a=0.105, h=1.23y). With only 6 years of gap range, the fit can't
+  separate "small floor + fast decay" from "no floor + slow decay" — both
+  explain the observed correlation curve equally well, so `h=9.62y`
+  shouldn't be read as a confirmed number.
+- **Net read**: neither of the two clean outcomes anticipated going in
+  (corrected h near 2-4y confirming 3y, or h≫5y *with* a grid lift at long
+  halflives confirming a longer pick) actually happened — h came out ≫5y
+  pooled, but the grid never lifted at long halflives, and the h estimate
+  itself is degenerate. This is genuinely ambiguous evidence, not a
+  confirmation or a refutation. Per protocol the CV grid still governs:
+  **AVG_HALFLIFE_YEARS pinned at 3** (no longer value beat it). Additional
+  caveat on every fitted-h number above: survivorship bias — only
+  long-career fighters contribute long-gap pairs, so `h` is inflated
+  somewhat regardless of the floor correction.
+- Upgrade path, if this is ever worth resolving properly: the isolated
+  CV proxy and the identifiability-limited autocorrelation fit are both
+  cheap diagnostics, not a full pipeline evaluation — the real test is
+  whether the gating retrain's pooled-OOF McNemar (below) prefers a
+  different halflife once threaded through the complete feature set.
+
 ### 6. Opponent-adjusted performance        (CPU retrain; builds on #5)
 Per-fight z-scores vs the opponent's prior allowed averages, career-
 aggregated — needs #5's absorbed/defensive stats as inputs.
