@@ -108,3 +108,72 @@ mma-ai's BestFightOdds dump: ~2.5 GB on Hugging Face, repo carries NO
 license → download privately on your own machine only; nothing from it gets
 committed here. Deliverable: accuracy vs closing line + $100 Kelly ROI over
 history, aggregated numbers only in this log.
+
+---
+
+### 1. Baseline v2 -- leak-free window search, OOF gate        2026-08-03, notebook at ee3ad47
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 229 columns remain
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'xgb_tuning_20260803_125404' (combined cap: 100 trials)...
+Shared study 'xgb_tuning_20260803_125404' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.6581
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 46 diff features
+Pooled test accuracy: 0.609  (n=110)
+95% CI (CLT):        [0.518, 0.700]
+Batch accuracy: 0.563 +/- 0.244 over 4 monthly batches
+Baseline accuracy: 0.600
+This run accuracy: 0.609
+New fixes 1 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Prediction: Ilia Topuria wins
+Confidence: 64.37% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+
+---
+
+### 2. Judge-scorecard features        2026-08-04, notebook at ee3ad47
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Scorecards joined to 1000 decisions (25.4% of all decisions; coverage is mid-2020..late-2024 by data availability); winner agreement 99.8%
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 238 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'xgb_tuning_20260803_224925' (combined cap: 100 trials)...
+Shared study 'xgb_tuning_20260803_224925' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.6581
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 49 diff features
+Pooled test accuracy: 0.609  (n=110)
+95% CI (CLT):        [0.518, 0.700]
+Batch accuracy: 0.538 +/- 0.306 over 4 monthly batches
+Baseline accuracy: 0.609
+This run accuracy: 0.609
+New fixes 1 fights baseline got wrong
+New breaks 1 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6171 vs this run 0.6176)
+OOF fixes 101 / breaks 97; McNemar p-value: 0.8312  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 64.20% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
