@@ -53,8 +53,12 @@ def norm(s):
 
 
 def load_odds(db_url):
-    import sqlalchemy
-    odds = pd.read_sql(ODDS_SQL, sqlalchemy.create_engine(db_url))
+    import warnings
+    import psycopg2  # already a requirement (Optuna shared-study storage)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)  # pandas prefers SQLAlchemy; DBAPI is fine here
+        with psycopg2.connect(db_url) as conn:
+            odds = pd.read_sql(ODDS_SQL, conn)
     odds["name"] = odds["fighter_name"].map(norm)
     odds["date"] = pd.to_datetime(odds["event_date"])
     # keep one closing quote per fighter-date (median if duplicated)
