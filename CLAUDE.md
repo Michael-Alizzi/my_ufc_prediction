@@ -87,7 +87,9 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
    on validation.
 6. Decision layer, stability checks, and export — see gotchas below for why several of these exist.
 
-**Weekly automation**: one claude.ai Routine (Thursday 13:00 UTC, self-bound session) retrains via
+**Weekly automation** — **PAUSED (Aug 2026)** by the user until the model reliably beats the market
+(the goal above); don't re-enable the Routine without being asked. When active: one claude.ai
+Routine (Thursday 13:00 UTC, self-bound session) retrains via
 `scripts/weekly_pipeline.sh` (scrape → CPU retrain → push master), then predicts the upcoming card
 with bookmaker odds via `send_weekly_predictions.py` and pushes the result table to the
 `weekly-predictions-log` branch — that push is the delivery mechanism; there is deliberately no email

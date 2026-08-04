@@ -107,6 +107,13 @@ runs on the desktop only (that's where the odds DB lives).
 previous entry is decided; specs land in docs/METHODOLOGY.md with each.
 Each entry records the full market comparison, not just the paired McNemar.
 
+Expectation for #3 (written before the run): `avg_*` halflife becomes 3
+years of wall-clock time instead of 5 fights. The two disagree mainly for
+fighters returning from long layoffs (their stale form now fades properly);
+active fighters' averages barely move. Expect a small effect concentrated
+on comeback fights; gate on pooled-OOF McNemar vs baseline v2 with the
+market comparison recorded, full revert if it loses.
+
 ### 6. Opponent-adjusted performance        (CPU retrain; builds on #5)
 Per-fight z-scores vs the opponent's prior allowed averages, career-
 aggregated — needs #5's absorbed/defensive stats as inputs.
