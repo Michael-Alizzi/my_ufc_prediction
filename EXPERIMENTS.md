@@ -28,25 +28,34 @@ Test:       acc ... (n=..., 95% CI [..., ...]), AUC ...
 Monthly batches: ... ± ... over ... months
 Paired vs baseline: pooled-OOF McNemar p=... (fixes ..., breaks ...);
                     test-set McNemar p=...
-Profitability (OOF vs closing odds, scripts/odds_backtest.py): flat ROI ...,
-    kelly ROI ..., close-vs-onesided segment ROI ... (n bets ...);
-    market favourite wins ...% on the same fights.
+Market comparison (OOF fights matched to closing odds, scripts/odds_backtest.py):
+    accuracy:     model ...% vs market favourite ...%
+    prob quality: model log-loss ... vs market log-loss ...
+    dollar value: flat ROI ...%, kelly ROI ...%,
+                  close-vs-onesided segment ROI ...% (n bets ...)
 $100 replay (last event): scored the LOGGED pre-event predictions from
     weekly-predictions-log against results: old model $... -> $... return.
     New model's stakes on the same card: <table or one-liner>.
 Decision: ACCEPTED / REVERTED — why.
 ```
 
-**Profitability rule:** betting is the model's end use, so each entry also
-records value-bet profitability: both models' pooled-OOF predictions scored
-against historical closing odds (BestFightOdds via the locally-restored
-mma-ai dump — unlicensed upstream, so the odds DB lives ONLY on the desktop
-and only aggregate numbers appear here). `scripts/odds_backtest.py` reports
-flat and Kelly ROI, the "model-close / bookies-one-sided" segment (the
-strategy actually bet), and the market-favourite baseline. Role: the
-pooled-OOF McNemar remains the accuracy gate; **when that gate is a
-statistical tie, the profitability comparison on common fights breaks the
-tie** — equal accuracy does not mean equal betting value.
+**Market-comparison rule:** beating the market is the point of the project
+(CLAUDE.md → What this repo is), so every entry records three metrics
+against it, all from `scripts/odds_backtest.py` on the OOF fights matched
+to historical closing odds (BestFightOdds via the locally-restored mma-ai
+dump — unlicensed upstream, so the odds DB lives ONLY on the desktop and
+only aggregate numbers appear here):
+1. **Accuracy vs the market** — model win-pick accuracy vs how often the
+   closing favourite wins on the same fights.
+2. **Probability quality** — model log-loss vs the market's log-loss from
+   vig-free implied probabilities; the gap ≈ expected log-bankroll loss per
+   full-Kelly bet before vig, so this is the metric that must close.
+3. **Dollar value** — flat and Kelly ROI of the value-bet rule, plus the
+   "model-close / bookies-one-sided" segment (the strategy actually bet).
+Role: the pooled-OOF McNemar remains the accuracy gate for accepting a
+change; **when that gate is a statistical tie, the market comparison on
+common fights breaks the tie** — equal accuracy does not mean equal
+betting value.
 
 **$100 replay rule:** always score the *logged* pre-event predictions
 (`weekly-predictions-log` branch) — never re-predict a past event through
@@ -91,7 +100,14 @@ auto-log (`scripts/log_run_metrics.py`) → pooled-OOF McNemar gate with the
 profitability tie-break → full revert on rejection. The odds backtest still
 runs on the desktop only (that's where the odds DB lives).
 
-### 3. Beat-the-market betting rule        (next up — no retrain, decision layer)
+### 3–5. Feature queue        (one CPU retrain each, in order; #3 next up)
+**#3 decay** (wall-clock EWM halflife replaces fight-count) →
+**#4 shrinkage** (finish rates toward weight-class priors) →
+**#5 absorbed/defensive stats**. Implemented one at a time only after the
+previous entry is decided; specs land in docs/METHODOLOGY.md with each.
+Each entry records the full market comparison, not just the paired McNemar.
+
+### 6. Beat-the-market betting rule        (no retrain, decision layer)
 Change: use the market as an input to bet selection instead of betting
 against it. The current value-bet rule stakes wherever model probability
 beats implied probability — which concentrates bets exactly where the model
@@ -100,21 +116,20 @@ close-vs-onesided segment). Candidate replacement: bet only when the model
 agrees with the market's direction AND its edge over the implied probability
 exceeds the vig (ride the market selectively, never fade it); compare
 against a shrunk blend (model proba shrunk toward the vig-free implied
-probability) as the staking input. Evaluated on the same OOF-with-odds
-fights via `scripts/odds_backtest.py` on the desktop — model artifacts
-unchanged, so no McNemar gate; the gate IS the ROI comparison against the
-current rule on identical fights.
+probability) as the staking input. Deliberately scheduled after #3–5 so the
+rule is designed around the best model available. Evaluated on the same
+OOF-with-odds fights via `scripts/odds_backtest.py` on the desktop — model
+artifacts unchanged, so no McNemar gate; the gate IS the ROI comparison
+against the current rule on identical fights.
 Expectation (written before the run): flat/Kelly ROI improves mainly by
 *not betting* the worst segment; total bet count drops sharply. If no
 positive-ROI rule exists at closing odds, that finding gets recorded
 honestly — the model then needs to get better, not the staking cleverer.
 
-### 4–7. Feature/algorithm queue (one CPU retrain each, in order)
-decay (wall-clock EWM halflife replaces fight-count) → shrinkage
-(finish rates toward weight-class priors) → absorbed/defensive stats →
-opponent-adjusted performance. Implemented one at a time only after the
-previous entry is decided; specs in docs/METHODOLOGY.md as they land. Each
-entry records the market-baseline comparison, not just the paired McNemar.
+### 7. Opponent-adjusted performance        (CPU retrain; builds on #5)
+Per-fight z-scores vs the opponent's prior allowed averages, career-
+aggregated — needs #5's absorbed/defensive stats as inputs, so it follows
+the staking-rule experiment rather than preceding it.
 
 ### Later: scorecards v2 (successor to the reverted entry 2)
 Same three decision-margin features, sourced from ufcstats' own judge
@@ -150,11 +165,12 @@ Prediction: Ilia Topuria wins
 Confidence: 64.37% that Ilia Topuria wins
 ```
 
-Profitability (OOF vs closing odds, scripts/odds_backtest.py; 5786/7869 OOF
-fights matched to odds, 74% coverage): flat ROI -0.5% (5368 bets, hit
-39.0%), kelly ROI +0.9%, close-vs-onesided segment ROI -9.5% (1637 bets, hit
-25.5%); market favourite wins 66.3% on the same fights (market log-loss
-0.6089 vs this model's 0.6422).
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py):
+    accuracy:     model 61.2% vs market favourite 66.3%
+    prob quality: model log-loss 0.6422 vs market log-loss 0.6089
+    dollar value: flat ROI -0.5% (5368 bets, hit 39.0%), kelly ROI +0.9%,
+                  close-vs-onesided segment ROI -9.5% (1637 bets, hit 25.5%)
 
 $100 replay (last event, UFC Belgrade — Medić vs Rodríguez): the LOGGED
 (deployed-model) predictions returned $100 → $49 (net −$51). Baseline v2
@@ -209,13 +225,14 @@ found on Musayev: $100 → $0 (net −$100) vs the deployed model's −$51. Sinc
 baseline v2 *without* scorecards made the same bets, the scorecard features
 are not the differentiator on this card; n=1, noise-level evidence either
 way (same caveats as entry 1).
-Profitability (OOF vs closing odds, scripts/odds_backtest.py; 5786/7869 OOF
-fights matched to odds, 74% coverage): flat ROI -0.8% (5378 bets, hit
-38.7%), kelly ROI +0.6%, close-vs-onesided segment ROI -9.8% (1728 bets, hit
-25.5%); market favourite wins 66.3% on the same fights (market log-loss
-0.6089 vs this model's 0.6431). Baseline v2 leads on every metric here
-(higher flat ROI, higher kelly ROI, better segment ROI, better log-loss) —
-tie-break goes against scorecards.
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py):
+    accuracy:     model 61.2% vs market favourite 66.3%
+    prob quality: model log-loss 0.6431 vs market log-loss 0.6089
+    dollar value: flat ROI -0.8% (5378 bets, hit 38.7%), kelly ROI +0.6%,
+                  close-vs-onesided segment ROI -9.8% (1728 bets, hit 25.5%)
+Baseline v2 leads on every metric here (higher flat ROI, higher kelly ROI,
+better segment ROI, better log-loss) — tie-break goes against scorecards.
 Decision: REVERTED — pooled-OOF McNemar was a statistical tie (p=0.8312);
 the profitability tie-break favors baseline v2 on every metric, and the
 $100 Belgrade replay showed no advantage either. Static coverage (mid-2020

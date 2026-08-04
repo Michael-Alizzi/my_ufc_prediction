@@ -153,10 +153,13 @@ automatically.
   the CLT interval, monthly-batch stats, and the paired McNemar comparison against the snapshotted
   baseline (`cp ensemble.joblib ensemble_baseline.joblib` BEFORE retraining). One variable per run;
   rejected changes are fully reverted, never left in because they "don't hurt".
-- **The profitability metric**: each entry records value-bet ROI of the model's pooled-OOF
-  predictions against historical closing odds (`scripts/odds_backtest.py`; odds DB restored locally
-  from the mma-ai dump, never committed — unlicensed upstream). The pooled-OOF McNemar gates
-  accuracy; when it's a statistical tie, profitability on common fights breaks the tie.
+- **The market comparison** (three metrics per entry, all from `scripts/odds_backtest.py` on the
+  pooled-OOF fights matched to historical closing odds; odds DB restored locally from the mma-ai
+  dump, never committed — unlicensed upstream): (1) accuracy vs how often the closing favourite
+  wins, (2) probability quality — model log-loss vs the market's vig-free log-loss, the gap that
+  must close for betting to be +EV, and (3) dollar value — flat/Kelly ROI plus the
+  close-vs-onesided segment. The pooled-OOF McNemar gates accuracy; when it's a statistical tie,
+  the market comparison on common fights breaks the tie.
 - **The $100 replay metric**: each entry also records how the new model would have used the $100
   bankroll on the last UFC event versus what was actually logged. Always score the LOGGED pre-event
   predictions from the `weekly-predictions-log` branch — never re-predict a past event through
