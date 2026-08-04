@@ -107,7 +107,11 @@ runs on the desktop only (that's where the odds DB lives).
 previous entry is decided; specs land in docs/METHODOLOGY.md with each.
 Each entry records the full market comparison, not just the paired McNemar.
 
-### 6. Beat-the-market betting rule        (no retrain, decision layer)
+### 6. Opponent-adjusted performance        (CPU retrain; builds on #5)
+Per-fight z-scores vs the opponent's prior allowed averages, career-
+aggregated — needs #5's absorbed/defensive stats as inputs.
+
+### 7. Beat-the-market betting rule        (last — no retrain, decision layer)
 Change: use the market as an input to bet selection instead of betting
 against it. The current value-bet rule stakes wherever model probability
 beats implied probability — which concentrates bets exactly where the model
@@ -116,20 +120,16 @@ close-vs-onesided segment). Candidate replacement: bet only when the model
 agrees with the market's direction AND its edge over the implied probability
 exceeds the vig (ride the market selectively, never fade it); compare
 against a shrunk blend (model proba shrunk toward the vig-free implied
-probability) as the staking input. Deliberately scheduled after #3–5 so the
-rule is designed around the best model available. Evaluated on the same
-OOF-with-odds fights via `scripts/odds_backtest.py` on the desktop — model
-artifacts unchanged, so no McNemar gate; the gate IS the ROI comparison
-against the current rule on identical fights.
+probability) as the staking input. Deliberately scheduled last, after every
+feature experiment (#3–6) has settled, so the rule is designed around the
+final model's calibration. Evaluated on the same OOF-with-odds fights via
+`scripts/odds_backtest.py` on the desktop — model artifacts unchanged, so
+no McNemar gate; the gate IS the ROI comparison against the current rule on
+identical fights.
 Expectation (written before the run): flat/Kelly ROI improves mainly by
 *not betting* the worst segment; total bet count drops sharply. If no
 positive-ROI rule exists at closing odds, that finding gets recorded
 honestly — the model then needs to get better, not the staking cleverer.
-
-### 7. Opponent-adjusted performance        (CPU retrain; builds on #5)
-Per-fight z-scores vs the opponent's prior allowed averages, career-
-aggregated — needs #5's absorbed/defensive stats as inputs, so it follows
-the staking-rule experiment rather than preceding it.
 
 ### Later: scorecards v2 (successor to the reverted entry 2)
 Same three decision-margin features, sourced from ufcstats' own judge
