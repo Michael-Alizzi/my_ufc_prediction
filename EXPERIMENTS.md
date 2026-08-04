@@ -100,13 +100,17 @@ auto-log (`scripts/log_run_metrics.py`) → pooled-OOF McNemar gate with the
 profitability tie-break → full revert on rejection. The odds backtest still
 runs on the desktop only (that's where the odds DB lives).
 
-### 4–5. Feature queue        (one CPU retrain each, in order; #4 next up)
-**#4 shrinkage** (finish rates toward weight-class priors) →
-**#5 absorbed/defensive stats**. Implemented one at a time only after the
-previous entry is decided; specs land in docs/METHODOLOGY.md with each.
-Each entry records the full market comparison, not just the paired McNemar.
+**Order (2026-08-04, re-prioritized by expected impact on the market gap;
+the betting-rule experiment stays last by design):**
+#4 shrinkage (gating retrain in flight) → #5 odds as a feature →
+#6 absorbed/defensive stats → #7 opponent-adjusted (builds on #6) →
+#8 ensemble diversity → #9 beat-the-market rule. One at a time, each
+decided before the next starts; specs land in docs/METHODOLOGY.md as each
+is implemented; every entry records the full market comparison.
 (#3 decay: DECIDED without a retrain — see entry 3 at the bottom of this
-log; the notes immediately below are the investigation's history.)
+log; the notes below are that investigation's history.)
+
+### 4. Finish-rate shrinkage        (gating retrain in flight)
 
 Expectation for #4 (written before the run, 2026-08-04): the 4 finish-rate
 stats (`ko_win_rate`, `sub_win_rate`, `ko_loss_rate`, `sub_loss_rate`, both
@@ -177,11 +181,47 @@ independent cross-check, both run on pre-holdout data only:
   whether the gating retrain's pooled-OOF McNemar (below) prefers a
   different halflife once threaded through the complete feature set.
 
-### 6. Opponent-adjusted performance        (CPU retrain; builds on #5)
-Per-fight z-scores vs the opponent's prior allowed averages, career-
-aggregated — needs #5's absorbed/defensive stats as inputs.
+### 5. Odds as a model feature        (highest expected impact)
+Give the model the market's own price: the vig-free implied probability
+from closing odds as a feature (optionally later: line movement, open-vs-
+close). Rationale: the backtest shows the market's log-loss (0.6089) beats
+the model's (0.642) — a blind model starts 0.033 behind and loses wherever
+it disagrees; an odds-aware model starts *at* the market's answer and
+learns residual corrections, which is almost certainly where mma-ai's
+claimed edge came from. **Data sourcing is part of the experiment's spec**:
+the historical odds DB is unlicensed and desktop-only, so either (a) that
+experiment's training joins + retrains run on the desktop with the odds
+columns never committed (cloud pipeline keeps a no-odds fallback), or
+(b) we start scraping/committing our own odds forward and backfill only
+for evaluation. Serving already receives current odds per fight for bet
+sizing, so the predict-time input exists. Caveats to document in the entry:
+coverage (older fights lack odds — NaN routes natively), and the market
+comparison's meaning shifts (the model is no longer an independent
+opinion; the test becomes "does model+market beat market alone").
 
-### 7. Beat-the-market betting rule        (last — no retrain, decision layer)
+### 6. Absorbed/defensive stats        (CPU retrain)
+Career prior averages of what opponents did TO the fighter (~6 stats:
+sig-str absorbed/min, KD absorbed, takedowns conceded, control time
+conceded, etc.) via the existing long-frame machinery with source columns
+swapped. New information the model currently can't see: durability and
+defense are only indirectly visible through loss rates today.
+
+### 7. Opponent-adjusted performance        (CPU retrain; builds on #6)
+Per-fight z-scores vs the opponent's prior allowed averages, career-
+aggregated — needs #6's absorbed/defensive stats as inputs. Landing 100
+strikes on a defensive wizard means more than 100 on a punching bag.
+
+### 8. Ensemble diversity: CatBoost + TabPFN        (one retrain)
+Add two diverse members to the blend, weights re-selected on validation:
+CatBoost (third boosted-tree family, ordered boosting + target-statistic
+categorical handling) and TabPFN (pre-trained tabular transformer, strong
+exactly in this small-data regime; ~4,800 mirrored rows per 72-month
+window fits its ≤10k limit). Expected effect: small log-loss polish from
+decorrelated errors — queued after the information-adding experiments
+because model additions squeeze the same information differently, and the
+market gap more likely closes with new information.
+
+### 9. Beat-the-market betting rule        (last — no retrain, decision layer)
 Change: use the market as an input to bet selection instead of betting
 against it. The current value-bet rule stakes wherever model probability
 beats implied probability — which concentrates bets exactly where the model
@@ -191,7 +231,7 @@ agrees with the market's direction AND its edge over the implied probability
 exceeds the vig (ride the market selectively, never fade it); compare
 against a shrunk blend (model proba shrunk toward the vig-free implied
 probability) as the staking input. Deliberately scheduled last, after every
-feature experiment (#3–6) has settled, so the rule is designed around the
+experiment (#4–8) has settled, so the rule is designed around the
 final model's calibration. Evaluated on the same OOF-with-odds fights via
 `scripts/odds_backtest.py` on the desktop — model artifacts unchanged, so
 no McNemar gate; the gate IS the ROI comparison against the current rule on
