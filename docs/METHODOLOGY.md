@@ -61,22 +61,26 @@ cumsum pattern is group-safe.
 
 ## 4. Career averages (exponentially weighted)
 
-**Math.** For a stat sequence $x_1..x_{t-1}$ over a fighter's prior fights,
-the EWM mean with halflife $h$ (in fights) is
+**Math.** For a stat sequence $x_1..x_{t-1}$ over a fighter's prior fights
+at dates $d_1..d_{t-1}$, the EWM mean with **wall-clock** halflife $h$ is
 $$\bar{x}_t = \frac{\sum_{i<t} w_i x_i}{\sum_{i<t} w_i},\qquad
-  w_i = 0.5^{(t-1-i)/h}$$
-Current setting: $h = 5$ fights. Medians (`med_*`) are rolling medians of
-the same windows; near-duplicate medians (corr > 0.95 with their mean twin
-on pre-holdout data) are dropped.
+  w_i = 0.5^{(d_{t-1}-d_i)/h}$$
+Current setting: $h = 3$ years (EXPERIMENTS.md entry 3; previously
+$h = 5$ *fights*, i.e. $w_i = 0.5^{(t-1-i)/5}$). Medians (`med_*`) are
+rolling medians of the same fight sequences; near-duplicate medians
+(corr > 0.95 with their mean twin on pre-holdout data) are dropped.
 
-**Plain.** A fighter's last few fights say more about who they are today
-than fights from 2015, so recent fights get more weight — with a 5-fight
-halflife, a performance five fights ago counts half as much as the latest
-one. Example: a fighter whose significant-strike accuracy went
-40%, 45%, 50%, 55%, 60% over five fights has an EWM average pulled toward
-~55%, not the flat 50%. (Planned experiment: wall-clock halflife — decay by
-*years* rather than fight count — which differs mainly for fighters with
-long layoffs.)
+**Plain.** A fighter's recent form says more about who they are today than
+fights from 2015, so recent fights get more weight — a performance three
+years before their latest fight counts half as much as the latest one.
+Decaying by *calendar time* rather than fight count matters exactly for
+inactive fighters: under the old 5-fight halflife, someone returning from a
+four-year layoff had their 2021 performances counted as "recent", while an
+active fighter's 18-month-old fights faded just as fast. Wall-clock decay
+makes "recent" mean the same thing for both. One served-value limitation
+(unchanged from before): the average decays to the fighter's *last-fight*
+date, not to today — a returning fighter's layoff shows up in
+`days_since_last`, not by further shrinking their averages.
 
 ## 5. Elo rating
 

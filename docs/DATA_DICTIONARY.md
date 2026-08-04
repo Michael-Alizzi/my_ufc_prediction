@@ -29,7 +29,7 @@ tournament nights are deduplicated on (r_fighter, b_fighter, date).
 
 | Family | Columns | Definition |
 |---|---|---|
-| Career averages | `avg_r_*`, `avg_b_*`, `avg_*_diff` | EWM mean (halflife = 5 fights) of each per-fight stat over PRIOR fights |
+| Career averages | `avg_r_*`, `avg_b_*`, `avg_*_diff` | EWM mean (wall-clock halflife = 3 years) of each per-fight stat over PRIOR fights |
 | Career medians | `med_r_*` … | rolling median twin; members correlating > 0.95 with their mean twin (pre-holdout) are dropped |
 | Form | `r_/b_prev_win`, `prev_3_win`, `win_streak`, `lose_streak` (+diffs) | last-fight result, last-3, current streaks |
 | Record | `r_/b_current_wins/losses`, `current_win_frac` (+diff) | prior UFC record |
