@@ -102,15 +102,16 @@ runs on the desktop only (that's where the odds DB lives).
 
 **Order (2026-08-04, re-prioritized by expected impact on the market gap;
 the betting-rule experiment stays last by design):**
-#4 shrinkage (gating retrain in flight) → #5 odds as a feature →
-#6 absorbed/defensive stats → #7 opponent-adjusted (builds on #6) →
-#8 ensemble diversity → #9 beat-the-market rule. One at a time, each
-decided before the next starts; specs land in docs/METHODOLOGY.md as each
-is implemented; every entry records the full market comparison.
-(#3 decay: DECIDED without a retrain — see entry 3 at the bottom of this
-log; the notes below are that investigation's history.)
+#5 odds as a feature (next up) → #6 absorbed/defensive stats →
+#7 opponent-adjusted (builds on #6) → #8 ensemble diversity →
+#9 beat-the-market rule. One at a time, each decided before the next
+starts; specs land in docs/METHODOLOGY.md as each is implemented; every
+entry records the full market comparison.
+(#3 decay: DECIDED without a retrain; #4 shrinkage: REVERTED after the
+market tie-break — see entries 3-4 at the bottom of this log; the notes
+below are those investigations' history.)
 
-### 4. Finish-rate shrinkage        (gating retrain in flight)
+### 4. Finish-rate shrinkage        (DECIDED: REVERTED — see entry 4)
 
 Expectation for #4 (written before the run, 2026-08-04): the 4 finish-rate
 stats (`ko_win_rate`, `sub_win_rate`, `ko_loss_rate`, `sub_loss_rate`, both
@@ -429,11 +430,19 @@ resumable Optuna storage across two container restarts (trials survived;
 that mechanism shipped as f7dff1f).
 $100 replay (last event): N/A — weekly Routine paused, no card logged
 since UFC Belgrade; that card's reconstruction is covered in entries 1-2.
-Market comparison: PENDING — accuracy gate is a precise null (OOF 0.6171
-vs 0.6171, fixes 143 / breaks 143, p=0.9528), so the tie-break runs on the
-desktop odds DB when it's next powered on:
-    .venv/bin/python scripts/odds_backtest.py \
-        .experiment_runs/run1-baseline-v2.ensemble.joblib ensemble.joblib \
-        --db postgresql://localhost:5432/mma_ai
-Decision: PENDING the market tie-break — if shrinkage doesn't win it,
-REVERT per protocol (nothing stays because it "doesn't hurt").
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-05):
+    accuracy:     model 61.2% vs market favourite 66.3% (both models)
+    prob quality: shrinkage log-loss 0.6432 vs baseline 0.6422
+                  (market 0.6089)
+    dollar value: flat ROI -0.7% (5390 bets) vs baseline -0.5%,
+                  kelly +0.4% vs +0.9%, close-vs-onesided segment -10.6%
+                  (1736 bets) vs -9.5%
+Baseline v2 leads on every metric — the tie-break goes against shrinkage,
+the same pattern as the scorecards (entry 2).
+Decision: REVERTED — accuracy gate was a symmetric null (143 fixes / 143
+breaks) and the market comparison favours baseline v2 across the board.
+Notable: two consecutive feature experiments have now nulled on accuracy
+while slightly worsening market log-loss; the model's probability quality
+appears saturated on this information set, which is exactly the case for
+#5 (odds as a feature) being next.

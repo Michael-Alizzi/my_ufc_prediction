@@ -105,30 +105,7 @@ $E \approx 0.24$, so they gain $32 \times 0.76 \approx +24$ points and the
 favourite loses 24. It summarises strength-of-schedule that raw win/loss
 records can't see.
 
-## 6. Finish-rate shrinkage (empirical Bayes)
-
-**Math.** A fighter's raw finish rate after $n$ prior fights with $c$
-qualifying outcomes is $c/n$ — an unbiased but high-variance estimate when
-$n$ is small. The shrunk estimate adds $K$ pseudo-fights at the weight
-class's base rate $p_{wc}$:
-$$\hat{r} = \frac{K\,p_{wc} + c}{K + n},\qquad K = 5$$
-$p_{wc}$ is each class's aggregate rate over **pre-holdout** rows only (a
-per-class constant — no per-fight information leaks), and a debut ($n=0$)
-receives the pure prior $p_{wc}$ instead of NaN. As $n$ grows, $\hat{r}$
-converges to the raw rate; the prior's influence halves roughly every $K$
-fights of evidence.
-
-**Plain.** One knockout in two fights is not a "50% KO artist" — it's two
-data points. Shrinkage treats every fighter as starting from their
-division's typical finish rate and lets their own record pull the estimate
-away from it as evidence accumulates. Worked example: heavyweight KO-win
-base rate ≈ 0.32; a debuting heavyweight gets 0.32, one with 1 KO in 2
-fights gets $(5 \cdot 0.32 + 1)/(5+2) = 0.37$ (not 0.50), and a veteran
-with 12 KOs in 30 fights gets $(1.6+12)/35 = 0.39$ — barely different from
-the raw $0.40$. The loud lies from tiny samples are silenced; established
-records pass through nearly untouched.
-
-## 7. Walk-forward cross-validation and window search
+## 6. Walk-forward cross-validation and window search
 
 **Math.** Folds slide over calendar months: fold $k$ trains on
 $[T_k - W_{tr},\ T_k)$ and tests on $[T_k,\ T_k + W_{te})$, stepping by
@@ -150,7 +127,7 @@ much history helps?" — too little is noisy, too much drags in a stale meta.
 The window is **pinned** between deliberate re-searches so experiments
 change one thing at a time.
 
-## 8. Hyperparameter search (Optuna / TPE)
+## 7. Hyperparameter search (Optuna / TPE)
 
 **Math.** The Tree-structured Parzen Estimator models
 $P(\text{params} \mid \text{score good})$ and
@@ -166,7 +143,7 @@ grid of recipes. The desktop and laptop each run trials against the same
 scoreboard, so the search is one coordinated 100-trial effort, not two
 blind 50s.
 
-## 9. The ensemble
+## 8. The ensemble
 
 **Math.** Final score
 $$p = (1-w)\cdot\tfrac{1}{3}\textstyle\sum_{k=1}^{3} p_{\text{xgb}_k} + w\cdot p_{\text{lgbm}}$$
@@ -177,9 +154,9 @@ $w \in \{0, 0.25, 0.5\}$ chosen by validation AUC.
 some of each one's individual quirks; LightGBM (a different algorithm
 family) is blended in only if the validation slice says it helps. Only
 three candidate weights are considered on ~120 validation fights — a finer
-grid would overfit the slice (see §11 for the same logic).
+grid would overfit the slice (see §10 for the same logic).
 
-## 10. Probability calibration (Platt, centered)
+## 9. Probability calibration (Platt, centered)
 
 **Math.** A logistic regression with no intercept fit on centered pooled-OOF
 scores: $\hat{p}_{\text{cal}} = \sigma(\beta (p_{\text{raw}} - 0.5))$, so
@@ -191,21 +168,21 @@ frequencies ("0.7" might win 65% or 80% of the time). Calibration reshapes
 the displayed confidence so that fights shown as 70% really win about 70%
 of the time — fit on thousands of pooled walk-forward predictions, never on
 the tiny validation slice. Pinning 0.5→0.5 guarantees the displayed
-favourite always matches the decision (§11). Example: raw 0.62 might
+favourite always matches the decision (§10). Example: raw 0.62 might
 display as 0.68 after calibration; raw 0.50 always displays as 0.50.
 
-## 11. The fixed 0.5 decision threshold
+## 10. The fixed 0.5 decision threshold
 
 **Math.** Winner $= \mathbb{1}[p \ge 0.5]$. Not tuned. Mirroring (§2) makes
 the training prior exactly 0.5, so 0.5 is the natural operating point.
 
 **Plain.** An earlier version tuned the threshold on ~120 validation fights
 and lost 6 points of test accuracy — a textbook case of fitting noise in a
-small sample (±9-point CI, §12). The threshold stays at the symmetric
+small sample (±9-point CI, §11). The threshold stays at the symmetric
 default; probability quality is handled by calibration, not by moving the
 cutoff.
 
-## 12. Evaluating a run
+## 11. Evaluating a run
 
 **Math.** Test accuracy $\hat{p}$ over $n \approx 110$ fights carries a CLT
 interval $\hat{p} \pm 1.96\sqrt{\hat{p}(1-\hat{p})/n} \approx \pm 9$ points.
@@ -226,7 +203,7 @@ is visible there, and invisible on 110. Example: baseline right / new wrong
 on 8 fights, reverse on 19 → McNemar $p \approx 0.05$; on the test set the
 same ratio would be 1-2 fights and meaningless.
 
-## 13. Betting layer (Kelly staking)
+## 12. Betting layer (Kelly staking)
 
 **Math.** For decimal odds $o$ and model probability $p$, edge $= po - 1$;
 the Kelly fraction is
@@ -242,7 +219,7 @@ the model expects to LOSE — a near-coin-flip priced as a lock is value on
 the underdog. Model edge over bookmakers is unproven; the $100 framing caps
 worst-case loss by design.
 
-## 14. Serving-time reconstruction
+## 13. Serving-time reconstruction
 
 **Math.** Serving builds a feature row from each fighter's most recent
 history row, reoriented so the `r_*` side always describes that fighter;
@@ -261,7 +238,7 @@ against each fighter's own history for a pair who never met (a pair who
 last fought *each other* hides this bug class — their "last opponent" is
 each other).
 
-## 15. Experiment protocol and the $100 replay
+## 14. Experiment protocol and the $100 replay
 
 See CLAUDE.md (protocol) and EXPERIMENTS.md (log + template). One variable
 per retrain; pooled-OOF McNemar decides; rejected changes are fully
@@ -270,7 +247,7 @@ predictions** from `weekly-predictions-log` — re-predicting a past event
 through current history is forbidden because the event's outcome is already
 inside `head_to_head` and both fighters' last rows (self-inclusion leak).
 
-## 16. Security notes
+## 15. Security notes
 
 - `ensemble.joblib` / `fighter_history.parquet` are pickle-family artifacts:
   loading them executes code by design. Only ever load the repo's own
