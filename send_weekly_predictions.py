@@ -68,6 +68,7 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 history=history,
                 artifacts=artifacts,
                 event_country=event_country,
+                odds_r=fight.get("odds1"), odds_b=fight.get("odds2"),
             )
 
             confidence = proba if winner == fighter1 else 1 - proba

@@ -142,13 +142,26 @@ def market_baseline(df):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("artifacts", nargs="+",
+    ap.add_argument("artifacts", nargs="*",
                     help="one or two ensemble.joblib paths (baseline [candidate])")
     ap.add_argument("--db", default="postgresql://localhost:5432/mma_ai")
+    ap.add_argument("--export-training", metavar="CSV",
+                    help="write per-fight odds for every fighter_history.parquet "
+                         "fight to CSV (gitignored -- feeds the notebook's "
+                         "r_/b_market_prob features, EXPERIMENTS.md entry 5)")
     args = ap.parse_args()
 
     odds = load_odds(args.db)
     print(f"odds rows loaded: {len(odds)} fighter-date closing quotes")
+
+    if args.export_training:
+        fights = pd.read_parquet("fighter_history.parquet")[
+            ["r_fighter", "b_fighter", "date_d"]]
+        out = join_odds(fights, odds)
+        out.to_csv(args.export_training, index=False)
+        print(f"wrote {len(out)}/{len(fights)} fights with odds -> {args.export_training}")
+        if not args.artifacts:
+            return
 
     frames = []
     for i, path in enumerate(args.artifacts):

@@ -105,7 +105,32 @@ $E \approx 0.24$, so they gain $32 \times 0.76 \approx +24$ points and the
 favourite loses 24. It summarises strength-of-schedule that raw win/loss
 records can't see.
 
-## 6. Walk-forward cross-validation and window search
+## 6. Market-implied probability (odds as a feature)
+
+**Math.** Decimal odds $o_r, o_b$ imply probabilities $1/o_r, 1/o_b$ that
+sum to more than 1 (the bookmaker's vig). Normalizing removes it:
+$$p^{mkt}_r = \frac{1/o_r}{1/o_r + 1/o_b},\qquad p^{mkt}_b = 1 - p^{mkt}_r$$
+Served as the paired features `r_market_prob`/`b_market_prob` (they mirror
+correctly: the corner swap exchanges them). Training values come from
+historical closing lines joined on the desktop (unlicensed source, never
+committed — the notebook reads a local `odds_train.csv` and produces
+all-NaN columns when it's absent); serving computes them from the odds
+already supplied for bet sizing. NaN where no odds exist (roughly pre-2007
+and unmatched fights) — the trees route missing values natively.
+
+**Plain.** The closing line is the market's own probability estimate,
+sharpened by every bettor's money — and it beats this model's blind
+estimate (log-loss 0.6089 vs 0.642). Feeding it in flips the model's job
+from "out-predict the market from scratch" to "start at the market's answer
+and learn when it's slightly off," which is a much easier game. Worked
+example: odds 1.30/3.60 imply 0.769/0.278; normalized, red's market
+probability is $0.769/1.047 = 0.735$. Two honest consequences, recorded
+with the experiment: the model stops being an independent opinion (the
+market comparison becomes "does model+market beat market alone"), and
+value-bet edges shrink by construction because the model now largely agrees
+with the price it's betting against.
+
+## 7. Walk-forward cross-validation and window search
 
 **Math.** Folds slide over calendar months: fold $k$ trains on
 $[T_k - W_{tr},\ T_k)$ and tests on $[T_k,\ T_k + W_{te})$, stepping by
@@ -127,7 +152,7 @@ much history helps?" — too little is noisy, too much drags in a stale meta.
 The window is **pinned** between deliberate re-searches so experiments
 change one thing at a time.
 
-## 7. Hyperparameter search (Optuna / TPE)
+## 8. Hyperparameter search (Optuna / TPE)
 
 **Math.** The Tree-structured Parzen Estimator models
 $P(\text{params} \mid \text{score good})$ and
@@ -143,7 +168,7 @@ grid of recipes. The desktop and laptop each run trials against the same
 scoreboard, so the search is one coordinated 100-trial effort, not two
 blind 50s.
 
-## 8. The ensemble
+## 9. The ensemble
 
 **Math.** Final score
 $$p = (1-w)\cdot\tfrac{1}{3}\textstyle\sum_{k=1}^{3} p_{\text{xgb}_k} + w\cdot p_{\text{lgbm}}$$
@@ -154,9 +179,9 @@ $w \in \{0, 0.25, 0.5\}$ chosen by validation AUC.
 some of each one's individual quirks; LightGBM (a different algorithm
 family) is blended in only if the validation slice says it helps. Only
 three candidate weights are considered on ~120 validation fights — a finer
-grid would overfit the slice (see §10 for the same logic).
+grid would overfit the slice (see §11 for the same logic).
 
-## 9. Probability calibration (Platt, centered)
+## 10. Probability calibration (Platt, centered)
 
 **Math.** A logistic regression with no intercept fit on centered pooled-OOF
 scores: $\hat{p}_{\text{cal}} = \sigma(\beta (p_{\text{raw}} - 0.5))$, so
@@ -168,21 +193,21 @@ frequencies ("0.7" might win 65% or 80% of the time). Calibration reshapes
 the displayed confidence so that fights shown as 70% really win about 70%
 of the time — fit on thousands of pooled walk-forward predictions, never on
 the tiny validation slice. Pinning 0.5→0.5 guarantees the displayed
-favourite always matches the decision (§10). Example: raw 0.62 might
+favourite always matches the decision (§11). Example: raw 0.62 might
 display as 0.68 after calibration; raw 0.50 always displays as 0.50.
 
-## 10. The fixed 0.5 decision threshold
+## 11. The fixed 0.5 decision threshold
 
 **Math.** Winner $= \mathbb{1}[p \ge 0.5]$. Not tuned. Mirroring (§2) makes
 the training prior exactly 0.5, so 0.5 is the natural operating point.
 
 **Plain.** An earlier version tuned the threshold on ~120 validation fights
 and lost 6 points of test accuracy — a textbook case of fitting noise in a
-small sample (±9-point CI, §11). The threshold stays at the symmetric
+small sample (±9-point CI, §12). The threshold stays at the symmetric
 default; probability quality is handled by calibration, not by moving the
 cutoff.
 
-## 11. Evaluating a run
+## 12. Evaluating a run
 
 **Math.** Test accuracy $\hat{p}$ over $n \approx 110$ fights carries a CLT
 interval $\hat{p} \pm 1.96\sqrt{\hat{p}(1-\hat{p})/n} \approx \pm 9$ points.
@@ -203,7 +228,7 @@ is visible there, and invisible on 110. Example: baseline right / new wrong
 on 8 fights, reverse on 19 → McNemar $p \approx 0.05$; on the test set the
 same ratio would be 1-2 fights and meaningless.
 
-## 12. Betting layer (Kelly staking)
+## 13. Betting layer (Kelly staking)
 
 **Math.** For decimal odds $o$ and model probability $p$, edge $= po - 1$;
 the Kelly fraction is
@@ -219,7 +244,7 @@ the model expects to LOSE — a near-coin-flip priced as a lock is value on
 the underdog. Model edge over bookmakers is unproven; the $100 framing caps
 worst-case loss by design.
 
-## 13. Serving-time reconstruction
+## 14. Serving-time reconstruction
 
 **Math.** Serving builds a feature row from each fighter's most recent
 history row, reoriented so the `r_*` side always describes that fighter;
@@ -238,7 +263,7 @@ against each fighter's own history for a pair who never met (a pair who
 last fought *each other* hides this bug class — their "last opponent" is
 each other).
 
-## 14. Experiment protocol and the $100 replay
+## 15. Experiment protocol and the $100 replay
 
 See CLAUDE.md (protocol) and EXPERIMENTS.md (log + template). One variable
 per retrain; pooled-OOF McNemar decides; rejected changes are fully
@@ -247,7 +272,7 @@ predictions** from `weekly-predictions-log` — re-predicting a past event
 through current history is forbidden because the event's outcome is already
 inside `head_to_head` and both fighters' last rows (self-inclusion leak).
 
-## 15. Security notes
+## 16. Security notes
 
 - `ensemble.joblib` / `fighter_history.parquet` are pickle-family artifacts:
   loading them executes code by design. Only ever load the repo's own

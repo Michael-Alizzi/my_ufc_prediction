@@ -21,3 +21,6 @@ data.csv
 
 # per-experiment Optuna resume scratch (cloud runs survive container restarts)
 .optuna_resume*.db
+
+# desktop-joined training odds (unlicensed upstream -- never committed)
+odds_train.csv

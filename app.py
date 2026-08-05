@@ -144,6 +144,7 @@ if st.button("Predict", type="primary"):
                 red, blue, weight_class, title_fight, total_round_number,
                 history, artifacts,
                 event_country=event_country.strip() or None,
+                odds_r=odds_red, odds_b=odds_blue,
             )
             confidence = proba if winner == red else 1 - proba
             st.success(f"**{winner}** wins")

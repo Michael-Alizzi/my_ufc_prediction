@@ -159,7 +159,7 @@ def head_to_head(red, blue, history):
 
 def build_features(red, blue, weight_class, title_fight, total_round_number,
                     history, feature_names, dtypes, event_country=None,
-                    diff_pairs=None):
+                    diff_pairs=None, odds_r=None, odds_b=None):
     red, blue = red.lower().strip(), blue.lower().strip()
     r_last = last_row(red, history)
     b_last = last_row(blue, history)
@@ -186,7 +186,14 @@ def build_features(red, blue, weight_class, title_fight, total_round_number,
         # column; like rules_era, dropped by reindex on older artifacts.
         "r_home_crowd": home_crowd_flag(r_last.get("r_country"), event_country),
         "b_home_crowd": home_crowd_flag(b_last.get("b_country"), event_country),
+        # Market-implied probability comes from the UPCOMING fight's closing
+        # odds (vig-free) -- like home_crowd, never inherited from a last-fight
+        # row. NaN when odds aren't supplied; dropped by reindex on odds-blind
+        # artifacts. (EXPERIMENTS.md entry 5)
+        "r_market_prob": ((1 / odds_r) / (1 / odds_r + 1 / odds_b)
+                          if odds_r and odds_b else np.nan),
     }
+    predict_dict["b_market_prob"] = 1 - predict_dict["r_market_prob"]
     predict_dict["home_crowd_diff"] = (
         predict_dict["r_home_crowd"] - predict_dict["b_home_crowd"]
     )
@@ -233,7 +240,8 @@ def blend_proba(X, models, lgbm, lgbm_weight):
 
 
 def predict_winner(red, blue, weight_class, title_fight, total_round_number,
-                    history, artifacts, event_country=None):
+                    history, artifacts, event_country=None,
+                    odds_r=None, odds_b=None):
     """Returns (winner_name, calibrated_probability_red_wins).
 
     The winner is decided on the raw ensemble score at best_th (a dedicated
@@ -247,6 +255,7 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
         history, artifacts["feature_names"], artifacts["dtypes"],
         event_country=event_country,
         diff_pairs=artifacts.get("diff_pairs"),
+        odds_r=odds_r, odds_b=odds_b,
     )
     raw_proba = float(blend_proba(
         X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"]

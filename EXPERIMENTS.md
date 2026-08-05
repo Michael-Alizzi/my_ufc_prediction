@@ -182,23 +182,36 @@ independent cross-check, both run on pre-holdout data only:
   whether the gating retrain's pooled-OOF McNemar (below) prefers a
   different halflife once threaded through the complete feature set.
 
-### 5. Odds as a model feature        (highest expected impact)
-Give the model the market's own price: the vig-free implied probability
-from closing odds as a feature (optionally later: line movement, open-vs-
-close). Rationale: the backtest shows the market's log-loss (0.6089) beats
-the model's (0.642) — a blind model starts 0.033 behind and loses wherever
-it disagrees; an odds-aware model starts *at* the market's answer and
-learns residual corrections, which is almost certainly where mma-ai's
-claimed edge came from. **Data sourcing is part of the experiment's spec**:
-the historical odds DB is unlicensed and desktop-only, so either (a) that
-experiment's training joins + retrains run on the desktop with the odds
-columns never committed (cloud pipeline keeps a no-odds fallback), or
-(b) we start scraping/committing our own odds forward and backfill only
-for evaluation. Serving already receives current odds per fight for bet
-sizing, so the predict-time input exists. Caveats to document in the entry:
-coverage (older fights lack odds — NaN routes natively), and the market
-comparison's meaning shifts (the model is no longer an independent
-opinion; the test becomes "does model+market beat market alone").
+### 5. Odds as a model feature        (IMPLEMENTED — desktop retrain pending)
+Give the model the market's own price: `r_/b_market_prob`, the vig-free
+implied probability from closing odds (METHODOLOGY §6). Rationale: the
+backtest shows the market's log-loss (0.6089) beats the model's (0.642) —
+a blind model starts 0.033 behind and loses wherever it disagrees; an
+odds-aware model starts *at* the market's answer and learns residual
+corrections. Two consecutive information-neutral experiments (entries 2, 4)
+nulling on accuracy while nudging log-loss the wrong way says the model is
+saturated on its current information set — this is the first experiment
+that adds information.
+**Two-phase data plan (user call, 2026-08-05):** phase 1 VALIDATES via the
+desktop — `scripts/odds_backtest.py --export-training odds_train.csv`
+joins historical closing odds locally (unlicensed source: the file is
+gitignored and never committed; cloud runs see all-NaN columns and stay
+schema-identical), then the gating retrain runs on the desktop GPU(s).
+Phase 2 ships ONLY IF phase 1 is ACCEPTED: extend the weekly job to log
+odds for every fight on each card (our own collected data, committable),
+so the owned dataset gradually replaces the dump for retraining.
+Expectation (written before the run): the first experiment expected to
+CLEARLY beat baseline on the accuracy gate — the market picks winners at
+66.3% vs the model's 61.7% OOF, and the feature hands the model that
+signal on ~74% of OOF fights. Success = pooled-OOF McNemar decisively
+favours odds-aware AND log-loss moves meaningfully toward 0.6089; stretch
+= beating the market's own log-loss on matched fights (model adds value
+beyond the price). Watch-outs: value-bet counts collapse by construction
+(the model now mostly agrees with the price), so betting-ROI comparisons
+against odds-blind models are apples-to-oranges — the log-loss-vs-market
+line is the honest scoreboard; and NaN-coverage asymmetry (pre-2007
+fights) means the trees may split on "odds exist at all" — acceptable,
+documented.
 
 ### 6. Absorbed/defensive stats        (CPU retrain)
 Career prior averages of what opponents did TO the fighter (~6 stats:

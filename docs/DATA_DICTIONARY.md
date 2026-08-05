@@ -42,6 +42,7 @@ tournament nights are deduplicated on (r_fighter, b_fighter, date).
 | Elo | `r_/b_elo`, `elo_diff` | pre-fight Elo (K=32, start 1500), sequential update |
 | Rules era | `rules_era` | shared ordinal: 0 pre-unified, 1 unified rules (Apr 2001), 2 post-2017 revision; pinned to 2 at predict time |
 | Home crowd | `r_/b_home_crowd`, `home_crowd_diff` | 1 if any citizenship matches the event country, 0 if none, NaN unknown; supplied per-prediction via `event_country`, never inherited from a past fight |
+| Market probability | `r_/b_market_prob` | vig-free implied win probability from the fight's closing odds (METHODOLOGY §6); training values joined from the local, never-committed `odds_train.csv` (desktop, `scripts/odds_backtest.py --export-training`), serving values from the odds supplied per-prediction; NaN when no odds exist |
 
 Shared context columns (no r/b pair, untouched by mirroring): `gender`,
 `weight_class`, `title_fight`, `total_round_number`, `total_minutes`,
