@@ -387,3 +387,53 @@ gated model. The decay question is CLOSED — don't re-tune it without new
 evidence. (Possible far-future lead, not queued: `sig_str_frac`'s fast form
 component hints per-family decay could matter for accuracy-type stats
 specifically.)
+
+---
+
+### 4. Finish-rate shrinkage toward weight-class priors (K=5)        2026-08-05, notebook at f7dff1f
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 229 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Worker storage env vars not both set -- desktop-only tuning.
+Shared study 'exp4_shrinkage' complete: 100 trials total (desktop + laptop combined). Best AUC: 0.6160
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 46 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.601 +/- 0.201 over 4 monthly batches
+Baseline accuracy: 0.618
+This run accuracy: 0.627
+New fixes 1 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6171 vs this run 0.6171)
+OOF fixes 143 / breaks 143; McNemar p-value: 0.9528  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 64.56% that Ilia Topuria wins
+```
+
+Run note: the "XGBoost device: cuda" line is a probe false-positive — this
+cloud box has no GPU; XGBoost accepted device='cuda' with a silent CPU
+fallback instead of erroring, so training ran on CPU as intended. Tighten
+the probe to also reject fallback warnings. Run executed on cloud CPU with
+resumable Optuna storage across two container restarts (trials survived;
+that mechanism shipped as f7dff1f).
+$100 replay (last event): N/A — weekly Routine paused, no card logged
+since UFC Belgrade; that card's reconstruction is covered in entries 1-2.
+Market comparison: PENDING — accuracy gate is a precise null (OOF 0.6171
+vs 0.6171, fixes 143 / breaks 143, p=0.9528), so the tie-break runs on the
+desktop odds DB when it's next powered on:
+    .venv/bin/python scripts/odds_backtest.py \
+        .experiment_runs/run1-baseline-v2.ensemble.joblib ensemble.joblib \
+        --db postgresql://localhost:5432/mma_ai
+Decision: PENDING the market tie-break — if shrinkage doesn't win it,
+REVERT per protocol (nothing stays because it "doesn't hurt").
