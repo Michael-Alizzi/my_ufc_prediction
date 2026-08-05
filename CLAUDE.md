@@ -148,8 +148,12 @@ automatically.
   the top-3 refits, the calibration OOF refits) reference `DEVICE`; never hardcode a device at one
   site. The laptop's eGPU joins tuning via `scripts/shared_study_worker.py` (dispatched over ssh;
   runs the same probe on its own device) — requires `OPTUNA_STORAGE_URL` and
-  `OPTUNA_WORKER_STORAGE_URL` in the environment; credentials are never committed. LightGBM stays
-  CPU-only (a GPU build isn't worth the packaging).
+  `OPTUNA_WORKER_STORAGE_URL` in the environment; credentials are never committed. The desktop's
+  study database is named **`optuna_db`** (a run-5 retrain silently went desktop-only because a
+  URL guessed `optuna` — the notebook degrades gracefully on Postgres failure, it does NOT error).
+  The probe also rejects XGBoost's silent GPU→CPU fallback (exit code 0 with "No visible GPU" on
+  stderr — a cloud run once logged `device: cuda` on a GPU-less box). LightGBM stays CPU-only (a
+  GPU build isn't worth the packaging).
 
 ## Experiment protocol (mandatory for any feature or algorithm change)
 
