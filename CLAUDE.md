@@ -155,6 +155,24 @@ automatically.
   stderr — a cloud run once logged `device: cuda` on a GPU-less box). LightGBM stays CPU-only (a
   GPU build isn't worth the packaging).
 
+## Session ground rules (standing user agreements)
+
+- **Coding tasks load `/ponytail` at full intensity first** — laziest working
+  solution, reuse existing machinery before writing new, shortest diff that
+  works (the skill is checked into this repo).
+- **Cloud retrains must use the Optuna resume mechanism** — `OPTUNA_STORAGE_URL`
+  pointing at a local sqlite file plus a stable per-experiment
+  `OPTUNA_STUDY_NAME`. Cloud containers are reclaimed at roughly 8 hours
+  regardless of activity; an unprotected multi-hour run dies with them (two
+  full runs were lost learning this). Desktop runs get the same protection
+  via Postgres when the env vars are set.
+- **One retrain at a time, one machine at a time.** Before launching, confirm
+  no other session already has one running (a duplicated `nbconvert --inplace`
+  once raced the same notebook file). Before pushing to the working branch,
+  `git fetch` first — and never move the branch tip while another machine's
+  automated chain ends in a bare `git push`, which would strand that run's
+  results at its final step.
+
 ## Experiment protocol (mandatory for any feature or algorithm change)
 
 - **Retrain and log every change.** Any change to features or the algorithm gets a full pipeline run
