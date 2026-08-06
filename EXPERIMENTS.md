@@ -459,3 +459,39 @@ Notable: two consecutive feature experiments have now nulled on accuracy
 while slightly worsening market log-loss; the model's probability quality
 appears saturated on this information set, which is exactly the case for
 #5 (odds as a feature) being next.
+
+---
+
+### 5. Odds as a model feature (market-implied probability)        2026-08-07, notebook at 6f848bc
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 231 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp5_odds' (combined cap: 100 trials)...
+Shared study 'exp5_odds' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7081
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 46 diff features
+Pooled test accuracy: 0.655  (n=110)
+95% CI (CLT):        [0.566, 0.743]
+Batch accuracy: 0.579 +/- 0.229 over 4 monthly batches
+Baseline accuracy: 0.609
+This run accuracy: 0.655
+New fixes 10 fights baseline got wrong
+New breaks 5 fights baseline got right
+Test-set McNemar p-value: 0.3018 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6171 vs this run 0.6601)
+OOF fixes 955 / breaks 617; McNemar p-value: 0.0000  <-- primary gate
+Statistically significant difference, favoring: this run
+Prediction: Ilia Topuria wins
+Confidence: 56.47% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
