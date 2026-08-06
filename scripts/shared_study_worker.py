@@ -1,19 +1,20 @@
-"""Optuna worker for the shared XGBoost study.
+"""Optuna worker for the shared XGBoost and LightGBM studies.
 
-Dispatched to the laptop by the notebook's "Hyperparameter Tuning with
-Optuna" cell (which also ships tuning_df_export.parquet, tuning_meta.json
-and cell4_helpers.py -- the fold/mirror helpers exported from the live
-kernel so this worker can never drift from the notebook's logic):
+Dispatched to the laptop by the notebook's tuning cells (which also ship
+tuning_df_export.parquet, tuning_meta.json and cell4_helpers.py -- the
+fold/mirror helpers exported from the live kernel so this worker can never
+drift from the notebook's logic):
 
     OPTUNA_STORAGE_URL=postgresql://... python shared_study_worker.py \
         tuning_df_export.parquet tuning_meta.json STUDY_NAME TRIAL_CAP \
-        cuda:1 SEED done_file
+        cuda:1 SEED done_file [xgb|lgbm]
 
 It joins the SAME Postgres-backed study as the desktop and adds trials until
 the shared COMPLETE-trial cap is reached, then touches done_file (the
-notebook polls for it over ssh). The device argument is probed with a tiny
-fit and falls back to cpu, so a broken GPU driver degrades to slow trials
-instead of dying silently in worker.log while the desktop waits.
+notebook polls for it over ssh). For xgb the device argument is probed with
+a tiny fit and falls back to cpu, so a broken GPU driver degrades to slow
+trials instead of dying silently in worker.log while the desktop waits.
+For lgbm the device argument is ignored (LightGBM stays CPU-only).
 """
 import json
 import os
@@ -43,12 +44,19 @@ def probe_device(device):
 def main():
     (tuning_path, meta_path, study_name, trial_cap,
      device_arg, seed, done_file) = sys.argv[1:8]
+    family = sys.argv[8] if len(sys.argv) > 8 else "xgb"
     trial_cap = int(trial_cap)
 
     tuning_df = pd.read_parquet(tuning_path)
     with open(meta_path) as fh:
         meta = json.load(fh)
-    device = probe_device(device_arg)
+
+    if family == "lgbm":
+        from lightgbm import LGBMClassifier
+        model_class = LGBMClassifier
+    else:
+        model_class = None  # cell4_helpers defaults to XGBClassifier
+        device = probe_device(device_arg)
 
     study = optuna.load_study(
         study_name=study_name,
@@ -57,31 +65,51 @@ def main():
     )
 
     def objective(trial):
-        # KEEP IN SYNC with the notebook's Optuna cell -- same space, same
-        # fixed params, only `device` differs per machine.
-        params = {
-            "objective": "binary:logistic",
-            "eval_metric": "logloss",
-            "verbosity": 0,
-            "random_state": 42,
-            "max_depth": trial.suggest_int("max_depth", 1, 6),
-            "learning_rate": trial.suggest_float("learning_rate", 0.002, 0.05, log=True),
-            "n_estimators": trial.suggest_int("n_estimators", 400, 1600),
-            "min_child_weight": trial.suggest_int("min_child_weight", 1, 50),
-            "gamma": trial.suggest_float("gamma", 1e-8, 10, log=True),
-            "subsample": trial.suggest_float("subsample", 0.6, 1.0),
-            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
-            "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10, log=True),
-            "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10, log=True),
-            "enable_categorical": True,
-            "tree_method": "hist",
-            "device": device,
-        }
+        # KEEP IN SYNC with the notebook's tuning cells -- same spaces, same
+        # fixed params; only `device` differs per machine (xgb only).
+        if family == "lgbm":
+            params = {
+                "objective": "binary",
+                "random_state": 42,
+                "verbosity": -1,
+                "num_leaves": trial.suggest_int("num_leaves", 7, 255),
+                "learning_rate": trial.suggest_float("learning_rate", 0.002, 0.05, log=True),
+                "n_estimators": trial.suggest_int("n_estimators", 400, 1600),
+                "min_child_samples": trial.suggest_int("min_child_samples", 5, 100),
+                "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                # Without a bagging frequency LightGBM silently ignores
+                # subsample -- keep in sync with the notebook's gotcha.
+                "subsample_freq": 1,
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10, log=True),
+                "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10, log=True),
+            }
+        else:
+            params = {
+                "objective": "binary:logistic",
+                "eval_metric": "logloss",
+                "verbosity": 0,
+                "random_state": 42,
+                "max_depth": trial.suggest_int("max_depth", 1, 6),
+                "learning_rate": trial.suggest_float("learning_rate", 0.002, 0.05, log=True),
+                "n_estimators": trial.suggest_int("n_estimators", 400, 1600),
+                "min_child_weight": trial.suggest_int("min_child_weight", 1, 50),
+                "gamma": trial.suggest_float("gamma", 1e-8, 10, log=True),
+                "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10, log=True),
+                "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10, log=True),
+                "enable_categorical": True,
+                "tree_method": "hist",
+                "device": device,
+            }
+        kwargs = {"model_class": model_class} if model_class else {}
         preds = train_test_windows_by_month(
             tuning_df,
             train_months=meta["best_train_months"],
             test_months=meta["best_test_months"],
             model_params=params,
+            **kwargs,
         )
         return evaluate_cv_predictions(preds, verbose=False)["AUC"]
 

@@ -146,8 +146,9 @@ automatically.
   subprocess with a timeout, because a broken driver — the desktop's current state — can HANG CUDA
   init rather than fail it). All four training sites (`create_xgb_model()`, the Optuna objective,
   the top-3 refits, the calibration OOF refits) reference `DEVICE`; never hardcode a device at one
-  site. The laptop's eGPU joins tuning via `scripts/shared_study_worker.py` (dispatched over ssh;
-  runs the same probe on its own device) — requires `OPTUNA_STORAGE_URL` and
+  site. The laptop joins BOTH tuning studies via `scripts/shared_study_worker.py` (dispatched over
+  ssh; family arg `xgb|lgbm` — eGPU trials for XGBoost after running the same probe on its own
+  device, CPU trials for LightGBM) — requires `OPTUNA_STORAGE_URL` and
   `OPTUNA_WORKER_STORAGE_URL` in the environment; credentials are never committed. The desktop's
   study database is named **`optuna_db`** (a run-5 retrain silently went desktop-only because a
   URL guessed `optuna` — the notebook degrades gracefully on Postgres failure, it does NOT error).
