@@ -506,8 +506,15 @@ coverage, scripts/odds_backtest.py, run on the desktop 2026-08-07):
                   disagreements; the residual disagreements still lose,
                   just far less often and for far less money
 
-$100 replay (last event): N/A — weekly Routine paused, no card logged
-since UFC Belgrade; that card's reconstruction is covered in entries 1-2.
+$100 replay (last event, UFC Belgrade — full-card reconstruction 2026-08-07):
+run-5 returns $100 → $115.75 (net +$15.75), picks 6/7 on the predictable
+fights (7 of 14 skipped: Serbia-debut fighters with no UFC history). Six
+value bets, all market-agreed favourites at small edges; the one loss
+(Klein, the card's only wrong pick) is absorbed by five wins. Same card:
+logged model $49, baseline v2 $0. Caveats: odds are DraftKings fight-day
+pairs fetched post-hoc from the card's betting-splits article (the log
+only recorded bet-side prices), not a logged closing line; and one card
+is noise-level evidence either way — the pooled backtest is the signal.
 
 Decision: ACCEPTED — every pre-registered success criterion met: pooled-OOF
 McNemar decisively favours odds-aware (fixes 955 / breaks 617, p ≈ 0,
