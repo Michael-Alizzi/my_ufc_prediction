@@ -182,7 +182,7 @@ independent cross-check, both run on pre-holdout data only:
   whether the gating retrain's pooled-OOF McNemar (below) prefers a
   different halflife once threaded through the complete feature set.
 
-### 5. Odds as a model feature        (IMPLEMENTED — desktop retrain pending)
+### 5. Odds as a model feature        (DECIDED: ACCEPTED — see entry 5)
 Give the model the market's own price: `r_/b_market_prob`, the vig-free
 implied probability from closing odds (METHODOLOGY §6). Rationale: the
 backtest shows the market's log-loss (0.6089) beats the model's (0.642) —
@@ -493,5 +493,27 @@ Prediction: Ilia Topuria wins
 Confidence: 56.47% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-07):
+    accuracy:     model 67.4% vs market favourite 66.3%
+    prob quality: model log-loss 0.5997 vs market log-loss 0.6089 — first
+                  model to beat the market's own log-loss (stretch goal;
+                  odds-blind baseline 0.6422)
+    dollar value: flat ROI +1.0% (4397 bets, hit 40.9%), kelly ROI +14.0%,
+                  close-vs-onesided segment ROI -5.1% (218 bets, hit 29.8%)
+                  — the segment collapsed from baseline's 1637 bets at
+                  -9.5%, the predicted by-construction shrink of market
+                  disagreements; the residual disagreements still lose,
+                  just far less often and for far less money
+
+$100 replay (last event): N/A — weekly Routine paused, no card logged
+since UFC Belgrade; that card's reconstruction is covered in entries 1-2.
+
+Decision: ACCEPTED — every pre-registered success criterion met: pooled-OOF
+McNemar decisively favours odds-aware (fixes 955 / breaks 617, p ≈ 0,
+acc 0.6171 → 0.6601) AND log-loss moved past the market's 0.6089 (the
+stretch goal: the model adds value beyond the price). Becomes the
+reference baseline. Unlocks phase 2 (own-odds logging in the weekly job,
+still gated on the user re-enabling the Routine) and entry 9's betting
+rule, which should now be designed around a model that agrees with the
+market by construction.
