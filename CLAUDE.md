@@ -29,7 +29,10 @@ CSVs from before that change still run, the home-crowd features just come out al
 ## Commands
 
 ```bash
-# environment
+# environment. `.venv/` is the generic path (cloud runs); on the desktop NO
+# .venv exists -- the working drive is FAT32, so the real venv lives at
+# ~/.cache/ufc_prediction_venv/ (substitute it for .venv in every command
+# below; a run-5 launch died instantly on the literal .venv path).
 .venv/bin/pip install -r requirements.txt
 
 # run the full modeling pipeline non-interactively (multi-hour: dominated by the
