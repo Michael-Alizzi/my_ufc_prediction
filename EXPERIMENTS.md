@@ -541,3 +541,40 @@ reference baseline. Unlocks phase 2 (own-odds logging in the weekly job,
 still gated on the user re-enabling the Routine) and entry 9's betting
 rule, which should now be designed around a model that agrees with the
 market by construction.
+
+---
+
+### 6. Absorbed/defensive stats (opponent output vs the fighter)        2026-08-07, notebook at e6b8d65
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 249 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp6_absorbed' (combined cap: 100 trials)...
+Shared study 'exp6_absorbed' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7096
+Laptop joined shared study 'exp6_absorbed_lgbm' (combined cap: 100 trials)...
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 52 diff features
+Pooled test accuracy: 0.645  (n=110)
+95% CI (CLT):        [0.556, 0.735]
+Batch accuracy: 0.598 +/- 0.161 over 4 monthly batches
+Baseline accuracy: 0.655
+This run accuracy: 0.645
+New fixes 3 fights baseline got wrong
+New breaks 4 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6601 vs this run 0.6622)
+OOF fixes 131 / breaks 114; McNemar p-value: 0.3067  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.95% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
