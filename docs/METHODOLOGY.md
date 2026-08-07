@@ -116,6 +116,37 @@ $\bar{y} = (0.76\cdot0 + 0.87\cdot1 + 1.0\cdot2)/2.63 \approx 1.09$
 takedowns conceded per fight — a takedown-defense number their win/loss
 record alone would never reveal.
 
+### 4.2 Opponent-adjusted performance (entry 7)
+
+**Math.** For fighter $f$'s fight $i$ against opponent $o$, the adjusted
+output for stat $x$ is the raw output minus what $o$ typically allowed
+before that night (their absorbed average from §4.1):
+$$\tilde{x}_i = x_i - \bar{y}^{(o)}_i$$
+where $\bar{y}^{(o)}_i$ is $o$'s prior absorbed EWM for the stat. The same
+six stats as §4.1; the per-fight $\tilde{x}_i$ values are then
+career-aggregated with the identical prior-only EWM and exported as
+`avg_r_adj_*`/`avg_b_adj_*` with `avg_adj_*_diff` differences (18
+columns). Not a z-score, deliberately: for per-stat aggregation feeding
+tree models, dividing by a constant per-stat $\sigma$ changes no split,
+and a per-opponent $\sigma$ estimated from short histories injects noise —
+the plain difference carries the same ordering information. An opponent's
+debut has no allowed average, so that fight contributes no adjusted value
+(the EWM skips NaN) rather than a fake zero.
+
+**Plain.** Raw career averages treat all opposition as equal: 100
+significant strikes landed counts the same against a defensive wizard as
+against a punching bag. The adjusted average asks "how much more (or less)
+did this fighter produce than that specific opponent usually gives up?" —
+a positive average means consistently beating opponents' defensive
+baselines, evidence of skill rather than soft matchmaking. Worked example:
+a fighter lands 60 significant strikes on an opponent who previously
+absorbed 80 per fight ($\tilde{x} = -20$, underperformed the baseline),
+then 50 on an opponent who usually absorbs 30 ($\tilde{x} = +20$,
+outperformed). Their raw striking average (55) looks identical to a
+fighter who did the reverse — the adjusted average (0 here, with the
+recency weighting favouring the +20) separates who actually beat the
+defenses in front of them.
+
 ## 5. Elo rating
 
 **Math.** Ratings start at 1500. After each fight, with

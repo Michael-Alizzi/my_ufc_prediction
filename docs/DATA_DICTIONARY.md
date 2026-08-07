@@ -32,6 +32,7 @@ tournament nights are deduplicated on (r_fighter, b_fighter, date).
 | Career averages | `avg_r_*`, `avg_b_*`, `avg_*_diff` | EWM mean (fight-count halflife = 5 fights, EXPERIMENTS.md entry 3) of each per-fight stat over PRIOR fights |
 | Career medians | `med_r_*` … | rolling median twin; members correlating > 0.95 with their mean twin (pre-holdout) are dropped |
 | Absorbed averages | `avg_r_abs_*`, `avg_b_abs_*`, `avg_abs_*_diff` | same EWM over what OPPONENTS did to the fighter in PRIOR fights — six stats (kd, sig_str_lnd, total_str_lnd, td_lnd, ctrl, sub_att): durability/defense (METHODOLOGY §4.1, entry 6) |
+| Opponent-adjusted averages | `avg_r_adj_*`, `avg_b_adj_*`, `avg_adj_*_diff` | same EWM over per-fight output MINUS that opponent's prior allowed average (their `abs` EWM) — same six stats: production relative to the defense actually faced (METHODOLOGY §4.2, entry 7) |
 | Form | `r_/b_prev_win`, `prev_3_win`, `win_streak`, `lose_streak` (+diffs) | last-fight result, last-3, current streaks |
 | Record | `r_/b_current_wins/losses`, `current_win_frac` (+diff) | prior UFC record |
 | Activity | `r_/b_days_since_last`, `fights_last_365` (+diff) | layoff and fight frequency |
