@@ -230,15 +230,25 @@ blind 50s.
 ## 9. The ensemble
 
 **Math.** Final score
-$$p = (1-w)\cdot\tfrac{1}{3}\textstyle\sum_{k=1}^{3} p_{\text{xgb}_k} + w\cdot p_{\text{lgbm}}$$
+$$p = (1-w_l-w_c)\cdot\tfrac{1}{3}\textstyle\sum_{k=1}^{3} p_{\text{xgb}_k}
+      + w_l\cdot p_{\text{lgbm}} + w_c\cdot p_{\text{cat}}$$
 with the top-3 Optuna XGBoost trials refit on the final training window and
-$w \in \{0, 0.25, 0.5\}$ chosen by validation AUC.
+$(w_l, w_c)$ chosen by validation AUC over the coarse simplex grid
+$w_l, w_c \in \{0, 0.25, 0.5\},\ w_l + w_c \le 0.75$ (8 candidates).
+Each of LightGBM and CatBoost is tuned by its own 100-trial shared Optuna
+study on the identical walk-forward objective (entry 8a). CatBoost runs
+through `CatBoostOnFrame` (predict.py): categorical NaN filled with a
+literal `missing` level and `cat_features` passed by name — XGBoost and
+LightGBM accept NaN categories natively, CatBoost refuses them.
 
 **Plain.** Averaging three good-but-different XGBoost configurations cancels
-some of each one's individual quirks; LightGBM (a different algorithm
-family) is blended in only if the validation slice says it helps. Only
-three candidate weights are considered on ~120 validation fights — a finer
-grid would overfit the slice (see §11 for the same logic).
+some of each one's individual quirks; LightGBM and CatBoost (different
+algorithm families — leaf-wise histogram boosting and ordered boosting with
+target-statistic categorical encoding respectively) are blended in only at
+weights the validation slice supports, including weight zero — a new family
+must earn its place, not assume it. Only 8 candidate weight pairs are
+considered on ~120 validation fights — a finer grid would overfit the
+slice (see §11 for the same logic).
 
 ## 10. Probability calibration (Platt, centered)
 

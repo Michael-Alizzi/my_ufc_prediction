@@ -29,3 +29,4 @@ jupyter
 
 # Testing
 pytest
+catboost

@@ -28,6 +28,7 @@ INTERESTING = re.compile(
     r"New fixes|New breaks|Test-set McNemar|McNemar p-value|"
     r"Pooled-OOF comparison|OOF fixes|Statistically significant|"
     r"No statistically significant|Validation: \d|Test: {7}\d|"
+    r"Best (LGBM|CatBoost) AUC|LGBM blend weight|Blend weights|"
     r"Dropped \d+ (duplicate|med_)|Prediction: |Confidence: )"
 )
 WINDOW_RE = re.compile(r"Best window:\s*(\d+) months train / (\d+) months test")

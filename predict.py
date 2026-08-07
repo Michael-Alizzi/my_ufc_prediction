@@ -233,10 +233,48 @@ def kelly_edge(p, odds):
     return edge / (odds - 1) if edge > 0 else 0.0
 
 
-def blend_proba(X, models, lgbm, lgbm_weight):
+class CatBoostOnFrame:
+    """CatBoostClassifier over a pandas frame with category dtypes.
+
+    XGBoost/LightGBM accept category columns with NaN natively; CatBoost
+    refuses NaN in categorical features. This wrapper fills categorical NaN
+    with a literal 'missing' level and passes cat_features by column name,
+    keeping the generic ``model_class(**params).fit(X, y)`` contract used by
+    the walk-forward harness, the Optuna objectives, and serving.
+    """
+
+    def __init__(self, **params):
+        self.params = params
+
+    @staticmethod
+    def _frame(X):
+        X = X.copy()
+        for c in X.columns:
+            if X[c].dtype.name == "category":
+                if "missing" not in X[c].cat.categories:
+                    X[c] = X[c].cat.add_categories("missing")
+                X[c] = X[c].fillna("missing")
+        return X
+
+    def fit(self, X, y):
+        from catboost import CatBoostClassifier
+        X = self._frame(X)
+        cats = [c for c in X.columns if X[c].dtype.name == "category"]
+        self.model_ = CatBoostClassifier(cat_features=cats, **self.params)
+        self.model_.fit(X, y)
+        return self
+
+    def predict_proba(self, X):
+        return self.model_.predict_proba(self._frame(X))
+
+
+def blend_proba(X, models, lgbm, lgbm_weight, catboost=None, cat_weight=0.0):
     xgb_p = np.mean([m.predict_proba(X)[:, 1] for m in models], axis=0)
     lgb_p = lgbm.predict_proba(X)[:, 1]
-    return (1 - lgbm_weight) * xgb_p + lgbm_weight * lgb_p
+    p = (1 - lgbm_weight - cat_weight) * xgb_p + lgbm_weight * lgb_p
+    if catboost is not None and cat_weight:
+        p = p + cat_weight * catboost.predict_proba(X)[:, 1]
+    return p
 
 
 def predict_winner(red, blue, weight_class, title_fight, total_round_number,
@@ -258,7 +296,8 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
         odds_r=odds_r, odds_b=odds_b,
     )
     raw_proba = float(blend_proba(
-        X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"]
+        X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"],
+        catboost=artifacts.get("catboost"), cat_weight=artifacts.get("cat_weight", 0.0)
     )[0])
     winner = red if raw_proba >= artifacts["best_th"] else blue
     # Calibrator is fit on the score centered at 0.5 (fit_intercept=False)

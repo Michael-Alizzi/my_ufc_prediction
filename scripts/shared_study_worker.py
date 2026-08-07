@@ -54,6 +54,22 @@ def main():
     if family == "lgbm":
         from lightgbm import LGBMClassifier
         model_class = LGBMClassifier
+    elif family == "catboost":
+        from cell4_helpers import CatBoostOnFrame
+        model_class = CatBoostOnFrame
+        # device_arg here is a CUDA index string for CatBoost's `devices`
+        # (dispatched with CUDA_DEVICE_ORDER=PCI_BUS_ID); probe with a tiny
+        # GPU fit, fall back to CPU params like the xgb probe does.
+        import numpy as _np
+        try:
+            CatBoostOnFrame(loss_function="Logloss", iterations=2, verbose=0,
+                            allow_writing_files=False, task_type="GPU",
+                            devices=device_arg).fit(
+                pd.DataFrame({"x": [0.0, 1.0, 0.0, 1.0]}), [0, 1, 0, 1])
+            cat_device = {"task_type": "GPU", "devices": device_arg}
+        except Exception as e:
+            print(f"catboost GPU devices={device_arg!r} unusable ({e}); cpu", flush=True)
+            cat_device = {}
     else:
         model_class = None  # cell4_helpers defaults to XGBClassifier
         device = probe_device(device_arg)
@@ -67,7 +83,22 @@ def main():
     def objective(trial):
         # KEEP IN SYNC with the notebook's tuning cells -- same spaces, same
         # fixed params; only `device` differs per machine (xgb only).
-        if family == "lgbm":
+        if family == "catboost":
+            params = {
+                "loss_function": "Logloss",
+                "random_seed": 42,
+                "verbose": 0,
+                "allow_writing_files": False,
+                "bootstrap_type": "Bernoulli",
+                "depth": trial.suggest_int("depth", 3, 8),
+                "learning_rate": trial.suggest_float("learning_rate", 0.002, 0.05, log=True),
+                "iterations": trial.suggest_int("iterations", 400, 1600),
+                "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1e-8, 10, log=True),
+                "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                "random_strength": trial.suggest_float("random_strength", 1e-8, 10, log=True),
+                **cat_device,
+            }
+        elif family == "lgbm":
             params = {
                 "objective": "binary",
                 "random_state": 42,
