@@ -598,3 +598,40 @@ on every line (log-loss, flat/Kelly ROI, and the first-ever positive
 close-vs-onesided segment). Contrast with entry 4: same null accuracy
 gate, opposite tie-break verdict, opposite decision. Absorbed/defensive
 stats stay in; run 6 becomes the reference baseline.
+
+---
+
+### 7. Opponent-adjusted performance (output vs opponent's allowed average)        2026-08-08, notebook at 0fc677e
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.587 +/- 0.162 over 4 monthly batches
+Baseline accuracy: 0.645
+This run accuracy: 0.627
+New fixes 0 fights baseline got wrong
+New breaks 2 fights baseline got right
+Test-set McNemar p-value: 0.5000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6622 vs this run 0.6623)
+OOF fixes 129 / breaks 128; McNemar p-value: 1.0000  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.40% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
