@@ -213,7 +213,7 @@ line is the honest scoreboard; and NaN-coverage asymmetry (pre-2007
 fights) means the trees may split on "odds exist at all" — acceptable,
 documented.
 
-### 6. Absorbed/defensive stats        (CPU retrain)
+### 6. Absorbed/defensive stats        (DECIDED: ACCEPTED — see entry 6)
 Career prior averages of what opponents did TO the fighter (~6 stats:
 sig-str absorbed/min, KD absorbed, takedowns conceded, control time
 conceded, etc.) via the existing long-frame machinery with source columns
@@ -576,5 +576,25 @@ Prediction: Ilia Topuria wins
 Confidence: 60.95% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-07):
+    accuracy:     model 67.6% vs market favourite 66.3% (run-5 baseline 67.4%)
+    prob quality: model log-loss 0.5963 vs market log-loss 0.6089
+                  (run-5 baseline 0.5997 — gap to market widens in our favour)
+    dollar value: flat ROI +2.1% (4317 bets, hit 45.8%), kelly ROI +15.9%,
+                  close-vs-onesided segment ROI +4.2% (189 bets, hit 32.3%)
+                  — the segment that defined the project's failure mode
+                  (−9.5% odds-blind, −5.1% at run 5) is POSITIVE for the
+                  first time; underdog share of bets 84% → 73%
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entry 5): $100 → $112.46 (net +$12.46), picks 6/7, same bets as run 5
+with slightly different stakes (run 5: $115.75). One-card noise either way.
+
+Decision: ACCEPTED via the market tie-break — the pooled-OOF McNemar is a
+statistical tie (fixes 131 / breaks 114, p=0.31; acc 0.6601 → 0.6622), and
+the protocol's tie-break goes to the market comparison, which run 6 wins
+on every line (log-loss, flat/Kelly ROI, and the first-ever positive
+close-vs-onesided segment). Contrast with entry 4: same null accuracy
+gate, opposite tie-break verdict, opposite decision. Absorbed/defensive
+stats stay in; run 6 becomes the reference baseline.
