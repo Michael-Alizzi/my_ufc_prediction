@@ -220,7 +220,7 @@ conceded, etc.) via the existing long-frame machinery with source columns
 swapped. New information the model currently can't see: durability and
 defense are only indirectly visible through loss rates today.
 
-### 7. Opponent-adjusted performance        (CPU retrain; builds on #6)
+### 7. Opponent-adjusted performance        (DECIDED: ACCEPTED, marginal — see entry 7)
 Per-fight z-scores vs the opponent's prior allowed averages, career-
 aggregated — needs #6's absorbed/defensive stats as inputs. Landing 100
 strikes on a defensive wizard means more than 100 on a punching bag.
@@ -633,5 +633,27 @@ Prediction: Ilia Topuria wins
 Confidence: 60.40% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-08):
+    accuracy:     model 67.8% vs market favourite 66.3% (run-6 baseline 67.6%)
+    prob quality: model log-loss 0.5958 vs market log-loss 0.6089
+                  (run-6 baseline 0.5963 — a 0.0005 improvement, within
+                  plausible refit noise; flagged below)
+    dollar value: flat ROI +2.1% (4384 bets, hit 47.1%; baseline +2.1%),
+                  kelly ROI +15.8% (baseline +15.9%),
+                  close-vs-onesided segment ROI +6.3% (211 bets, hit 33.2%;
+                  baseline +4.2%); underdog share 73% → 69%
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-6): $100 → $115.59 (net +$15.59), picks 6/7. One-card noise.
+
+Decision: ACCEPTED, marginally — the weakest accept in the log, recorded
+as such. The pooled-OOF McNemar is a perfect null (fixes 129 / breaks 128,
+p=1.0), and the tie-break market comparison leans positive on its primary
+metric (log-loss −0.0005), accuracy (+0.2), and the close-vs-onesided
+segment (+4.2% → +6.3%) while flat/Kelly ROI are a wash — nothing
+regressed. Honest caveat: the winning margins are individually within
+refit noise; the acceptance rests on the tie-break's letter plus the
+directional consistency with entries 5-6, not on any decisive line. If a
+future run needs schema slimming, these 18 columns are the first
+candidates for an ablation. Run 7 becomes the reference baseline.
