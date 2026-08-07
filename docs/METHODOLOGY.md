@@ -88,6 +88,34 @@ fighter's *last-fight* position, not to today — a returning fighter's
 layoff shows up in `days_since_last`, not by further shrinking their
 averages.
 
+### 4.1 Absorbed/defensive averages (entry 6)
+
+**Math.** For fighter $f$ in fight $t$, let $y_i$ be what $f$'s *opponent*
+recorded against $f$ in prior fight $i$ — the same six stats sourced from
+the opposite corner's columns: knockdowns, significant strikes landed,
+total strikes landed, takedowns landed, control time, submission attempts.
+The absorbed average is the identical EWM over prior fights,
+$$\bar{y}_t = \frac{\sum_{i<t} w_i\, y_i}{\sum_{i<t} w_i},\qquad
+  w_i = 0.5^{(t-1-i)/5},$$
+exported as `avg_r_abs_*`/`avg_b_abs_*` with `avg_abs_*_diff` matchup
+differences (18 columns). Implementation is the career-average long frame
+with source columns swapped — red rows read the fight's `b_` stats, blue
+rows read `r_` — then the same aggregation, join, first-fight NaN mask,
+mirroring, and serving path, unchanged.
+
+**Plain.** The career averages describe what a fighter *does*; these
+describe what is *done to them*. Two fighters can share identical loss
+records while one eats 5.8 significant strikes a minute and gives up
+three takedowns a fight and the other barely gets touched — durability
+and defense that, before this feature, the model could only infer
+indirectly from outcomes. Worked example: a fighter conceded 0, 1 and 2
+takedowns in their last three fights (oldest first). At halflife 5 the
+weights are $0.5^{2/5} \approx 0.76$, $0.5^{1/5} \approx 0.87$ and $1.0$
+respectively, so
+$\bar{y} = (0.76\cdot0 + 0.87\cdot1 + 1.0\cdot2)/2.63 \approx 1.09$
+takedowns conceded per fight — a takedown-defense number their win/loss
+record alone would never reveal.
+
 ## 5. Elo rating
 
 **Math.** Ratings start at 1500. After each fight, with
