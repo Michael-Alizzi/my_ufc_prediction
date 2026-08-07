@@ -225,15 +225,32 @@ Per-fight z-scores vs the opponent's prior allowed averages, career-
 aggregated — needs #6's absorbed/defensive stats as inputs. Landing 100
 strikes on a defensive wizard means more than 100 on a punching bag.
 
-### 8. Ensemble diversity: CatBoost + TabPFN        (one retrain)
-Add two diverse members to the blend, weights re-selected on validation:
-CatBoost (third boosted-tree family, ordered boosting + target-statistic
-categorical handling) and TabPFN (pre-trained tabular transformer, strong
-exactly in this small-data regime; ~4,800 mirrored rows per 72-month
-window fits its ≤10k limit). Expected effect: small log-loss polish from
-decorrelated errors — queued after the information-adding experiments
-because model additions squeeze the same information differently, and the
-market gap more likely closes with new information.
+### 8. Ensemble diversity: CatBoost, then TabPFN        (two gated retrains — user call, 2026-08-07)
+Add diverse members to the blend, weights re-selected on validation.
+Split into TWO sub-experiments run in sequence (user instruction: one
+model per run, each with its own review and accept/revert against the
+then-current baseline — the original "one retrain" bundling violated the
+one-variable rule):
+**8a. CatBoost** (third boosted-tree family, ordered boosting +
+target-statistic categorical handling). Full gating retrain; snapshot
+baseline first; accept/revert on its own McNemar + market comparison.
+**8b. TabPFN** (pre-trained tabular transformer, strong exactly in this
+small-data regime; ~4,800 mirrored rows per 72-month window fits its
+≤10k limit). Runs only after 8a is decided, against whatever baseline
+8a leaves behind. Same gates.
+**Laptop integration (user instruction):** each new model family gets the
+same shared-study laptop dispatch as XGB/LGBM — extend
+`scripts/shared_study_worker.py`'s family arg (`catboost`, and a TabPFN
+family if it grows a tuning study) and dispatch via the notebook's
+existing `dispatch_laptop_worker()` helpers. CatBoost tunes on GPU
+(desktop cuda + laptop eGPU, its own probe); TabPFN is PyTorch — runs on
+DEVICE for its per-window fits, laptop-dispatched the same way if a
+config search exists (its Pascal support differs from XGBoost's, so the
+probe decides per machine, never an assumption).
+Expected effect: small log-loss polish from decorrelated errors — queued
+after the information-adding experiments because model additions squeeze
+the same information differently, and the market gap more likely closes
+with new information.
 
 ### 9. Beat-the-market betting rule        (last — no retrain, decision layer)
 Change: use the market as an input to bet selection instead of betting
