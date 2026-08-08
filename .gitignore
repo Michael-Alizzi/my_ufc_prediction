@@ -5,12 +5,22 @@ __pycache__/
 .env
 
 # Large generated artifacts (reproducible from the notebook pipeline).
-# ensemble.joblib and fighter_history.parquet are the exception: app.py
+# ensemble.joblib and fighter_history.parquet are checked in: app.py
 # (and Streamlit Community Cloud, which only sees what's on GitHub) needs
-# them checked in to serve predictions.
+# them to serve predictions. The raw CSVs are checked in too (since Aug
+# 2026): "re-scrape anytime" stopped being true once ufcstats began
+# blocking datacenter IPs, and committed data pins each experiment to the
+# exact rows it trained on.
 ensemble_baseline.joblib
 data.csv
-raw_fight_data.csv
-raw_fighter_details.csv
 .claude/*.tmp.*
 .claude/settings.local.json
+
+# per-run artifact stash from scripts/run_experiments.sh
+.experiment_runs/
+
+# per-experiment Optuna resume scratch (cloud runs survive container restarts)
+.optuna_resume*.db
+
+# desktop-joined training odds (unlicensed upstream -- never committed)
+odds_train.csv
