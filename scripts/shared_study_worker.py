@@ -66,7 +66,10 @@ def main():
                             allow_writing_files=False, task_type="GPU",
                             devices=device_arg).fit(
                 pd.DataFrame({"x": [0.0, 1.0, 0.0, 1.0]}), [0, 1, 0, 1])
-            cat_device = {"task_type": "GPU", "devices": device_arg}
+            # gpu_ram_part: default reserves 95% of the card per fit, which
+            # stalls under shared/display GPU memory -- 3 GB is ample here.
+            cat_device = {"task_type": "GPU", "devices": device_arg,
+                          "gpu_ram_part": 0.3}
         except Exception as e:
             print(f"catboost GPU devices={device_arg!r} unusable ({e}); cpu", flush=True)
             cat_device = {}
@@ -150,7 +153,14 @@ def main():
         if n_complete >= trial_cap:
             study.stop()
 
-    study.optimize(objective, n_trials=None, callbacks=[stop_when_enough])
+    # Resumed studies may already be at the cap -- the stop callback only
+    # fires AFTER a trial completes, which would waste one full trial here.
+    n_done = len([t for t in study.get_trials(deepcopy=False)
+                  if t.state == TrialState.COMPLETE])
+    if n_done < trial_cap:
+        study.optimize(objective, n_trials=None, callbacks=[stop_when_enough])
+    else:
+        print(f"study already at cap ({n_done} complete) -- nothing to do", flush=True)
 
     with open(done_file, "w") as fh:
         fh.write("done\n")
