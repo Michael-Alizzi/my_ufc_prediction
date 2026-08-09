@@ -697,5 +697,33 @@ Prediction: Ilia Topuria wins
 Confidence: 61.69% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-10):
+    accuracy:     model 67.5% vs market favourite 66.3% (run-7 baseline 67.8%)
+    prob quality: model log-loss 0.5966 vs market log-loss 0.6089
+                  (run-7 baseline 0.5958 — a 0.0008 regression)
+    dollar value: flat ROI +3.2% (4513 bets, hit 47.2%; baseline +2.1%),
+                  kelly ROI +14.7% (baseline +15.8%),
+                  close-vs-onesided segment ROI +3.9% (258 bets, hit 32.9%;
+                  baseline +6.3%); underdog share 69% (unchanged)
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-7): $100 → $115.96 (net +$15.96), picks 6/7 — statistically
+identical to run-7's $115.59, as expected from a zero-weight change.
+(Reconstruction script recovered from the Aug-9 session transcript; the
+scratchpad original was lost to the power-off.)
+
+Decision: REVERTED. The headline result is that CatBoost never made the
+team: the validation blend weight search gave it 0.0 (CatBoost-only val
+AUC 0.754 vs XGB 0.769 / LGBM 0.772), despite posting the best tuning-CV
+AUC of any study (0.7122). The shipped ensemble was therefore
+architecturally identical to run-7 plus refit noise — and that noise leans
+negative: pooled-OOF McNemar null (fixes 184 / breaks 196, p=0.5726) with
+OOF accuracy down 0.6623 → 0.6608, and the market tie-break favours
+baseline on 4 of 5 metrics (accuracy, log-loss, kelly ROI, segment ROI;
+only flat ROI leans the other way). Run-7 artifacts restored as current;
+run 7 remains the reference baseline for 8b. The CatBoost tuning/dispatch
+infrastructure (shared_study_worker catboost family, CatBoostOnFrame,
+three-member blend plumbing) stays in the code — entry 8's standing
+instruction reuses it for every new model family, and predict.py serves
+two-member artifacts unchanged (cat fields default to absent/0.0).
