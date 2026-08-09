@@ -657,3 +657,45 @@ refit noise; the acceptance rests on the tie-break's letter plus the
 directional consistency with entries 5-6, not on any decisive line. If a
 future run needs schema slimming, these 18 columns are the first
 candidates for an ablation. Run 7 becomes the reference baseline.
+
+---
+
+### 8a. CatBoost as third ensemble member        2026-08-10, notebook at 8f3cf4e
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp8a_catboost' (combined cap: 100 trials)...
+Shared study 'exp8a_catboost' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7109
+Laptop joined shared study 'exp8a_catboost_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.706026001246759
+Laptop joined shared study 'exp8a_catboost_catboost' (combined cap: 100 trials)...
+Shared study 'exp8a_catboost_catboost' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7122
+Best CatBoost AUC: 0.712202947882838
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Blend weights: lgbm=0.5 catboost=0.0 (XGB-only val AUC 0.769, LGBM-only 0.772, CatBoost-only 0.754)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.645  (n=110)
+95% CI (CLT):        [0.556, 0.735]
+Batch accuracy: 0.598 +/- 0.161 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.645
+New fixes 2 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 0.5000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6623 vs this run 0.6608)
+OOF fixes 184 / breaks 196; McNemar p-value: 0.5726  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 61.69% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
