@@ -251,6 +251,28 @@ Expected effect: small log-loss polish from decorrelated errors — queued
 after the information-adding experiments because model additions squeeze
 the same information differently, and the market gap more likely closes
 with new information.
+**8c. Logit-space blending** (queued 2026-08-10, after 8b decides): the
+ensemble currently averages probabilities linearly; average in log-odds
+instead (equivalently a geometric mean of odds). One-line change to
+`blend_proba` + the notebook's blend sites. Mechanism: linear probability
+averages are systematically overconfident where members disagree; logit
+averaging is the standard fix when the metric is log-loss — and log-loss
+vs the market is the project's headline metric. No new tuning studies, no
+laptop; same gates.
+**8d. OOF stacking for blend weights** (queued 2026-08-10, after 8c):
+replace the coarse validation-slice weight grid with a tiny logistic
+meta-learner (2-3 coefficients, member probabilities only) fit on the
+~7.9k pooled walk-forward OOF predictions — 65× the sample of the
+120-fight slice, so fractional and negative weights become measurable
+instead of noise-chased. Guardrail: the meta-model stays at member-count
+coefficients; anything richer re-opens the validation-overfit door the
+coarse grid deliberately closed (see the decision-layer cell's 6-point
+scar). No new tuning studies; same gates.
+(Far-future, contingent, not queued: dynamic ensemble selection / KNORA —
+per-fight member selection by local OOF competence. Only worth a look if
+the roster reaches ~5+ genuinely diverse families; with 2-3 correlated
+members and ~8k OOF fights the neighborhood competence estimates are
+noise. Revisit at roster growth, not before.)
 
 ### 9. Beat-the-market betting rule        (last — no retrain, decision layer)
 Change: use the market as an input to bet selection instead of betting
