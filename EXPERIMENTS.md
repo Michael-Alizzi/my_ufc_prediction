@@ -255,10 +255,15 @@ with new information.
 ensemble currently averages probabilities linearly; average in log-odds
 instead (equivalently a geometric mean of odds). One-line change to
 `blend_proba` + the notebook's blend sites. Mechanism: linear probability
-averages are systematically overconfident where members disagree; logit
-averaging is the standard fix when the metric is log-loss — and log-loss
-vs the market is the project's headline metric. No new tuning studies, no
-laptop; same gates.
+pools are systematically flatter than their members justify (the average
+of two calibrated forecasts is under-sharp; Jensen compresses toward
+0.5); logit averaging restores sharpness and is the standard fix when the
+metric is log-loss — and log-loss vs the market is the project's headline
+metric. Caveat to record at run time: the Platt calibrator downstream can
+absorb some of this flatness already (its slope can exceed 1), so the
+entry must compare on the same probability the odds backtest scores, and
+a null is a live possibility. No new tuning studies, no laptop; same
+gates.
 **8d. OOF stacking for blend weights** (queued 2026-08-10, after 8c):
 replace the coarse validation-slice weight grid with a tiny logistic
 meta-learner (2-3 coefficients, member probabilities only) fit on the
