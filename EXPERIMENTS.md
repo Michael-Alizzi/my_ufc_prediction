@@ -727,3 +727,22 @@ infrastructure (shared_study_worker catboost family, CatBoostOnFrame,
 three-member blend plumbing) stays in the code — entry 8's standing
 instruction reuses it for every new model family, and predict.py serves
 two-member artifacts unchanged (cat fields default to absent/0.0).
+
+### Expectation for #8b (written before the run, 2026-08-10)
+TabPFN as the third-member candidate in 8a's now-reverted slot, against
+the run-7 baseline. No tuning study and no laptop dispatch — the entry-8
+spec gates dispatch on "if a config search exists", and TabPFN's core
+claim is that none does; XGB/LGBM still get fresh 100-trial shared
+studies. Fit check: ~4.8k mirrored rows per 72-month window ≤ its 10k
+pretraining limit, 267 features ≤ 500. Client note: tabpfn 8.2.0 with the
+openly-published v2 checkpoint pinned via model_path (the 8.x client's
+default v2.5+ weights sit behind a per-user license token a batch run
+can't accept; the pre-gate 2.x clients force pandas<3 / sklearn<1.7
+downgrades that break this repo's stack — both discovered the hard way
+tonight). Artifact keys generalised: catboost/cat_weight →
+extra_model/extra_weight; the TabPFN member is only persisted when it
+earns non-zero weight (a pickled TabPFN embeds its ~29MB transformer).
+Expected: decorrelated errors from a genuinely different model family
+give a small blend weight (0.25) and a mild log-loss polish; the honest
+prior after 8a is that the 120-fight validation slice gives the newcomer
+0.0 again and the gate stays null.

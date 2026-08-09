@@ -268,12 +268,51 @@ class CatBoostOnFrame:
         return self.model_.predict_proba(self._frame(X))
 
 
-def blend_proba(X, models, lgbm, lgbm_weight, catboost=None, cat_weight=0.0):
+class TabPFNOnFrame:
+    """TabPFNClassifier over a pandas frame with category dtypes.
+
+    TabPFN wants numeric arrays with categorical columns declared by index.
+    Category columns are mapped to their fixed dtype codes (NaN preserved --
+    TabPFN handles missing values natively), keeping the generic
+    ``model_class(**params).fit(X, y)`` contract used by the walk-forward
+    harness and serving. Codes are stable across fit/predict because every
+    frame carries the same categorical dtypes (X_train.dtypes).
+    """
+
+    def __init__(self, **params):
+        self.params = params
+
+    @staticmethod
+    def _array(X):
+        X = X.copy()
+        cat_idx = []
+        for i, c in enumerate(X.columns):
+            if X[c].dtype.name == "category":
+                cat_idx.append(i)
+                codes = X[c].cat.codes.astype("float64")
+                X[c] = codes.where(codes >= 0)  # -1 (NaN) back to NaN
+        return X.astype("float64").to_numpy(), cat_idx
+
+    def fit(self, X, y):
+        from tabpfn import TabPFNClassifier
+        Xa, cat_idx = self._array(X)
+        self.model_ = TabPFNClassifier(
+            categorical_features_indices=cat_idx or None, **self.params)
+        self.model_.fit(Xa, y)
+        return self
+
+    def predict_proba(self, X):
+        return self.model_.predict_proba(self._array(X)[0])
+
+
+def blend_proba(X, models, lgbm, lgbm_weight, extra=None, extra_weight=0.0):
+    """Ensemble probability; `extra` is any third member with predict_proba
+    (CatBoostOnFrame in run 8a, TabPFNOnFrame in run 8b)."""
     xgb_p = np.mean([m.predict_proba(X)[:, 1] for m in models], axis=0)
     lgb_p = lgbm.predict_proba(X)[:, 1]
-    p = (1 - lgbm_weight - cat_weight) * xgb_p + lgbm_weight * lgb_p
-    if catboost is not None and cat_weight:
-        p = p + cat_weight * catboost.predict_proba(X)[:, 1]
+    p = (1 - lgbm_weight - extra_weight) * xgb_p + lgbm_weight * lgb_p
+    if extra is not None and extra_weight:
+        p = p + extra_weight * extra.predict_proba(X)[:, 1]
     return p
 
 
@@ -297,7 +336,7 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
     )
     raw_proba = float(blend_proba(
         X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"],
-        catboost=artifacts.get("catboost"), cat_weight=artifacts.get("cat_weight", 0.0)
+        extra=artifacts.get("extra_model"), extra_weight=artifacts.get("extra_weight", 0.0)
     )[0])
     winner = red if raw_proba >= artifacts["best_th"] else blue
     # Calibrator is fit on the score centered at 0.5 (fit_intercept=False)
