@@ -975,3 +975,41 @@ and survives only via its Brier non-regression assert. Run 8d becomes the
 reference baseline. Queued next: re-audition CatBoost (8a) and TabPFN
 (8b) under the stacker — both were rejected by the mechanism this entry
 just replaced.
+
+---
+
+### 8e. CatBoost re-audition under the OOF stacker        2026-08-10, notebook at 997facb
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7096779831694502
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.600  (n=110)
+95% CI (CLT):        [0.508, 0.692]
+Batch accuracy: 0.543 +/- 0.211 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.600
+New fixes 0 fights baseline got wrong
+New breaks 3 fights baseline got right
+Test-set McNemar p-value: 0.2500 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6615 vs this run 0.6640)
+OOF fixes 131 / breaks 111; McNemar p-value: 0.2219  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.13% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
