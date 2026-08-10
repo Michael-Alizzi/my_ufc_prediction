@@ -937,5 +937,41 @@ Prediction: Ilia Topuria wins
 Confidence: 61.98% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Stacker fit (not captured by the auto-log scraper): coefficients in logit
+space xgb=0.829, lgbm=0.356 on 7869 pooled OOF fights — LGBM earns real
+weight on the big sample, and the coefficients summing to 1.185 (>1) means
+the pool sharpens, the theoretically-expected signature of decorrelated
+members agreeing.
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, desktop 2026-08-10):
+    accuracy:     model 67.7% vs market favourite 66.3% (baseline 67.8%)
+    prob quality: model log-loss 0.5939 vs market log-loss 0.6089
+                  (baseline 0.5958 — a 0.0019 improvement, the largest
+                  log-loss move of the 8-series, on the primary metric)
+    dollar value: flat ROI +5.7% (4569 bets, hit 55.9%; baseline +2.1%,
+                  hit 47.1%), kelly ROI +13.6% (baseline +15.8%),
+                  close-vs-onesided segment ROI +5.8% (150 bets; baseline
+                  +6.3%, 211 bets); underdog share 69% → 51%
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-8b): $100 → $120.69 (net +$20.69), picks 6/7 — the best replay
+of the series (run-7 baseline $115.59). One-card noise, as always.
+
+Decision: ACCEPTED. The pick-level gate is null (fixes 46 / breaks 53,
+p=0.5465 — expected: stacking barely moves picks), so the market tie-break
+decides, and it is the clearest tie-break of the series: log-loss improved
+0.0019 (the metric that must close, now 0.0150 ahead of the market), flat
+ROI nearly tripled (+2.1% → +5.7%) with hit rate up 47.1% → 55.9% and
+underdog share down 69% → 51% — the sharper probabilities stopped
+over-betting longshots. Kelly ROI dips (+15.8% → +13.6%) and the segment
+thins (211 → 150 bets, +6.3% → +5.8%): both are consequences of the same
+recalibrated bet profile, traded against the flat-ROI and log-loss gains.
+Honest caveats: (1) the stacker is fit on the same pooled OOF the gate and
+backtest score — mitigated by its 2-coefficient capacity, but a
+fully-nested evaluation would refit it per window; (2) the Platt
+calibrator downstream is now near-redundant (double-fit on the same OOF)
+and survives only via its Brier non-regression assert. Run 8d becomes the
+reference baseline. Queued next: re-audition CatBoost (8a) and TabPFN
+(8b) under the stacker — both were rejected by the mechanism this entry
+just replaced.

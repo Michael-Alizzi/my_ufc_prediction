@@ -229,26 +229,33 @@ blind 50s.
 
 ## 9. The ensemble
 
-**Math.** Final score
-$$p = (1-w_l-w_c)\cdot\tfrac{1}{3}\textstyle\sum_{k=1}^{3} p_{\text{xgb}_k}
-      + w_l\cdot p_{\text{lgbm}} + w_c\cdot p_{\text{cat}}$$
-with the top-3 Optuna XGBoost trials refit on the final training window and
-$(w_l, w_c)$ chosen by validation AUC over the coarse simplex grid
-$w_l, w_c \in \{0, 0.25, 0.5\},\ w_l + w_c \le 0.75$ (8 candidates).
-Each of LightGBM and CatBoost is tuned by its own 100-trial shared Optuna
-study on the identical walk-forward objective (entry 8a). CatBoost runs
-through `CatBoostOnFrame` (predict.py): categorical NaN filled with a
-literal `missing` level and `cat_features` passed by name — XGBoost and
-LightGBM accept NaN categories natively, CatBoost refuses them.
+**Math.** Member scores are $p_{\text{xgb}} = \tfrac{1}{3}\sum_{k=1}^{3}
+p_{\text{xgb}_k}$ (top-3 Optuna trials refit on the final window) and
+$p_{\text{lgbm}}$ (its own 100-trial shared study). The final score is a
+logistic stacker over member log-odds (entry 8d):
+$$p = \sigma\big(\beta_x\,\mathrm{logit}(p_{\text{xgb}})
+      + \beta_l\,\mathrm{logit}(p_{\text{lgbm}})\big)$$
+with $(\beta_x, \beta_l)$ the coefficients of an **intercept-free** logistic
+regression fit on the ~7.9k pooled walk-forward OOF member predictions
+(run-8d fit: $\beta_x{=}0.83$, $\beta_l{=}0.36$). The fitted stacker ships
+inside `ensemble.joblib`; artifacts without one (pre-8d) are served with
+their original linear weights.
 
-**Plain.** Averaging three good-but-different XGBoost configurations cancels
-some of each one's individual quirks; LightGBM and CatBoost (different
-algorithm families — leaf-wise histogram boosting and ordered boosting with
-target-statistic categorical encoding respectively) are blended in only at
-weights the validation slice supports, including weight zero — a new family
-must earn its place, not assume it. Only 8 candidate weight pairs are
-considered on ~120 validation fights — a finer grid would overfit the
-slice (see §11 for the same logic).
+**Plain.** Weights used to come from an AUC grid on the ~120-fight
+validation slice — which zeroed and promoted LightGBM essentially at random
+across runs 5-8c (0.25 → 0 → 0 → 0.5 → 0 → 0). The stacker asks the same
+question on 65× the evidence, optimizing log-loss (the market metric, §12)
+directly, and settled it: LightGBM carries real weight. The coefficients
+sum slightly above 1, meaning the pool *sharpens* — two decorrelated
+opinions agreeing justify more confidence than either alone. No intercept
+by construction: the training pool is mirror-balanced, so the optimal
+intercept is 0, and forcing it keeps corner-swap antisymmetry exact.
+Guardrail: the stacker never grows beyond member-count coefficients —
+anything richer is a model fitted on model outputs, the overfitting door
+§11's 6-point scar warns about. Third-member slot currently empty:
+CatBoost (entry 8a) and TabPFN (entry 8b) both failed their gates under
+the old grid; their wrappers remain in predict.py and re-audition under
+the stacker is queued.
 
 ## 10. Probability calibration (Platt, centered)
 
