@@ -252,10 +252,13 @@ by construction: the training pool is mirror-balanced, so the optimal
 intercept is 0, and forcing it keeps corner-swap antisymmetry exact.
 Guardrail: the stacker never grows beyond member-count coefficients —
 anything richer is a model fitted on model outputs, the overfitting door
-§11's 6-point scar warns about. Third-member slot currently empty:
-CatBoost (entry 8a) and TabPFN (entry 8b) both failed their gates under
-the old grid; their wrappers remain in predict.py and re-audition under
-the stacker is queued.
+§11's 6-point scar warns about. Third member: **CatBoost** (entry 8e —
+rejected by the old grid in 8a, re-auditioned under the stacker and
+accepted with a near-co-equal coefficient; run-8e fit: xgb 0.57, lgbm
+0.10, catboost 0.50). CatBoost runs through `CatBoostOnFrame`
+(predict.py): categorical NaN filled with a literal `missing` level and
+`cat_features` passed by name. TabPFN (entry 8b) remains out; its
+re-audition under the stacker is queued.
 
 ## 10. Probability calibration (Platt, centered)
 

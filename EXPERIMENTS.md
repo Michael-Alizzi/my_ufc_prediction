@@ -1011,5 +1011,41 @@ Prediction: Ilia Topuria wins
 Confidence: 60.13% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Stacker fit (not captured by the auto-log scraper): coefficients in logit
+space xgb=0.573, lgbm=0.104, catboost=0.498 on 7869 pooled OOF fights.
+CatBoost enters nearly co-equal with XGB; LGBM's coefficient collapses
+0.356 → 0.104 — CatBoost supplies the same second opinion better, which
+is exactly what the correlated-members theory predicted a fair weighting
+would reveal.
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, desktop 2026-08-10; baseline = run 8d):
+    accuracy:     model 67.7% vs market favourite 66.3% (baseline 67.7%)
+    prob quality: model log-loss 0.5932 vs market log-loss 0.6089
+                  (baseline 0.5939 — improved again; the market lead is
+                  now 0.0157)
+    dollar value: flat ROI +6.1% (4536 bets, hit 55.9%; baseline +5.7%),
+                  kelly ROI +14.0% (baseline +13.6%),
+                  close-vs-onesided segment ROI -0.9% (125 bets, hit
+                  31.2%; baseline +5.8%, 150 bets) — the one regression,
+                  flagged below; underdog share 50% (unchanged)
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-8d): $100 → $138.75 (net +$38.75), picks 6/7 — best of the
+series (8d baseline $120.69). One-card noise, as always.
+
+Decision: ACCEPTED. First positive-leaning gate of the 8-series (fixes
+131 / breaks 111, p=0.2219, OOF acc 0.6615 → 0.6640 — still null, so the
+tie-break rules), and the tie-break favours the candidate on the primary
+metric (log-loss 0.5939 → 0.5932), flat ROI, kelly ROI, and the replay,
+with accuracy tied. Honest counterweights, recorded not buried: (1) the
+close-vs-onesided segment flipped +5.8% → -0.9% — but on 125 bets a
+handful of outcomes swing the sign, and the broad value-bet rule (4536
+bets) improved on both staking schemes; watch this line in 8f and the
+next weekly cards; (2) the 110-fight test-set sanity check leans against
+(0.627 → 0.600, fixes 0 / breaks 3, p=0.25) — noise-range on n=110, and
+the protocol demoted this line for exactly this reason, but it is the
+first accept where it points the other way. The 8a verdict is hereby
+overturned on better evidence: CatBoost was a real member wrongly zeroed
+by the 120-fight grid. Run 8e becomes the reference baseline. Queued
+next: TabPFN re-audition (8f) under the same mechanism.
