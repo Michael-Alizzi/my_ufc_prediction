@@ -324,8 +324,11 @@ def blend_proba(X, models, lgbm, lgbm_weight, extra=None, extra_weight=0.0,
     lgb_p = lgbm.predict_proba(X)[:, 1]
     if stacker is not None:
         cols = [_logit(xgb_p), _logit(lgb_p)]
-        if extra is not None:
-            cols.append(_logit(extra.predict_proba(X)[:, 1]))
+        # `extra` may be one member or a list (roster grew past one in 8f);
+        # column order must match the stacker's training order in the notebook.
+        for m in ([extra] if extra is not None and not isinstance(extra, list)
+                  else (extra or [])):
+            cols.append(_logit(m.predict_proba(X)[:, 1]))
         return stacker.predict_proba(np.column_stack(cols))[:, 1]
     p = (1 - lgbm_weight - extra_weight) * xgb_p + lgbm_weight * lgb_p
     if extra is not None and extra_weight:
@@ -353,7 +356,8 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
     )
     raw_proba = float(blend_proba(
         X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"],
-        extra=artifacts.get("extra_model"), extra_weight=artifacts.get("extra_weight", 0.0),
+        extra=artifacts.get("extra_models", artifacts.get("extra_model")),
+        extra_weight=artifacts.get("extra_weight", 0.0),
         stacker=artifacts.get("stacker")
     )[0])
     winner = red if raw_proba >= artifacts["best_th"] else blue
