@@ -30,3 +30,4 @@ jupyter
 # Testing
 pytest
 catboost
+tabpfn

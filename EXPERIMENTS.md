@@ -1049,3 +1049,6 @@ first accept where it points the other way. The 8a verdict is hereby
 overturned on better evidence: CatBoost was a real member wrongly zeroed
 by the 120-fight grid. Run 8e becomes the reference baseline. Queued
 next: TabPFN re-audition (8f) under the same mechanism.
+
+---
+
