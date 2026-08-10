@@ -824,14 +824,17 @@ $100 replay (last event, UFC Belgrade — same full-card reconstruction as
 entries 5-7): $100 → $109.27 (net +$9.27), picks 6/7 (run-7: $115.59).
 One-card noise.
 
-Decision: REVERTED. TabPFN earned 0.0 blend weight — but so did LGBM
+Decision: REVERTED. TabPFN earned 0.0 blend weight — and so did LGBM
 (XGB-only val AUC 0.774 vs LGBM 0.750, TabPFN 0.752), making this run's
-shipped ensemble XGB-only plus refit noise. Two readings, both recorded:
-(1) TabPFN at zero tuning matched LGBM standalone on the slice — a real
-credential for the prior-fitted approach, just not additive here; (2) the
-slice zeroing LGBM, a 0.5-weight member across every prior accepted run,
-is direct evidence the 120-fight weight grid is noise-dominated — exactly
-the failure mode queued experiment 8d (OOF stacking) exists to fix. Gate
+shipped ensemble XGB-only plus different-params refit noise. Two readings,
+both recorded: (1) TabPFN at zero tuning matched LGBM standalone on the
+slice — a real credential for the prior-fitted approach, just not additive
+here; (2) [corrected 2026-08-10, discovered during 8c: the run-7 baseline
+artifact ALSO carries lgbm_weight=0.0 — production has been XGB-only since
+run 7. The slice's LGBM weight has flip-flopped 0.0 (run 7) → 0.5 (8a) →
+0.0 (8b/8c) across four runs] — direct evidence the 120-fight weight grid
+is noise-dominated, exactly the failure mode queued experiment 8d (OOF
+stacking) exists to fix. Gate
 null-to-negative (p=0.4517, OOF acc 0.6623 → 0.6612), market tie-break
 favours baseline on accuracy, log-loss, and segment ROI (flat/kelly +0.1
 each way is noise). Run-7 artifacts restored; run 7 remains the reference
@@ -873,5 +876,28 @@ Prediction: Ilia Topuria wins
 Confidence: 60.40% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Market comparison (5786/7869 OOF fights matched to closing odds,
+scripts/odds_backtest.py, desktop 2026-08-10): IDENTICAL to baseline on
+every metric (log-loss 0.5958, accuracy 67.8%, same 4384 bets, flat +2.1%
+/ kelly +15.8% / segment +6.3%). $100 replay: identical, $115.59, 6/7.
+
+Decision: REVERTED — the experiment was a perfect NO-OP, and that is the
+finding. The weight grid picked lgbm_weight=0.0 (XGB-only val AUC 0.772
+vs LGBM 0.764 on this run's exp7-params members), and a logit pool over
+one member is the identity: the artifact's probabilities match baseline
+within 3e-8 (float noise). Two records:
+(1) The gate line "p=0.0000, favoring baseline" is a degenerate-case
+display artifact — fixes 0 / breaks 0 means zero discordant pairs, i.e.
+literally identical picks (provable at any shared weight w=0; also true
+at w=0.5 by logit antisymmetry), not a significant difference. The
+comparison cell's McNemar print should special-case zero discordant
+pairs; fix queued with 8d's cell surgery.
+(2) The run surfaced the real state of production: the accepted run-7
+baseline is XGB-ONLY (lgbm_weight=0.0 in the artifact), so blending-space
+is moot until some member earns non-zero weight. That question — does
+LGBM deserve fractional weight on 7.9k-fight OOF evidence rather than
+being zeroed/promoted by a 120-fight slice that has flip-flopped across
+four runs — is exactly experiment 8d. Logit-blend code fully reverted
+(notebook cells + predict.py's space param, per protocol rule 4: nothing
+stays because it "doesn't hurt"); 8d's logistic meta-learner operates in
+logit space inherently, so 8c's mechanism returns there if 8d ships.
