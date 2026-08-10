@@ -810,5 +810,30 @@ Prediction: Ilia Topuria wins
 Confidence: 59.52% that Ilia Topuria wins
 ```
 
-$100 replay (last event): (fill in from weekly-predictions-log)
-Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-10):
+    accuracy:     model 67.5% vs market favourite 66.3% (run-7 baseline 67.8%)
+    prob quality: model log-loss 0.5960 vs market log-loss 0.6089
+                  (run-7 baseline 0.5958 — a 0.0002 regression, within noise)
+    dollar value: flat ROI +2.2% (4349 bets, hit 46.5%; baseline +2.1%),
+                  kelly ROI +15.9% (baseline +15.8%),
+                  close-vs-onesided segment ROI +2.9% (190 bets, hit 32.1%;
+                  baseline +6.3%); underdog share 71% (baseline 69%)
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-7): $100 → $109.27 (net +$9.27), picks 6/7 (run-7: $115.59).
+One-card noise.
+
+Decision: REVERTED. TabPFN earned 0.0 blend weight — but so did LGBM
+(XGB-only val AUC 0.774 vs LGBM 0.750, TabPFN 0.752), making this run's
+shipped ensemble XGB-only plus refit noise. Two readings, both recorded:
+(1) TabPFN at zero tuning matched LGBM standalone on the slice — a real
+credential for the prior-fitted approach, just not additive here; (2) the
+slice zeroing LGBM, a 0.5-weight member across every prior accepted run,
+is direct evidence the 120-fight weight grid is noise-dominated — exactly
+the failure mode queued experiment 8d (OOF stacking) exists to fix. Gate
+null-to-negative (p=0.4517, OOF acc 0.6623 → 0.6612), market tie-break
+favours baseline on accuracy, log-loss, and segment ROI (flat/kelly +0.1
+each way is noise). Run-7 artifacts restored; run 7 remains the reference
+baseline for 8c. TabPFN infra (TabPFNOnFrame, pinned v2 ckpt) stays in
+predict.py for future roster experiments.
