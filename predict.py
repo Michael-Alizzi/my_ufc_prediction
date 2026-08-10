@@ -305,11 +305,26 @@ class TabPFNOnFrame:
         return self.model_.predict_proba(self._array(X)[0])
 
 
-def blend_proba(X, models, lgbm, lgbm_weight, extra=None, extra_weight=0.0):
+def _logit(p, eps=1e-6):
+    p = np.clip(p, eps, 1 - eps)
+    return np.log(p / (1 - p))
+
+
+def blend_proba(X, models, lgbm, lgbm_weight, extra=None, extra_weight=0.0,
+                stacker=None):
     """Ensemble probability; `extra` is any third member with predict_proba
-    (CatBoostOnFrame in run 8a, TabPFNOnFrame in run 8b)."""
+    (CatBoostOnFrame in run 8a, TabPFNOnFrame in run 8b).
+
+    `stacker` (EXPERIMENTS.md entry 8d): a logistic meta-learner over the
+    members' logits, fit on pooled walk-forward OOF. When present it
+    supersedes the scalar weights; artifacts without one (pre-8d) keep the
+    linear arithmetic below.
+    """
     xgb_p = np.mean([m.predict_proba(X)[:, 1] for m in models], axis=0)
     lgb_p = lgbm.predict_proba(X)[:, 1]
+    if stacker is not None:
+        return stacker.predict_proba(
+            np.column_stack([_logit(xgb_p), _logit(lgb_p)]))[:, 1]
     p = (1 - lgbm_weight - extra_weight) * xgb_p + lgbm_weight * lgb_p
     if extra is not None and extra_weight:
         p = p + extra_weight * extra.predict_proba(X)[:, 1]
@@ -336,7 +351,8 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
     )
     raw_proba = float(blend_proba(
         X_pred, artifacts["models"], artifacts["lgbm"], artifacts["lgbm_weight"],
-        extra=artifacts.get("extra_model"), extra_weight=artifacts.get("extra_weight", 0.0)
+        extra=artifacts.get("extra_model"), extra_weight=artifacts.get("extra_weight", 0.0),
+        stacker=artifacts.get("stacker")
     )[0])
     winner = red if raw_proba >= artifacts["best_th"] else blue
     # Calibrator is fit on the score centered at 0.5 (fit_intercept=False)
