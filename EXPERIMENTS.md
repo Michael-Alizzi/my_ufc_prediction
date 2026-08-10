@@ -773,3 +773,42 @@ Expected: decorrelated errors from a genuinely different model family
 give a small blend weight (0.25) and a mild log-loss polish; the honest
 prior after 8a is that the 120-fight validation slice gives the newcomer
 0.0 again and the gate stays null.
+
+---
+
+### 8b. TabPFN as third ensemble member        2026-08-10, notebook at 5deba43
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp8b_tabpfn' (combined cap: 100 trials)...
+Shared study 'exp8b_tabpfn' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7103
+Laptop joined shared study 'exp8b_tabpfn_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7091980782956236
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Blend weights: lgbm=0.0 tabpfn=0.0 (XGB-only val AUC 0.774, LGBM-only 0.750, TabPFN-only 0.752)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.585 +/- 0.152 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.627
+New fixes 1 fights baseline got wrong
+New breaks 1 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6623 vs this run 0.6612)
+OOF fixes 52 / breaks 61; McNemar p-value: 0.4517  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 59.52% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
