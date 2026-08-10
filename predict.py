@@ -323,8 +323,10 @@ def blend_proba(X, models, lgbm, lgbm_weight, extra=None, extra_weight=0.0,
     xgb_p = np.mean([m.predict_proba(X)[:, 1] for m in models], axis=0)
     lgb_p = lgbm.predict_proba(X)[:, 1]
     if stacker is not None:
-        return stacker.predict_proba(
-            np.column_stack([_logit(xgb_p), _logit(lgb_p)]))[:, 1]
+        cols = [_logit(xgb_p), _logit(lgb_p)]
+        if extra is not None:
+            cols.append(_logit(extra.predict_proba(X)[:, 1]))
+        return stacker.predict_proba(np.column_stack(cols))[:, 1]
     p = (1 - lgbm_weight - extra_weight) * xgb_p + lgbm_weight * lgb_p
     if extra is not None and extra_weight:
         p = p + extra_weight * extra.predict_proba(X)[:, 1]
