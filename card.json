@@ -1,0 +1,14 @@
+[
+ {"fighter1": "Islam Makhachev", "fighter2": "Ian Machado Garry", "weight_class": "Welterweight", "title_fight": true, "odds1": 1.286, "odds2": 3.55},
+ {"fighter1": "Mackenzie Dern", "fighter2": "Gillian Robertson", "weight_class": "Strawweight", "odds1": 1.40, "odds2": 2.90},
+ {"fighter1": "Charles Johnson", "fighter2": "Jose Ochoa", "weight_class": "Flyweight", "odds1": 3.80, "odds2": 1.263},
+ {"fighter1": "Mansur Abdul-Malik", "fighter2": "Dustin Stoltzfus", "weight_class": "Middleweight", "odds1": 1.154, "odds2": 5.25},
+ {"fighter1": "Edson Barboza", "fighter2": "Esteban Ribovics", "weight_class": "Lightweight", "odds1": 4.80, "odds2": 1.182},
+ {"fighter1": "Chidi Njokuani", "fighter2": "Joel Alvarez", "weight_class": "Welterweight", "odds1": 2.95, "odds2": 1.385},
+ {"fighter1": "Jalin Turner", "fighter2": "Kaue Fernandes", "weight_class": "Lightweight", "odds1": 1.556, "odds2": 2.40},
+ {"fighter1": "Donte Johnson", "fighter2": "Eric McConico", "weight_class": "Middleweight", "odds1": 1.40, "odds2": 2.90},
+ {"fighter1": "Vicente Luque", "fighter2": "Tresean Gore", "weight_class": "Middleweight", "odds1": 2.10, "odds2": 1.714},
+ {"fighter1": "Rafael Tobias", "fighter2": "Lucas Fernando", "weight_class": "Light Heavyweight", "odds1": 3.30, "odds2": 1.323},
+ {"fighter1": "Neil Magny", "fighter2": "Ramiz Brahimaj", "weight_class": "Welterweight", "odds1": 1.909, "odds2": 1.833},
+ {"fighter1": "Jeremiah Wells", "fighter2": "Myktybek Orolbai", "weight_class": "Welterweight", "odds1": 6.25, "odds2": 1.118}
+]
