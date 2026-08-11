@@ -86,6 +86,28 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 if k > 0:
                     bet_on, bet_odds, kelly = name, float(o), k
 
+            # Shadow rules C (vig floor) and E (shrunk staking) — logged
+            # alongside the production rule A, never staked. EXPERIMENTS.md
+            # entry 9: both beat A on the full backtest but tripped the
+            # pre-registered halves-consistency clause; the forward record
+            # logged here adjudicates on genuinely held-out cards.
+            shadow = {}
+            if fight.get("odds1") and fight.get("odds2"):
+                o1, o2 = float(fight["odds1"]), float(fight["odds2"])
+                vig = 1 / o1 + 1 / o2 - 1
+                e1, e2 = proba * o1 - 1, (1 - proba) * o2 - 1
+                if max(e1, e2) > vig:
+                    n, p_, o_ = ((fight["fighter1"], proba, o1) if e1 > e2
+                                 else (fight["fighter2"], 1 - proba, o2))
+                    shadow["C"] = (n, o_, kelly_edge(p_, o_))
+                imp1 = (1 / o1) / (1 / o1 + 1 / o2)
+                ps = (proba + imp1) / 2
+                for n, p_, o_ in ((fight["fighter1"], ps, o1),
+                                  (fight["fighter2"], 1 - ps, o2)):
+                    k = kelly_edge(p_, o_)
+                    if k > 0:
+                        shadow["E"] = (n, o_, k)
+
             predictions.append({
                 "fighter1": fight["fighter1"],
                 "fighter2": fight["fighter2"],
@@ -96,6 +118,7 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 "bet_on": bet_on,
                 "bet_odds": bet_odds,
                 "kelly": kelly,
+                "shadow": shadow,
             })
         except Exception as e:
             logger.error(f"Prediction failed for {fight['fighter1']} vs {fight['fighter2']}: {e}")
@@ -122,6 +145,19 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 f"(@{p['bet_odds']:.2f}, returns ~${payout})"
             )
 
+    # Shadow bankrolls: each rule's own $100 split, display-only.
+    for rule in ("C", "E"):
+        picks = [p for p in predictions if p.get("shadow", {}).get(rule)]
+        total = sum(p["shadow"][rule][2] for p in picks)
+        for p in picks:
+            name, o, k = p["shadow"][rule]
+            amt = round(100 * k / total) if total else 0
+            p.setdefault("shadow_txt", []).append(
+                f"{rule}: ${amt} on {name.title()} (@{o:.2f})")
+    for p in predictions:
+        p["shadow"] = " / ".join(p.get("shadow_txt", [])) or "-"
+        p.pop("shadow_txt", None)
+
     return predictions
 
 
@@ -130,17 +166,18 @@ def format_predictions_markdown(event_title, predictions):
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking $100 total) |",
-        "|---|---|---|---|---|---|",
+        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking $100 total) | Shadow rules (C vig-floor / E shrunk, not staked) |",
+        "|---|---|---|---|---|---|---|",
     ]
     for p in predictions:
         lines.append(
             f"| {p['fighter1']} | {p['fighter2']} | {p.get('weight_class', '?')} "
-            f"| **{p['prediction']}** | {p['confidence']} | {p.get('stake', '-')} |"
+            f"| **{p['prediction']}** | {p['confidence']} | {p.get('stake', '-')} "
+            f"| {p.get('shadow', '-')} |"
         )
     lines += [
         "",
-        "_XGBoost + LightGBM ensemble; confidence calibrated on walk-forward CV._",
+        "_XGBoost + LightGBM + CatBoost, stacked on walk-forward OOF; confidence calibrated the same way._",
         "_Bet column: how to place a total of $100 — your maximum possible loss "
         "— across the card. The $100 is split over every side priced below the "
         "model's probability, proportional to Kelly edge; stakes always sum to "

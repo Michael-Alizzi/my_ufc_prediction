@@ -1260,3 +1260,36 @@ temporal halves (split at the median fight date); ties go to the simpler
 rule; if nothing beats A cleanly, A stays and that finding is the entry.
 All numbers are upper bounds (closing-odds conditioning, no vig slippage
 beyond posted prices, no line movement) and the entry must say so.
+
+### 9. Beat-the-market betting rule        2026-08-11, decided (no retrain)
+Run per the pre-registration above: scripts/betting_rule_compare.py, 5786
+pooled-OOF fights matched to closing odds, production 8e artifact. Full
+table (flat / kelly ROI; halves split at median fight date):
+
+    A current    4536 bets, hit 55.9%: +6.1% / +14.0%  (H1 +11.3/+20.8, H2 +0.9/+4.8)
+    B carveout   4411 bets, hit 56.6%: +6.3% / +15.0%  (H1 +12.3/+22.9, H2 +0.3/+4.7)
+    C vigfloor   3288 bets, hit 54.6%: +9.4% / +16.0%  (H1 +10.8/+18.7, H2 +8.0/+12.9)
+    D neverfade  1414 bets, hit 72.8%: +6.4% / +10.4%  (H1 +11.1/+15.6, H2 +1.7/+4.4)
+    E shrunk     3340 bets, hit 54.6%: +9.2% / +27.9%  (H1 +10.9/+29.9, H2 +7.4/+23.8)
+
+Decision: RULE A STAYS, per the pre-registered letter — no arm beat A on
+both schemes AND held sign-consistency on both halves (C and E each dip
+~0.5pp below A on H1 flat; B's gain vanishes in H2; D lost outright as
+the direction-split preview predicted). Honest notes: (1) E nearly
+doubles kelly ROI with both halves strongly positive on kelly — its one
+failing cell is noise-sized, and its mechanism (shrinkage toward the
+market tames kelly's oversized-disagreement stakes) is principled; but
++27.9% is the best of five draws on the selection dataset and kelly ROI
+is the most winner's-curse-prone metric here, so the letter holds.
+(2) A's edge is collapsing in recent data (H2 flat +0.9%) while C and E
+hold +7-8% — worth watching regardless of rule choice. (3) Last-event
+sanity (Gamrot card): A $121.21, C $129.83, E $131.75.
+Resolution: C and E are now SHADOW-LOGGED in the weekly job
+(send_weekly_predictions.py — own $100 splits, display-only, never
+staked) so genuinely held-out cards adjudicate the noise-level tiebreak
+prospectively. Promotion criterion (pre-registered now): after 10 logged
+events, promote a shadow rule iff it beats A on cumulative $100-replay
+return AND was ahead on at least 6 of the 10 cards; otherwise A stands.
+All backtest ROIs remain upper bounds (closing-odds conditioning — see
+the design constraints above). The queued experiment list is now empty:
+entries 5-9 all decided.
