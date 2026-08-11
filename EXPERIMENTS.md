@@ -1126,3 +1126,41 @@ most of the full config's coefficient (in-context learners degrade
 gracefully under context subsampling); if the coefficient collapses at
 feasible budgets, the gate reverts and TabPFN's file closes as "GPU-only
 member, not worth hosted-API complexity".
+
+---
+
+### 8g. Budget TabPFN (CPU-servable) under the OOF stacker        2026-08-11, notebook at 7f2b683
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7096779831694502
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.582  (n=110)
+95% CI (CLT):        [0.490, 0.674]
+Batch accuracy: 0.531 +/- 0.204 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.582
+New fixes 0 fights baseline got wrong
+New breaks 5 fights baseline got right
+Test-set McNemar p-value: 0.0625 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6640 vs this run 0.6650)
+OOF fixes 137 / breaks 129; McNemar p-value: 0.6678  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.12% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
