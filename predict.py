@@ -295,9 +295,22 @@ class TabPFNOnFrame:
 
     def fit(self, X, y):
         from tabpfn import TabPFNClassifier
+        params = dict(self.params)
+        # Wrapper-level context budget (entry 8g): TabPFN's in-context cost
+        # scales ~O(n^1.6), so the CPU-servable member trains on a seeded
+        # subsample of the window instead of all of it.
+        max_ctx = params.pop("max_context", None)
+        if max_ctx and len(X) > max_ctx:
+            # ponytail: uniform row subsample; mirror pairs may split, the
+            # corner-swap test asserts drift stays small -- go pair-aware
+            # sampling only if it ever trips.
+            rng = np.random.default_rng(params.get("random_state", 0))
+            idx = np.sort(rng.choice(len(X), size=max_ctx, replace=False))
+            X = X.iloc[idx]
+            y = np.asarray(y)[idx]
         Xa, cat_idx = self._array(X)
         self.model_ = TabPFNClassifier(
-            categorical_features_indices=cat_idx or None, **self.params)
+            categorical_features_indices=cat_idx or None, **params)
         self.model_.fit(Xa, y)
         return self
 

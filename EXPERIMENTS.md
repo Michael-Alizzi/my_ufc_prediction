@@ -1106,3 +1106,23 @@ packaging fixes an inference path that slow; serving would need a GPU (or
 Prior Labs' hosted API, unevaluated). Run-8e roster (XGB+LGBM+CatBoost)
 restored and remains the reference baseline. Revisit TabPFN only if
 serving gains a GPU; the evidence here says it would earn its seat.
+
+### Expectation for #8g (written before the run, 2026-08-11)
+Budget TabPFN: the 8f evidence says the full config (ctx 4800, 4
+estimators) earns its seat but cannot be served (CPU cost ~O(n^1.6),
+measured 500/1000/2000 ctx = 42/121/375s per single-estimator call; the
+weekly job is cloud CPU). 8g sweeps (ctx, n_estimators) in {2000,3000,
+4800}x{1,2,4} (6 configs, GPU OOF passes, one stacker per config) and
+pre-registers the selection: best stacked-OOF log-loss among configs with
+estimated CPU cost <= 1800s per card-sized batched call; ties within
+0.0005 log-loss go to the cheaper config. The chosen config is the run's
+single variable and passes the standard gate vs the 8e baseline.
+Persisted member: chosen config + device=cpu + fit_mode=low_memory +
+ignore_pretraining_limits (every 8f packaging rake dodged by design).
+Serving note: predict_winner is per-fight, so a 13-fight card costs ~13x
+one call until the weekly script batches — recorded as the upgrade path,
+not blocking (weekly is a batch job). Expected: the budget configs hold
+most of the full config's coefficient (in-context learners degrade
+gracefully under context subsampling); if the coefficient collapses at
+feasible budgets, the gate reverts and TabPFN's file closes as "GPU-only
+member, not worth hosted-API complexity".
