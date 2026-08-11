@@ -318,6 +318,14 @@ agreement bets (fragile to vig/line movement), while the disagreement
 segment currently loses — the rule should be free to bet WITH the
 market's direction on mispriced magnitude, and the "never fade" candidate
 above is one arm of the comparison, not an assumption.
+Direction-split preview (2026-08-11, current 8e model, same backtest):
+bets WITH the market's direction 2269, hit 71.1%, flat +2.4% / kelly
++8.3%; bets AGAINST it 2267, hit 40.8%, flat +9.8% / kelly +22.6%. The
+against-direction residuals carry most of the edge — the "never fade"
+arm (written against the pre-odds model's -9.5% pathology) would
+amputate the profitable half and is expected to lose the comparison;
+the live carve-out question is only the extreme-disagreement segment
+(close-vs-onesided, 125 bets, -0.9%).
 
 ### Later: scorecards v2 (successor to the reverted entry 2)
 Same three decision-margin features, sourced from ufcstats' own judge
