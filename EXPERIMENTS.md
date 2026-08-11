@@ -299,6 +299,26 @@ Expectation (written before the run): flat/Kelly ROI improves mainly by
 positive-ROI rule exists at closing odds, that finding gets recorded
 honestly — the model then needs to get better, not the staking cleverer.
 
+Design constraints added 2026-08-11 (odds-conditioning discussion, after
+the 8-series settled the model): the numbers above (84% underdogs, −9.5%
+segment) describe the PRE-entry-5 model; the current model consumes
+closing odds as a feature, so it agrees with the market by construction
+and the betting surface is residual disagreements only (segment now ~125
+bets at −0.9%, underdog share 50%). Consequences the rule design must
+respect: (1) a copycat model places no bets — edges are genuine residuals,
+small by construction, so thresholds tuned finer than the residual noise
+floor are fiction; (2) all rule parameters (thresholds, segments,
+shrinkage) are selected on pooled OOF only — never the validation slice
+(§11 scar) — and evaluated against the current rule on identical fights;
+(3) the backtest's optimistic edge is now structural: we condition on the
+closing line AND bet at it; live betting happens at near-closing odds, so
+any accepted rule's expected ROI is an upper bound and the entry must say
+so; (4) the aggregate ROI is carried substantially by small-edge
+agreement bets (fragile to vig/line movement), while the disagreement
+segment currently loses — the rule should be free to bet WITH the
+market's direction on mispriced magnitude, and the "never fade" candidate
+above is one arm of the comparison, not an assumption.
+
 ### Later: scorecards v2 (successor to the reverted entry 2)
 Same three decision-margin features, sourced from ufcstats' own judge
 totals instead of the static UFC-DataLab CSV (~4× coverage, refreshed
