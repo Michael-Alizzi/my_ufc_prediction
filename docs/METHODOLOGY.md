@@ -257,8 +257,11 @@ rejected by the old grid in 8a, re-auditioned under the stacker and
 accepted with a near-co-equal coefficient; run-8e fit: xgb 0.57, lgbm
 0.10, catboost 0.50). CatBoost runs through `CatBoostOnFrame`
 (predict.py): categorical NaN filled with a literal `missing` level and
-`cat_features` passed by name. TabPFN (entry 8b) remains out; its
-re-audition under the stacker is queued.
+`cat_features` passed by name. TabPFN was re-auditioned
+under the stacker (entry 8f) and earned coefficient 0.25 on the pooled
+OOF — but stays OUT: its pickle is only servable on a GPU, and the weekly
+job runs on cloud CPU where its inference is infeasibly slow (entry 8f's
+packaging post-mortem). Revisit only if serving gains a GPU.
 
 ## 10. Probability calibration (Platt, centered)
 

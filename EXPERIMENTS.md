@@ -1052,3 +1052,57 @@ next: TabPFN re-audition (8f) under the same mechanism.
 
 ---
 
+
+### 8f. TabPFN re-audition under the OOF stacker        2026-08-10/11, notebook at 21c43f2 (reverted)
+Change (one variable): TabPFN as a FOURTH member (8b's rejected candidate,
+re-auditioned under 8d's stacker like 8e did for CatBoost). Same exp7
+member params as baseline; no tuning study (prior-fitted transformer).
+The retrain completed and produced valid numbers; the entry is
+hand-logged because the artifact was rebuilt three times for packaging
+and the final rebuild was abandoned (below).
+
+Stacker fit (7869 pooled OOF fights, logit space): xgb=0.366, lgbm=0.090,
+catboost=0.414, tabpfn=0.254 — a genuinely different function class
+earned a real seat on the big sample.
+
+Gate and sanity vs run-8e baseline:
+  Pooled-OOF McNemar: fixes 157 / breaks 161, p=0.8664 (null);
+  OOF acc 0.6640 → 0.6635. Test set (sanity): 0.627 → 0.618 (n=110,
+  CI [0.527, 0.709], fixes 1 / breaks 2, p=1.0).
+
+Market comparison (5786 OOF fights matched to closing odds):
+    accuracy:     67.6% vs market favourite 66.3% (baseline 67.7%)
+    prob quality: log-loss 0.5925 vs market 0.6089 (baseline 0.5932 —
+                  third consecutive improvement of the 8-series)
+    dollar value: flat ROI +6.2% (4526 bets, hit 58.0%; baseline +6.1%,
+                  55.9%), kelly +13.8% (baseline +14.0%), segment +3.0%
+                  (123 bets; baseline -0.9% — the 8e watch-flag
+                  recovered); underdog share 45%
+
+$100 replays: Belgrade $119.80 (baseline $138.75). Fresh out-of-sample
+card, UFC FN Gamrot vs Salkilld 2026-08-08 (12 fights incl. prelims, 6
+predictable — 5 debutants + one stance-data gap; DK fight-day odds,
+full-card reconstruction): baseline $121.21, TabPFN blend $138.98, both
+6/6 picks. The gap was pure probability quality via Kelly sizing: bigger
+stake on the winning Salkilld edge, and correctly NO value bet where the
+baseline burned $8.79 (Quarantillo). The only line neither model could
+overfit, and it agreed with the log-loss story.
+
+Decision: REVERTED — accepted on evidence, UNSHIPPABLE on serving. The
+tally favoured accept (log-loss, flat ROI, hit rate, segment, fresh-card
+replay vs noise-level dips in kelly/accuracy/test/Belgrade), and the user
+approved paying the engineering cost. Packaging then failed three ways in
+sequence, each real: (1) default fit_mode pickles TabPFN at ~228MB
+(cached preprocessed ensembles) — GitHub hard-rejects >100MB;
+fit_mode="low_memory" fixes this at ~39MB with identical predictions.
+(2) A CUDA-fitted estimator's pickle cannot be loaded on a CPU-only
+machine — and the weekly job is cloud CPU. (3) Refitting the persisted
+member on CPU to dodge (2) revealed the terminal problem: TabPFN CPU
+inference on this stack is catastrophically slow — an overnight run burned
+2.5 CPU-days without completing the notebook's val/test predictions, and
+a controlled test could not finish ONE 4800-context fit + 12-row predict
+in 9 minutes. The cloud weekly job could never serve this member. No
+packaging fixes an inference path that slow; serving would need a GPU (or
+Prior Labs' hosted API, unevaluated). Run-8e roster (XGB+LGBM+CatBoost)
+restored and remains the reference baseline. Revisit TabPFN only if
+serving gains a GPU; the evidence here says it would earn its seat.
