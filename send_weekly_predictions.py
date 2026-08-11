@@ -68,7 +68,13 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 history=history,
                 artifacts=artifacts,
                 event_country=event_country,
-                odds_r=fight.get("odds1"), odds_b=fight.get("odds2"),
+                # Feature slot: de-vigged multi-book median when the card
+                # carries one (scripts/fetch_card_odds.py) — the model's
+                # market-opinion input. Staking below always uses odds1/odds2
+                # (Sportsbet, the bettable price). Two-slot design: entry 9
+                # follow-up, 2026-08-11.
+                odds_r=fight.get("feat_odds1", fight.get("odds1")),
+                odds_b=fight.get("feat_odds2", fight.get("odds2")),
             )
 
             confidence = proba if winner == fighter1 else 1 - proba
