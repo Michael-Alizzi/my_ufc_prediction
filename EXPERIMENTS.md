@@ -1164,3 +1164,47 @@ Confidence: 60.12% that Ilia Topuria wins
 
 $100 replay (last event): (fill in from weekly-predictions-log)
 Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+
+Sweep table (the compute/power curve the run was asked for; stacked-OOF
+log-loss on 7869 fights, 3-member baseline reference 0.60087):
+    ctx=2000 n_est=1: 0.60077, coef -0.053, ~375s/call
+    ctx=2000 n_est=2: 0.59990, coef +0.207, ~750s/call
+    ctx=3000 n_est=1: 0.60039, coef -0.123, ~717s/call  <- selected
+    ctx=3000 n_est=2: 0.60028, coef +0.176, ~1435s/call
+    ctx=4800 n_est=2: 0.60007, coef +0.217, ~3044s/call
+    ctx=4800 n_est=4: 0.59986, coef +0.253, ~6087s/call (8f reference)
+Selection post-mortem: the pre-registered tie-break (cheaper within
+0.0005) traded a 4% compute saving into shipping the negative-coefficient
+variant over (2000,2)'s +0.207 — a rule flaw, recorded so the next sweep
+constrains to positive coefficients.
+
+Market comparison (5786 OOF fights matched to closing odds, baseline =
+run 8e): log-loss 0.5934 vs baseline 0.5932 (PRIMARY metric regressed;
+market 0.6089); accuracy 67.7% (tie); flat +5.7% hit 55.1% (baseline
++6.1%/55.9%); kelly +14.2% (baseline +14.0%); segment -2.3%, 139 bets
+(baseline -0.9%, 125).
+
+Test set (sanity): 0.627 -> 0.582, fixes 0 / breaks 5, p=0.0625 — the
+worst sanity line of the series. $100 replays (GPU-remapped member for
+evaluation speed): Belgrade $139.62 (baseline $138.75), Gamrot card
+$123.93 (baseline $121.21) — both marginal positives, one-card noise.
+Measured serving cost of the shipped member: ~12 min PER FIGHT on CPU
+(per-fight predict_winner path), ~1-2h per card until the weekly script
+batches.
+
+Decision: REVERTED, and the TabPFN file is CLOSED. The pick gate is null
+(fixes 137 / breaks 129, p=0.6678), the tie-break's primary metric went
+the wrong way, the test-set sanity check is nearly-significantly negative,
+and the shipped member's coefficient is negative — a stacker exploiting
+single-estimator noise as a weak contrarian signal, not added skill. The
+sweep answers the balance question definitively: TabPFN's coefficient
+degrades smoothly with budget (0.253 full -> +0.207 at the best feasible
+config -> negative at single-estimator configs), and even the best
+feasible config's OOF gain (~0.001) matches what just failed to survive
+translation to the market numbers. At CPU-servable compute, TabPFN's
+additive value sits inside the noise floor at material serving cost.
+Pre-registered reversal condition met: GPU-only member, not worth
+hosted-API complexity. Run-8e roster restored; wrapper-level max_context
+stays in predict.py (inert infra, same precedent as the 8a/8b wrappers).
+Revisit only if serving gains a GPU — then start from (4800,4), which
+remains the only config with demonstrated market-side value.

@@ -261,7 +261,7 @@ accepted with a near-co-equal coefficient; run-8e fit: xgb 0.57, lgbm
 under the stacker (entry 8f) and earned coefficient 0.25 on the pooled
 OOF — but stays OUT: its pickle is only servable on a GPU, and the weekly
 job runs on cloud CPU where its inference is infeasibly slow (entry 8f's
-packaging post-mortem). Revisit only if serving gains a GPU.
+packaging post-mortem). A budget sweep (entry 8g) closed the file: at CPU-servable compute its coefficient degrades to noise (+0.207 best-feasible, negative at single-estimator configs) and the market metrics regress. Revisit only if serving gains a GPU.
 
 ## 10. Probability calibration (Platt, centered)
 
