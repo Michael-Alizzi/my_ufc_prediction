@@ -1236,3 +1236,27 @@ hosted-API complexity. Run-8e roster restored; wrapper-level max_context
 stays in predict.py (inert infra, same precedent as the 8a/8b wrappers).
 Revisit only if serving gains a GPU — then start from (4800,4), which
 remains the only config with demonstrated market-side value.
+
+### Expectation for #9 (written before the run, 2026-08-11)
+Five pre-registered arms, all discrete (no tuned thresholds — with one
+backtest to both fit and score, a fine grid would be fiction; see the
+design constraints above):
+  A. CURRENT: bet any side whose kelly edge at the posted price is
+     positive; kelly-proportional stakes capped at 0.25 (status quo).
+  B. CARVE-OUT: A minus the close-vs-onesided segment
+     (|p-0.5| <= 0.10 and vig-free favourite >= 0.65) — remove the one
+     segment that measurably loses.
+  C. VIG FLOOR: A, but a side must clear the round's overround
+     (p*odds - 1 > vig) — edges smaller than the bookmaker's margin are
+     noise by construction.
+  D. NEVER-FADE: C restricted to sides that are also the market's
+     favourite (the original spec's candidate; the direction-split
+     preview above predicts this loses badly).
+  E. SHRUNK STAKING: sides and stakes from p' = (p + vig-free implied)/2
+     (fixed 50% shrink, no tuning) — epistemic humility as a staking rule.
+Decision rule (pre-registered): winner must beat A on BOTH flat and
+kelly ROI on the full pool AND keep the same sign of improvement on both
+temporal halves (split at the median fight date); ties go to the simpler
+rule; if nothing beats A cleanly, A stays and that finding is the entry.
+All numbers are upper bounds (closing-odds conditioning, no vig slippage
+beyond posted prices, no line movement) and the entry must say so.
