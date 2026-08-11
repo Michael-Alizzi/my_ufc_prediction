@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def make_predictions(fights, history, artifacts, event_country=None):
+def make_predictions(fights, history, artifacts, event_country=None, bankroll=100):
     """Predict each fight and size bets.
 
     Bet sizing: the whole $100 bankroll is split across every side of every
@@ -140,8 +140,8 @@ def make_predictions(fights, history, artifacts, event_country=None):
     if value:
         total = sum(p["kelly"] for p in value)
         for p in value:
-            p["stake_amt"] = round(100 * p["kelly"] / total)
-        max(value, key=lambda p: p["kelly"])["stake_amt"] += 100 - sum(
+            p["stake_amt"] = round(bankroll * p["kelly"] / total)
+        max(value, key=lambda p: p["kelly"])["stake_amt"] += bankroll - sum(
             p["stake_amt"] for p in value
         )
         for p in value:
@@ -157,7 +157,7 @@ def make_predictions(fights, history, artifacts, event_country=None):
         total = sum(p["shadow"][rule][2] for p in picks)
         for p in picks:
             name, o, k = p["shadow"][rule]
-            amt = round(100 * k / total) if total else 0
+            amt = round(bankroll * k / total) if total else 0
             p.setdefault("shadow_txt", []).append(
                 f"{rule}: ${amt} on {name.title()} (@{o:.2f})")
     for p in predictions:
@@ -167,12 +167,12 @@ def make_predictions(fights, history, artifacts, event_country=None):
     return predictions
 
 
-def format_predictions_markdown(event_title, predictions):
+def format_predictions_markdown(event_title, predictions, bankroll=100):
     lines = [
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking $100 total) | Shadow rules (C vig-floor / E shrunk, not staked) |",
+        f"| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking ${bankroll} total) | Shadow rules (C vig-floor / E shrunk, not staked) |",
         "|---|---|---|---|---|---|---|",
     ]
     for p in predictions:
