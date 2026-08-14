@@ -184,10 +184,10 @@ def format_predictions_markdown(event_title, predictions, bankroll=100):
     lines += [
         "",
         "_XGBoost + LightGBM + CatBoost, stacked on walk-forward OOF; confidence calibrated the same way._",
-        "_Bet column: how to place a total of $100 — your maximum possible loss "
-        "— across the card. The $100 is split over every side priced below the "
+        f"_Bet column: how to place a total of ${bankroll} — your maximum possible loss "
+        f"— across the card. The ${bankroll} is split over every side priced below the "
         "model's probability, proportional to Kelly edge; stakes always sum to "
-        "$100. The bet can be on the fighter the model predicts to lose: a "
+        f"${bankroll}. The bet can be on the fighter the model predicts to lose: a "
         "near-coin-flip the market prices as a lock is value on the underdog. "
         "The model's edge over bookmakers is unproven — only risk what you're "
         "happy to lose._",
