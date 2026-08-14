@@ -77,9 +77,15 @@ the Paired Comparison cell reads it.
 
 ## 5. Weekly outputs (`weekly-predictions-log` branch)
 
-`predictions_output.md` — the card's predictions, confidences, and the $100
-Kelly split. `card.json` — the exact card + odds used, committed beside it
-so any future model can replay the same card mechanically ($100 replay
-metric; see EXPERIMENTS.md). Skip-unchanged-retrain logic diffs the freshly
-scraped CSVs against the committed copies (the raw CSVs are tracked in git
-since Aug 2026).
+`predictions_output.md` — the card's predictions, confidences, and the
+bankroll's Kelly split (rule A) plus C/E shadow columns. `card.json` — the
+exact card + odds used (two-slot: `odds1/2` Sportsbet staking prices,
+`feat_odds1/2` de-vigged AU-median feature input), committed beside it so
+any future model can replay the same card mechanically (replay metric; see
+EXPERIMENTS.md). `ledger.md` — per-event graded returns for rules A/C/E
+(`scripts/score_card.py`; the entry-9 10-event promotion record).
+`collected_odds.csv` — phase-2 own-odds feed, one row per fight
+(`r_fighter`, `b_fighter`, `date_d`, `odds_r`, `odds_b`), merged into
+`odds_train.csv` by `scripts/fetch_training_odds.py` at retrain time.
+Skip-unchanged-retrain logic diffs the freshly scraped CSVs against the
+committed copies (the raw CSVs are tracked in git since Aug 2026).

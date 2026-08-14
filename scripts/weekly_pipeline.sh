@@ -28,10 +28,20 @@ fi
 python3 -m venv .venv 2>/dev/null || true
 .venv/bin/pip install -q -r requirements.txt
 
-# Headless-safe: Optuna storage is env-gated (unset here -> in-process),
-# the laptop dispatch, baseline comparison and prediction demo cells all
-# skip cleanly when their inputs are missing, and raw CSV paths are
-# repo-relative.
+# The model trains on historical odds (EXPERIMENTS.md entry 5). Build
+# odds_train.csv BEFORE training: without it the run would silently train
+# an odds-BLIND model and regress the accepted one -- set -e makes a fetch
+# failure abort the retrain instead.
+.venv/bin/python scripts/fetch_training_odds.py
+
+# Cloud containers die at ~8h; the resume mechanism (CLAUDE.md ground
+# rules) makes a relaunch continue its Optuna trials instead of restarting.
+export OPTUNA_STORAGE_URL="sqlite:///$PWD/.optuna_resume_weekly.db"
+export OPTUNA_STUDY_NAME="weekly_$(date +%Y%m%d)"
+
+# Headless-safe: the laptop dispatch (needs the worker env var, unset here),
+# baseline comparison and prediction demo cells all skip cleanly when their
+# inputs are missing, and raw CSV paths are repo-relative.
 .venv/bin/python -m jupyter nbconvert --to notebook --execute --inplace \
   --ExecutePreprocessor.timeout=-1 ufc_prediction_claude.ipynb
 

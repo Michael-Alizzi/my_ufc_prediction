@@ -201,17 +201,21 @@ def main():
     parser.add_argument("--event-title", default="Upcoming UFC Event")
     parser.add_argument("--event-country", default=None,
                         help="Host country of the card, e.g. USA (feeds home-crowd features)")
+    parser.add_argument("--bankroll", type=int, default=50,
+                        help="Total dollars risked across the card (default 50)")
     args = parser.parse_args()
 
     with open(args.fights_json) as f:
         fights = json.load(f)
 
     predictions = make_predictions(fights, load_history(), load_artifacts(),
-                                   event_country=args.event_country)
+                                   event_country=args.event_country,
+                                   bankroll=args.bankroll)
     if not predictions:
         raise SystemExit("No predictions produced")
 
-    md = format_predictions_markdown(args.event_title, predictions)
+    md = format_predictions_markdown(args.event_title, predictions,
+                                     bankroll=args.bankroll)
     with open("predictions_output.md", "w") as f:
         f.write(md)
     # card.json goes to weekly-predictions-log beside predictions_output.md so

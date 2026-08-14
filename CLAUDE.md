@@ -93,15 +93,28 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
    on validation.
 6. Decision layer, stability checks, and export — see gotchas below for why several of these exist.
 
-**Weekly automation** — **PAUSED (Aug 2026)** by the user until the model reliably beats the market
-(the goal above); don't re-enable the Routine without being asked. When active: one claude.ai
-Routine (Thursday 13:00 UTC, self-bound session) retrains via
-`scripts/weekly_pipeline.sh` (scrape → CPU retrain → push master), then predicts the upcoming card
-with bookmaker odds via `send_weekly_predictions.py` and pushes the result table to the
-`weekly-predictions-log` branch — that push is the delivery mechanism; there is deliberately no email
-path (SMTP is unreachable from the cloud environment, and a Gmail app password was leaked into git
-history doing it the old way — revoke-and-avoid, don't reintroduce). Betting maths lives in
-`predict.py:kelly_edge` and is shared by the weekly job and the app's optional odds inputs.
+**Weekly automation** (redesigned Aug 2026 after the odds-aware model was accepted — entry 5):
+prediction and retraining are deliberately SEPARATED. Two cloud Routines, no PC required:
+- **Thursday (card day)**: scrape fresh fight data → commit CSVs → fetch the upcoming card's odds
+  (`scripts/fetch_card_odds.py`: Sportsbet staking slot + de-vigged AU-median feature slot; needs
+  `ODDS_API_KEY`) → predict with rule A stakes ($50 bankroll default) + C/E shadow logs
+  (`send_weekly_predictions.py --bankroll`) → push `predictions_output.md` + `card.json` to the
+  `weekly-predictions-log` branch. That push is the delivery mechanism; there is deliberately no
+  email path (SMTP is unreachable from the cloud environment, and a Gmail app password was leaked
+  into git history doing it the old way — revoke-and-avoid, don't reintroduce).
+- **Sunday (scoring day)**: the session fetches results from the web, then
+  `scripts/score_card.py` grades rules A/C/E from `card.json` (recomputing stakes with the same
+  code that produced them), appends `ledger.md` (the entry-9 10-event promotion record) and
+  `collected_odds.csv` (phase-2 own-odds training feed) on the log branch.
+- **Retraining is NOT weekly/automatic.** The model trains on historical odds; a retrain without
+  `odds_train.csv` silently produces an odds-BLIND model and regresses entry 5.
+  `scripts/weekly_pipeline.sh` (deliberate retrains, any machine) builds it first via
+  `scripts/fetch_training_odds.py` — downloads the mma-ai dump from its original public
+  HuggingFace host (never committed; unlicensed), extracts the odds tables with
+  `pg_restore --data-only -f -` (no Postgres server needed), and merges the collected feed.
+  Needs huggingface.co reachable + `postgresql-client`.
+Betting maths lives in `predict.py:kelly_edge` and is shared by the weekly job and the app's
+optional odds inputs.
 
 **Serving path** (`predict.py` + `app.py`): reimplements the notebook's single-fight-prediction cell
 against two exported artifacts — `ensemble.joblib` (trained models, blend weight, threshold, feature
