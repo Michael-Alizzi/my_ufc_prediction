@@ -1,13 +1,17 @@
 """Self-check for predict.py. Run: .venv/bin/python test_predict.py
-Requires ensemble.joblib and fighter_history.parquet (produced by the
-notebook's "Export for Streamlit App" cell).
+(or via pytest -- test_demo is collectable). Requires ensemble.joblib and
+fighter_history.parquet (produced by the notebook's export cells).
+
+NOTE: this pair (Topuria/Gaethje) last fought EACH OTHER, which makes the
+corner-swap check blind to opponent-contamination bugs -- the content-based
+serving test in test_pipeline_logic.py covers that with a never-met pair.
 """
 from predict import kelly_edge, load_artifacts, load_history, predict_winner
 
 SYMMETRY_TOLERANCE = 0.05
 
 
-def demo():
+def test_demo():
     # Money path: edge only when model probability beats implied probability.
     assert abs(kelly_edge(0.6, 2.0) - 0.2) < 1e-9   # p*o-1 = 0.2, /(o-1) = 0.2
     assert kelly_edge(0.5, 2.0) == 0.0               # fair price, no bet
@@ -36,4 +40,4 @@ def demo():
 
 
 if __name__ == "__main__":
-    demo()
+    test_demo()

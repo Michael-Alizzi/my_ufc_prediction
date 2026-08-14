@@ -16,11 +16,11 @@ python3 -m venv "$SCRAPER_DIR/.venv" 2>/dev/null || true
 cp "$SCRAPER_DIR/data/raw_total_fight_data.csv" raw_fight_data.csv
 cp "$SCRAPER_DIR/data/raw_fighter_details.csv" raw_fighter_details.csv
 
-# The raw CSVs are gitignored, so "did anything change since the last
-# retrain" is tracked via a committed checksum file instead. If the fresh
-# scrape matches it, the multi-hour retrain would only reproduce the
-# committed artifacts -- skip it; a later week's run picks up new data.
-if [ -f raw_data.sha256 ] && sha256sum --status -c raw_data.sha256; then
+# The raw CSVs are tracked in git, so "did anything change since the last
+# retrain" is just a diff against the committed copies. If the fresh scrape
+# matches them, the multi-hour retrain would only reproduce the committed
+# artifacts -- skip it; a later week's run picks up new data.
+if git diff --quiet -- raw_fight_data.csv raw_fighter_details.csv; then
   echo "No new fight data since last retrain; skipping retrain."
   exit 0
 fi
@@ -28,10 +28,25 @@ fi
 python3 -m venv .venv 2>/dev/null || true
 .venv/bin/pip install -q -r requirements.txt
 
-# device="cpu" throughout + the Optuna cell's Postgres->in-process fallback
-# (see ufc_prediction_claude.ipynb) make this safe to run GPU-less.
+# The model trains on historical odds (EXPERIMENTS.md entry 5). Build
+# odds_train.csv BEFORE training: without it the run would silently train
+# an odds-BLIND model and regress the accepted one -- set -e makes a fetch
+# failure abort the retrain instead.
+.venv/bin/python scripts/fetch_training_odds.py
+
+# Cloud containers die at ~8h; the resume mechanism (CLAUDE.md ground
+# rules) makes a relaunch continue its Optuna trials instead of restarting.
+export OPTUNA_STORAGE_URL="sqlite:///$PWD/.optuna_resume_weekly.db"
+export OPTUNA_STUDY_NAME="weekly_$(date +%Y%m%d)"
+
+# Headless-safe: the laptop dispatch (needs the worker env var, unset here),
+# baseline comparison and prediction demo cells all skip cleanly when their
+# inputs are missing, and raw CSV paths are repo-relative.
 .venv/bin/python -m jupyter nbconvert --to notebook --execute --inplace \
   --ExecutePreprocessor.timeout=-1 ufc_prediction_claude.ipynb
 
-sha256sum raw_fight_data.csv raw_fighter_details.csv > raw_data.sha256
+# Fail the run loudly if the fresh artifacts break the serving contract
+.venv/bin/python -m pytest -q test_pipeline_logic.py test_predict.py
+
 echo "Retrain complete: ensemble.joblib + fighter_history.parquet refreshed."
+echo "Commit the refreshed CSVs together with the artifacts (they are tracked)."

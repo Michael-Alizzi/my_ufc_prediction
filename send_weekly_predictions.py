@@ -18,6 +18,8 @@ the delivery mechanism; there is no email path.
 import argparse
 import json
 import logging
+import os
+import shutil
 from datetime import datetime
 
 import pandas as pd
@@ -28,7 +30,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def make_predictions(fights, history, artifacts, event_country=None):
+def make_predictions(fights, history, artifacts, event_country=None, bankroll=100):
     """Predict each fight and size bets.
 
     Bet sizing: the whole $100 bankroll is split across every side of every
@@ -66,6 +68,13 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 history=history,
                 artifacts=artifacts,
                 event_country=event_country,
+                # Feature slot: de-vigged multi-book median when the card
+                # carries one (scripts/fetch_card_odds.py) — the model's
+                # market-opinion input. Staking below always uses odds1/odds2
+                # (Sportsbet, the bettable price). Two-slot design: entry 9
+                # follow-up, 2026-08-11.
+                odds_r=fight.get("feat_odds1", fight.get("odds1")),
+                odds_b=fight.get("feat_odds2", fight.get("odds2")),
             )
 
             confidence = proba if winner == fighter1 else 1 - proba
@@ -83,6 +92,28 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 if k > 0:
                     bet_on, bet_odds, kelly = name, float(o), k
 
+            # Shadow rules C (vig floor) and E (shrunk staking) — logged
+            # alongside the production rule A, never staked. EXPERIMENTS.md
+            # entry 9: both beat A on the full backtest but tripped the
+            # pre-registered halves-consistency clause; the forward record
+            # logged here adjudicates on genuinely held-out cards.
+            shadow = {}
+            if fight.get("odds1") and fight.get("odds2"):
+                o1, o2 = float(fight["odds1"]), float(fight["odds2"])
+                vig = 1 / o1 + 1 / o2 - 1
+                e1, e2 = proba * o1 - 1, (1 - proba) * o2 - 1
+                if max(e1, e2) > vig:
+                    n, p_, o_ = ((fight["fighter1"], proba, o1) if e1 > e2
+                                 else (fight["fighter2"], 1 - proba, o2))
+                    shadow["C"] = (n, o_, kelly_edge(p_, o_))
+                imp1 = (1 / o1) / (1 / o1 + 1 / o2)
+                ps = (proba + imp1) / 2
+                for n, p_, o_ in ((fight["fighter1"], ps, o1),
+                                  (fight["fighter2"], 1 - ps, o2)):
+                    k = kelly_edge(p_, o_)
+                    if k > 0:
+                        shadow["E"] = (n, o_, k)
+
             predictions.append({
                 "fighter1": fight["fighter1"],
                 "fighter2": fight["fighter2"],
@@ -93,6 +124,7 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 "bet_on": bet_on,
                 "bet_odds": bet_odds,
                 "kelly": kelly,
+                "shadow": shadow,
             })
         except Exception as e:
             logger.error(f"Prediction failed for {fight['fighter1']} vs {fight['fighter2']}: {e}")
@@ -108,8 +140,8 @@ def make_predictions(fights, history, artifacts, event_country=None):
     if value:
         total = sum(p["kelly"] for p in value)
         for p in value:
-            p["stake_amt"] = round(100 * p["kelly"] / total)
-        max(value, key=lambda p: p["kelly"])["stake_amt"] += 100 - sum(
+            p["stake_amt"] = round(bankroll * p["kelly"] / total)
+        max(value, key=lambda p: p["kelly"])["stake_amt"] += bankroll - sum(
             p["stake_amt"] for p in value
         )
         for p in value:
@@ -119,29 +151,43 @@ def make_predictions(fights, history, artifacts, event_country=None):
                 f"(@{p['bet_odds']:.2f}, returns ~${payout})"
             )
 
+    # Shadow bankrolls: each rule's own $100 split, display-only.
+    for rule in ("C", "E"):
+        picks = [p for p in predictions if p.get("shadow", {}).get(rule)]
+        total = sum(p["shadow"][rule][2] for p in picks)
+        for p in picks:
+            name, o, k = p["shadow"][rule]
+            amt = round(bankroll * k / total) if total else 0
+            p.setdefault("shadow_txt", []).append(
+                f"{rule}: ${amt} on {name.title()} (@{o:.2f})")
+    for p in predictions:
+        p["shadow"] = " / ".join(p.get("shadow_txt", [])) or "-"
+        p.pop("shadow_txt", None)
+
     return predictions
 
 
-def format_predictions_markdown(event_title, predictions):
+def format_predictions_markdown(event_title, predictions, bankroll=100):
     lines = [
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        "| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking $100 total) |",
-        "|---|---|---|---|---|---|",
+        f"| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking ${bankroll} total) | Shadow rules (C vig-floor / E shrunk, not staked) |",
+        "|---|---|---|---|---|---|---|",
     ]
     for p in predictions:
         lines.append(
             f"| {p['fighter1']} | {p['fighter2']} | {p.get('weight_class', '?')} "
-            f"| **{p['prediction']}** | {p['confidence']} | {p.get('stake', '-')} |"
+            f"| **{p['prediction']}** | {p['confidence']} | {p.get('stake', '-')} "
+            f"| {p.get('shadow', '-')} |"
         )
     lines += [
         "",
-        "_XGBoost + LightGBM ensemble; confidence calibrated on walk-forward CV._",
-        "_Bet column: how to place a total of $100 — your maximum possible loss "
-        "— across the card. The $100 is split over every side priced below the "
+        "_XGBoost + LightGBM + CatBoost, stacked on walk-forward OOF; confidence calibrated the same way._",
+        f"_Bet column: how to place a total of ${bankroll} — your maximum possible loss "
+        f"— across the card. The ${bankroll} is split over every side priced below the "
         "model's probability, proportional to Kelly edge; stakes always sum to "
-        "$100. The bet can be on the fighter the model predicts to lose: a "
+        f"${bankroll}. The bet can be on the fighter the model predicts to lose: a "
         "near-coin-flip the market prices as a lock is value on the underdog. "
         "The model's edge over bookmakers is unproven — only risk what you're "
         "happy to lose._",
@@ -155,21 +201,30 @@ def main():
     parser.add_argument("--event-title", default="Upcoming UFC Event")
     parser.add_argument("--event-country", default=None,
                         help="Host country of the card, e.g. USA (feeds home-crowd features)")
+    parser.add_argument("--bankroll", type=int, default=50,
+                        help="Total dollars risked across the card (default 50)")
     args = parser.parse_args()
 
     with open(args.fights_json) as f:
         fights = json.load(f)
 
     predictions = make_predictions(fights, load_history(), load_artifacts(),
-                                   event_country=args.event_country)
+                                   event_country=args.event_country,
+                                   bankroll=args.bankroll)
     if not predictions:
         raise SystemExit("No predictions produced")
 
-    md = format_predictions_markdown(args.event_title, predictions)
+    md = format_predictions_markdown(args.event_title, predictions,
+                                     bankroll=args.bankroll)
     with open("predictions_output.md", "w") as f:
         f.write(md)
+    # card.json goes to weekly-predictions-log beside predictions_output.md so
+    # any future model can replay the same card+odds (the $100 replay metric
+    # in EXPERIMENTS.md).
+    if os.path.abspath(args.fights_json) != os.path.abspath("card.json"):
+        shutil.copy(args.fights_json, "card.json")
     print(md)
-    logger.info("Wrote predictions_output.md")
+    logger.info("Wrote predictions_output.md and card.json")
 
 
 if __name__ == "__main__":

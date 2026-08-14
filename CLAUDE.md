@@ -10,16 +10,29 @@ is the single source of truth for the modeling pipeline. (Two superseded noteboo
 `ufc_prediction.ipynb` and `ufc_analysis.ipynb`, were removed in the Aug 2026 cleanup — recover from
 git history if ever needed.)
 
+**The goal is to beat the betting market, not just to predict winners.** The 2026 odds backtest
+(EXPERIMENTS.md entries 1–2) measured the bar: closing favourites win 66.3% with log-loss 0.6089 on
+5,786 historical fights, while the model sits at 61.2% / 0.642 — so bets defined by disagreeing with
+the market lose (the "model close / bookies one-sided" segment ran −9.5% ROI). Every experiment is
+judged against the market baseline (`scripts/odds_backtest.py`), not against a coin flip, and the
+end-state is a model + staking rule with positive expected ROI at closing odds.
+
 Raw data (`raw_fight_data.csv`, `raw_fighter_details.csv`) is produced by a separate sibling scraper
 project at `../UFC-Predictions` (its own `src/createdata/` pipeline) and copied into this repo — this
-repo does not scrape data itself. Since Aug 2026 the fighter CSV includes a Wikidata-sourced
+repo does not scrape data itself. The CSVs are **committed to git** (since Aug 2026; they were
+gitignored before): ufcstats blocks datacenter IPs so "re-scrape anytime" is false in most
+environments, and committed data pins every experiment to the exact rows it trained on. Refreshing
+data = a new scrape committed with the retrain it feeds. Since Aug 2026 the fighter CSV includes a Wikidata-sourced
 `Country` column (citizenship; `;`-joined for dual citizens) feeding the home-crowd features —
 CSVs from before that change still run, the home-crowd features just come out all-NaN.
 
 ## Commands
 
 ```bash
-# environment
+# environment. `.venv/` is the generic path (cloud runs); on the desktop NO
+# .venv exists -- the working drive is FAT32, so the real venv lives at
+# ~/.cache/ufc_prediction_venv/ (substitute it for .venv in every command
+# below; a run-5 launch died instantly on the literal .venv path).
 .venv/bin/pip install -r requirements.txt
 
 # run the full modeling pipeline non-interactively (multi-hour: dominated by the
@@ -70,7 +83,8 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
    event location's country — supplied per-prediction via `event_country`, never inherited from a
    fighter's last fight row), and Elo rating (the one feature computed via a
    sequential chronological loop rather than a vectorised cumsum, since each fight's rating depends
-   on both fighters' evolving state).
+   on both fighters' evolving state). Full definitions with math + plain explanations:
+   `docs/METHODOLOGY.md` and `docs/DATA_DICTIONARY.md`; run history: `EXPERIMENTS.md`.
 3. Target/feature selection → correlation check → **rolling-window grid search** to pick how much
    trailing history to train on → **Optuna** hyperparameter search evaluated with the same
    walk-forward CV scheme (never a plain train/test split).
@@ -79,13 +93,28 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
    on validation.
 6. Decision layer, stability checks, and export — see gotchas below for why several of these exist.
 
-**Weekly automation**: one claude.ai Routine (Thursday 13:00 UTC, self-bound session) retrains via
-`scripts/weekly_pipeline.sh` (scrape → CPU retrain → push master), then predicts the upcoming card
-with bookmaker odds via `send_weekly_predictions.py` and pushes the result table to the
-`weekly-predictions-log` branch — that push is the delivery mechanism; there is deliberately no email
-path (SMTP is unreachable from the cloud environment, and a Gmail app password was leaked into git
-history doing it the old way — revoke-and-avoid, don't reintroduce). Betting maths lives in
-`predict.py:kelly_edge` and is shared by the weekly job and the app's optional odds inputs.
+**Weekly automation** (redesigned Aug 2026 after the odds-aware model was accepted — entry 5):
+prediction and retraining are deliberately SEPARATED. Two cloud Routines, no PC required:
+- **Thursday (card day)**: scrape fresh fight data → commit CSVs → fetch the upcoming card's odds
+  (`scripts/fetch_card_odds.py`: Sportsbet staking slot + de-vigged AU-median feature slot; needs
+  `ODDS_API_KEY`) → predict with rule A stakes ($50 bankroll default) + C/E shadow logs
+  (`send_weekly_predictions.py --bankroll`) → push `predictions_output.md` + `card.json` to the
+  `weekly-predictions-log` branch. That push is the delivery mechanism; there is deliberately no
+  email path (SMTP is unreachable from the cloud environment, and a Gmail app password was leaked
+  into git history doing it the old way — revoke-and-avoid, don't reintroduce).
+- **Sunday (scoring day)**: the session fetches results from the web, then
+  `scripts/score_card.py` grades rules A/C/E from `card.json` (recomputing stakes with the same
+  code that produced them), appends `ledger.md` (the entry-9 10-event promotion record) and
+  `collected_odds.csv` (phase-2 own-odds training feed) on the log branch.
+- **Retraining is NOT weekly/automatic.** The model trains on historical odds; a retrain without
+  `odds_train.csv` silently produces an odds-BLIND model and regresses entry 5.
+  `scripts/weekly_pipeline.sh` (deliberate retrains, any machine) builds it first via
+  `scripts/fetch_training_odds.py` — downloads the mma-ai dump from its original public
+  HuggingFace host (never committed; unlicensed), extracts the odds tables with
+  `pg_restore --data-only -f -` (no Postgres server needed), and merges the collected feed.
+  Needs huggingface.co reachable + `postgresql-client`.
+Betting maths lives in `predict.py:kelly_edge` and is shared by the weekly job and the app's
+optional odds inputs.
 
 **Serving path** (`predict.py` + `app.py`): reimplements the notebook's single-fight-prediction cell
 against two exported artifacts — `ensemble.joblib` (trained models, blend weight, threshold, feature
@@ -105,10 +134,18 @@ automatically.
   fit Platt scaling and a tuned threshold on the ~120-fight validation slice and it cost 6 points of
   test accuracy from overfitting that small a sample. Don't reintroduce calibration without pooling
   many out-of-fold predictions first (see the `ponytail:` comment in the Threshold Selection cell).
-- **`last_row()`** (in both the notebook and `predict.py`) must reorient a fighter's most recent fight
-  row when they fought in the blue corner last time — otherwise the `r_`-prefixed columns silently
-  describe their opponent instead of them. This was a real bug, only caught by `test_predict.py`'s
-  corner-swap symmetry check.
+- **`last_row()`** (`predict.py`) must reorient a fighter's most recent fight row when they fought in
+  the blue corner last time — otherwise the `r_`-prefixed columns silently describe their opponent
+  instead of them. This was a real bug, only caught by `test_predict.py`'s corner-swap symmetry check.
+- **Serving reads every feature through `own_value()`/`diff_pairs`, never raw `b_*` columns.** A
+  reoriented last-fight row's `b_*` side is by construction the fighter's LAST OPPONENT; reading it
+  directly once served ~half the feature vector from the wrong fighter, and substring-matching diff
+  sources zero-filled all 25 `avg_*`/`med_*` diffs (EXPERIMENTS.md entry 0). `build_features` in
+  `predict.py` is the single serving implementation — the notebook's prediction cell imports it;
+  never re-inline a copy. The corner-swap symmetry test cannot catch this class of bug (its fighters
+  last fought each other, so contamination self-cancels); the content-based serving test in
+  `test_pipeline_logic.py` (never-met pair, every feature checked against the fighter's own history)
+  is the guard.
 - **Duplicate fight rows**: 1990s multi-fight tournament nights create many-to-many merge artifacts
   (~950 phantom duplicate rows). The pipeline explicitly deduplicates on `(r_fighter, b_fighter,
   date)` before computing head-to-head/Elo features — don't skip it.
@@ -121,8 +158,60 @@ automatically.
   of roughly ±9 points. Compare experiments using the notebook's Test Set Stability Check (CLT
   interval + monthly-batch breakdown) and Paired Comparison / McNemar cells, not raw point-estimate
   deltas.
-- **GPU usage (`device="cuda"`) is hardcoded** in `create_xgb_model()`, the Optuna objective, and the
-  final refit. If running without a GPU, all three need to change together.
+- **XGBoost device is `DEVICE`, probed once at startup** (settings cell: a tiny cuda fit in a
+  subprocess with a timeout, because a broken driver — the desktop's current state — can HANG CUDA
+  init rather than fail it). All four training sites (`create_xgb_model()`, the Optuna objective,
+  the top-3 refits, the calibration OOF refits) reference `DEVICE`; never hardcode a device at one
+  site. The laptop joins BOTH tuning studies via `scripts/shared_study_worker.py` (dispatched over
+  ssh; family arg `xgb|lgbm` — eGPU trials for XGBoost after running the same probe on its own
+  device, CPU trials for LightGBM) — requires `OPTUNA_STORAGE_URL` and
+  `OPTUNA_WORKER_STORAGE_URL` in the environment; credentials are never committed. The desktop's
+  study database is named **`optuna_db`** (a run-5 retrain silently went desktop-only because a
+  URL guessed `optuna` — the notebook degrades gracefully on Postgres failure, it does NOT error).
+  The probe also rejects XGBoost's silent GPU→CPU fallback (exit code 0 with "No visible GPU" on
+  stderr — a cloud run once logged `device: cuda` on a GPU-less box). LightGBM stays CPU-only (a
+  GPU build isn't worth the packaging).
+
+## Session ground rules (standing user agreements)
+
+- **Coding tasks load `/ponytail` at full intensity first** — laziest working
+  solution, reuse existing machinery before writing new, shortest diff that
+  works (the skill is checked into this repo).
+- **Cloud retrains must use the Optuna resume mechanism** — `OPTUNA_STORAGE_URL`
+  pointing at a local sqlite file plus a stable per-experiment
+  `OPTUNA_STUDY_NAME`. Cloud containers are reclaimed at roughly 8 hours
+  regardless of activity; an unprotected multi-hour run dies with them (two
+  full runs were lost learning this). Desktop runs get the same protection
+  via Postgres when the env vars are set.
+- **One retrain at a time, one machine at a time.** Before launching, confirm
+  no other session already has one running (a duplicated `nbconvert --inplace`
+  once raced the same notebook file). Before pushing to the working branch,
+  `git fetch` first — and never move the branch tip while another machine's
+  automated chain ends in a bare `git push`, which would strand that run's
+  results at its final step.
+
+## Experiment protocol (mandatory for any feature or algorithm change)
+
+- **Retrain and log every change.** Any change to features or the algorithm gets a full pipeline run
+  (Restart + Run All) and an entry in `EXPERIMENTS.md` — window, validation/test accuracy + AUC with
+  the CLT interval, monthly-batch stats, and the paired McNemar comparison against the snapshotted
+  baseline (`cp ensemble.joblib ensemble_baseline.joblib` BEFORE retraining). One variable per run;
+  rejected changes are fully reverted, never left in because they "don't hurt".
+- **The market comparison** (three metrics per entry, all from `scripts/odds_backtest.py` on the
+  pooled-OOF fights matched to historical closing odds; odds DB restored locally from the mma-ai
+  dump, never committed — unlicensed upstream): (1) accuracy vs how often the closing favourite
+  wins, (2) probability quality — model log-loss vs the market's vig-free log-loss, the gap that
+  must close for betting to be +EV, and (3) dollar value — flat/Kelly ROI plus the
+  close-vs-onesided segment. The pooled-OOF McNemar gates accuracy; when it's a statistical tie,
+  the market comparison on common fights breaks the tie.
+- **The $100 replay metric**: each entry also records how the new model would have used the $100
+  bankroll on the last UFC event versus what was actually logged. Always score the LOGGED pre-event
+  predictions from the `weekly-predictions-log` branch — never re-predict a past event through
+  current history (its outcome is already inside `head_to_head` and the fighters' last rows). The
+  weekly job commits `card.json` next to `predictions_output.md` to make this mechanical.
+- **Docs move with the code.** `docs/METHODOLOGY.md` and `docs/DATA_DICTIONARY.md` are updated in the
+  same commit as any change to features, data, or algorithm — each concept explained mathematically
+  first, then in plain terms with a worked example (write for a data-science undergrad).
 
 ## ML Guidelines (rules; see Architecture and Gotchas above for the concrete implementation)
 

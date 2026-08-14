@@ -1,0 +1,1295 @@
+# Experiment Log
+
+Every feature or algorithm change gets exactly one entry here, filled in
+after the full pipeline run that measured it. Protocol (also in CLAUDE.md):
+
+1. **One variable per run.** A change ships alone; its entry names the single
+   thing that changed.
+2. **Snapshot the baseline first**: `cp ensemble.joblib ensemble_baseline.joblib`
+   before retraining, so the notebook's Paired Comparison cell has something
+   to compare against.
+3. **Run the full pipeline** (Restart + Run All / `nbconvert`), then record
+   the metrics below from the notebook's output cells.
+4. **Decide**: the primary gate is the pooled-OOF McNemar (~6,000 fights);
+   the 110-fight test set (95% CI ≈ ±9 points) is a sanity check only.
+   Rejected changes are **fully reverted** — nothing stays in because it
+   "doesn't hurt".
+5. **Update the docs** (`docs/METHODOLOGY.md`, `docs/DATA_DICTIONARY.md`)
+   in the same commit as any accepted change.
+
+## Entry template
+
+```
+### <n>. <change title>            <date>, commit <sha>
+Change (one variable): ...
+Window: <train>/<test> months (pinned | re-searched)
+Validation: acc ..., AUC ...
+Test:       acc ... (n=..., 95% CI [..., ...]), AUC ...
+Monthly batches: ... ± ... over ... months
+Paired vs baseline: pooled-OOF McNemar p=... (fixes ..., breaks ...);
+                    test-set McNemar p=...
+Market comparison (OOF fights matched to closing odds, scripts/odds_backtest.py):
+    accuracy:     model ...% vs market favourite ...%
+    prob quality: model log-loss ... vs market log-loss ...
+    dollar value: flat ROI ...%, kelly ROI ...%,
+                  close-vs-onesided segment ROI ...% (n bets ...)
+$100 replay (last event): scored the LOGGED pre-event predictions from
+    weekly-predictions-log against results: old model $... -> $... return.
+    New model's stakes on the same card: <table or one-liner>.
+Decision: ACCEPTED / REVERTED — why.
+```
+
+**Market-comparison rule:** beating the market is the point of the project
+(CLAUDE.md → What this repo is), so every entry records three metrics
+against it, all from `scripts/odds_backtest.py` on the OOF fights matched
+to historical closing odds (BestFightOdds via the locally-restored mma-ai
+dump — unlicensed upstream, so the odds DB lives ONLY on the desktop and
+only aggregate numbers appear here):
+1. **Accuracy vs the market** — model win-pick accuracy vs how often the
+   closing favourite wins on the same fights.
+2. **Probability quality** — model log-loss vs the market's log-loss from
+   vig-free implied probabilities; the gap ≈ expected log-bankroll loss per
+   full-Kelly bet before vig, so this is the metric that must close.
+3. **Dollar value** — flat and Kelly ROI of the value-bet rule, plus the
+   "model-close / bookies-one-sided" segment (the strategy actually bet).
+Role: the pooled-OOF McNemar remains the accuracy gate for accepting a
+change; **when that gate is a statistical tie, the market comparison on
+common fights breaks the tie** — equal accuracy does not mean equal
+betting value.
+
+**$100 replay rule:** always score the *logged* pre-event predictions
+(`weekly-predictions-log` branch) — never re-predict a past event through
+current history, because `head_to_head` and the fighters' last-row features
+already include that event's outcome (self-inclusion leak). The weekly job
+commits `card.json` (with odds) alongside `predictions_output.md` so the new
+model's stakes on the same card are reproducible mechanically.
+
+---
+
+### 0. Serving corruption fixed — model unchanged        2026-08-02
+Change: `predict.build_features` rewritten. Previously ~half the serving
+feature vector came from the wrong fighter: `b_*` features were read off the
+blue fighter's reoriented last row (= their **last opponent's** stats),
+`avg_b_*`/`med_b_*` came from the *red* fighter's last opponent, all 25
+`avg_*`/`med_*` diffs were silently zero-filled, and the remaining diffs
+mixed red-own with blue's-last-opponent values. Verified example: predicting
+Makhachev–Holloway served Holloway's height as 175cm (McGregor's) and his
+layoff as 1827 days (McGregor's).
+Model artifacts: **unchanged** (notebook training/holdout matrices were
+always built correctly — only the app/weekly-card serving path was wrong).
+Every served prediction changes from this date; logged predictions before it
+were produced by the corrupted path and should be read accordingly.
+Gate: content-based serving test added (never-met pair, every feature checked
+against the fighter's own history); no retrain required.
+Decision: ACCEPTED (bug fix).
+
+---
+
+## Queued (next experiments, in order)
+
+**The bar is the market, not a coin flip** (see CLAUDE.md → What this repo
+is): closing favourites win 66.3% / log-loss 0.6089 on the 5,786 backtested
+fights vs the model's 61.2% / 0.642. An experiment that improves accuracy
+without closing that gap hasn't moved the needle that matters.
+
+**Compute note (2026-08-04):** retrains now run on **cloud CPU** (the same
+path as the weekly pipeline) rather than the desktop/laptop GPUs — the
+DEVICE probe falls back to cpu automatically; expect longer wall-clock. The
+per-run protocol is unchanged: snapshot baseline → one variable → full run →
+auto-log (`scripts/log_run_metrics.py`) → pooled-OOF McNemar gate with the
+profitability tie-break → full revert on rejection. The odds backtest still
+runs on the desktop only (that's where the odds DB lives).
+
+**Order (2026-08-04, re-prioritized by expected impact on the market gap;
+the betting-rule experiment stays last by design):**
+#5 odds as a feature (next up) → #6 absorbed/defensive stats →
+#7 opponent-adjusted (builds on #6) → #8 ensemble diversity →
+#9 beat-the-market rule. One at a time, each decided before the next
+starts; specs land in docs/METHODOLOGY.md as each is implemented; every
+entry records the full market comparison.
+(#3 decay: DECIDED without a retrain; #4 shrinkage: REVERTED after the
+market tie-break — see entries 3-4 at the bottom of this log; the notes
+below are those investigations' history.)
+
+### 4. Finish-rate shrinkage        (DECIDED: REVERTED — see entry 4)
+
+Expectation for #4 (written before the run, 2026-08-04): the 4 finish-rate
+stats (`ko_win_rate`, `sub_win_rate`, `ko_loss_rate`, `sub_loss_rate`, both
+corners + diffs) are REPLACED by empirical-Bayes shrunk versions —
+`(K·p_wc + count) / (K + n)` with K=5 pseudo-fights at the weight class's
+pre-holdout base rate `p_wc`; debuts get the pure class prior instead of
+NaN. Mechanism: raw rates scream on tiny samples (1 KO in 2 fights reads
+"50% finisher"), and trees split on those loud lies; shrinkage silences
+exactly the small-n rows while leaving veterans' rates almost untouched.
+Expect a small positive effect concentrated on fights involving
+short-record fighters; possible null if the trees were already routing
+around noisy rates via n-correlated features. Gate: pooled-OOF McNemar vs
+baseline v2, market comparison recorded, full revert if it loses. Same
+column names (values change, schema doesn't), so mirroring/selection/
+serving are untouched.
+
+Expectation for #3 (written before the run): `avg_*` halflife becomes 3
+years of wall-clock time instead of 5 fights. The two disagree mainly for
+fighters returning from long layoffs (their stale form now fades properly);
+active fighters' averages barely move. Expect a small effect concentrated
+on comeback fights; gate on pooled-OOF McNemar vs baseline v2 with the
+market comparison recorded, full revert if it loses.
+
+**Halflife selection (2026-08-04, notebook cells 14-15, desktop, pre-gating-retrain):**
+the 3-year figure above was originally a round-number guess ("3y ≈ 5 fights
+at a typical cadence", not tuned). Replaced with a data-driven pick plus an
+independent cross-check, both run on pre-holdout data only:
+
+- **CV grid search** (`avg_*_diff` feature block alone, default XGBoost,
+  pinned 72/6-month rolling window — the same harness as the window search,
+  not a full pipeline re-run per candidate): grid `[1, 1.5, 2, 3, 4, 5, 7,
+  10, 15]` years plus a flat/expanding-mean (no-decay) reference. AUC
+  clustered tightly across every candidate (0.5284-0.5375) — **3.0y won
+  narrowly** (0.5359) but the **no-decay reference beat every single
+  numeric halflife** (0.5375). Extending the grid to 7/10/15y found nothing
+  better than 3.0y (7y was in fact the worst numeric candidate). Read
+  honestly: halflife choice barely moves this feature block's own CV
+  signal at all; 3.0y is "best of a flat curve," not a confident optimum.
+- **Autocorrelation cross-check** (independent of the CV metric entirely —
+  estimates how long raw per-fight stats stay correlated with a fighter's
+  own future performance, straight from the data): every fighter's fight
+  pairs, z-scored **within weight class** (a first pass that z-scored
+  globally conflated division identity with persistence and was
+  discarded), correlation of z-scores bucketed by gap and fit to
+  `corr(Δt) = a + b·0.5^(Δt/h)` (floor `a` = permanent identity/division/
+  physique the model gets elsewhere; `h` = the form halflife that's
+  actually comparable to `AVG_HALFLIFE`), weighted least squares via
+  `scipy.optimize.curve_fit`. Result: pooled `h = 9.62y`, but **the fit is
+  degenerate** — `a` lands pinned at its 0 lower bound for the pooled fit
+  and 3 of 4 per-stat fits (only `sig_str_frac` identifies a real floor:
+  a=0.105, h=1.23y). With only 6 years of gap range, the fit can't
+  separate "small floor + fast decay" from "no floor + slow decay" — both
+  explain the observed correlation curve equally well, so `h=9.62y`
+  shouldn't be read as a confirmed number.
+- **Net read**: neither of the two clean outcomes anticipated going in
+  (corrected h near 2-4y confirming 3y, or h≫5y *with* a grid lift at long
+  halflives confirming a longer pick) actually happened — h came out ≫5y
+  pooled, but the grid never lifted at long halflives, and the h estimate
+  itself is degenerate. This is genuinely ambiguous evidence, not a
+  confirmation or a refutation. Per protocol the CV grid still governs:
+  **AVG_HALFLIFE_YEARS pinned at 3** (no longer value beat it). Additional
+  caveat on every fitted-h number above: survivorship bias — only
+  long-career fighters contribute long-gap pairs, so `h` is inflated
+  somewhat regardless of the floor correction.
+- Upgrade path, if this is ever worth resolving properly: the isolated
+  CV proxy and the identifiability-limited autocorrelation fit are both
+  cheap diagnostics, not a full pipeline evaluation — the real test is
+  whether the gating retrain's pooled-OOF McNemar (below) prefers a
+  different halflife once threaded through the complete feature set.
+
+### 5. Odds as a model feature        (DECIDED: ACCEPTED — see entry 5)
+Give the model the market's own price: `r_/b_market_prob`, the vig-free
+implied probability from closing odds (METHODOLOGY §6). Rationale: the
+backtest shows the market's log-loss (0.6089) beats the model's (0.642) —
+a blind model starts 0.033 behind and loses wherever it disagrees; an
+odds-aware model starts *at* the market's answer and learns residual
+corrections. Two consecutive information-neutral experiments (entries 2, 4)
+nulling on accuracy while nudging log-loss the wrong way says the model is
+saturated on its current information set — this is the first experiment
+that adds information.
+**Two-phase data plan (user call, 2026-08-05):** phase 1 VALIDATES via the
+desktop — `scripts/odds_backtest.py --export-training odds_train.csv`
+joins historical closing odds locally (unlicensed source: the file is
+gitignored and never committed; cloud runs see all-NaN columns and stay
+schema-identical), then the gating retrain runs on the desktop GPU(s).
+Phase 2 ships ONLY IF phase 1 is ACCEPTED: extend the weekly job to log
+odds for every fight on each card (our own collected data, committable),
+so the owned dataset gradually replaces the dump for retraining.
+Expectation (written before the run): the first experiment expected to
+CLEARLY beat baseline on the accuracy gate — the market picks winners at
+66.3% vs the model's 61.7% OOF, and the feature hands the model that
+signal on ~74% of OOF fights. Success = pooled-OOF McNemar decisively
+favours odds-aware AND log-loss moves meaningfully toward 0.6089; stretch
+= beating the market's own log-loss on matched fights (model adds value
+beyond the price). Watch-outs: value-bet counts collapse by construction
+(the model now mostly agrees with the price), so betting-ROI comparisons
+against odds-blind models are apples-to-oranges — the log-loss-vs-market
+line is the honest scoreboard; and NaN-coverage asymmetry (pre-2007
+fights) means the trees may split on "odds exist at all" — acceptable,
+documented.
+
+### 6. Absorbed/defensive stats        (DECIDED: ACCEPTED — see entry 6)
+Career prior averages of what opponents did TO the fighter (~6 stats:
+sig-str absorbed/min, KD absorbed, takedowns conceded, control time
+conceded, etc.) via the existing long-frame machinery with source columns
+swapped. New information the model currently can't see: durability and
+defense are only indirectly visible through loss rates today.
+
+### 7. Opponent-adjusted performance        (DECIDED: ACCEPTED, marginal — see entry 7)
+Per-fight z-scores vs the opponent's prior allowed averages, career-
+aggregated — needs #6's absorbed/defensive stats as inputs. Landing 100
+strikes on a defensive wizard means more than 100 on a punching bag.
+
+### 8. Ensemble diversity: CatBoost, then TabPFN        (two gated retrains — user call, 2026-08-07)
+Add diverse members to the blend, weights re-selected on validation.
+Split into TWO sub-experiments run in sequence (user instruction: one
+model per run, each with its own review and accept/revert against the
+then-current baseline — the original "one retrain" bundling violated the
+one-variable rule):
+**8a. CatBoost** (third boosted-tree family, ordered boosting +
+target-statistic categorical handling). Full gating retrain; snapshot
+baseline first; accept/revert on its own McNemar + market comparison.
+**8b. TabPFN** (pre-trained tabular transformer, strong exactly in this
+small-data regime; ~4,800 mirrored rows per 72-month window fits its
+≤10k limit). Runs only after 8a is decided, against whatever baseline
+8a leaves behind. Same gates.
+**Laptop integration (user instruction):** each new model family gets the
+same shared-study laptop dispatch as XGB/LGBM — extend
+`scripts/shared_study_worker.py`'s family arg (`catboost`, and a TabPFN
+family if it grows a tuning study) and dispatch via the notebook's
+existing `dispatch_laptop_worker()` helpers. CatBoost tunes on GPU
+(desktop cuda + laptop eGPU, its own probe); TabPFN is PyTorch — runs on
+DEVICE for its per-window fits, laptop-dispatched the same way if a
+config search exists (its Pascal support differs from XGBoost's, so the
+probe decides per machine, never an assumption).
+Expected effect: small log-loss polish from decorrelated errors — queued
+after the information-adding experiments because model additions squeeze
+the same information differently, and the market gap more likely closes
+with new information.
+**8c. Logit-space blending** (queued 2026-08-10, after 8b decides): the
+ensemble currently averages probabilities linearly; average in log-odds
+instead (equivalently a geometric mean of odds). One-line change to
+`blend_proba` + the notebook's blend sites. Mechanism: linear probability
+pools are systematically flatter than their members justify (the average
+of two calibrated forecasts is under-sharp; Jensen compresses toward
+0.5); logit averaging restores sharpness and is the standard fix when the
+metric is log-loss — and log-loss vs the market is the project's headline
+metric. Caveat to record at run time: the Platt calibrator downstream can
+absorb some of this flatness already (its slope can exceed 1), so the
+entry must compare on the same probability the odds backtest scores, and
+a null is a live possibility. No new tuning studies, no laptop; same
+gates.
+**8d. OOF stacking for blend weights** (queued 2026-08-10, after 8c):
+replace the coarse validation-slice weight grid with a tiny logistic
+meta-learner (2-3 coefficients, member probabilities only) fit on the
+~7.9k pooled walk-forward OOF predictions — 65× the sample of the
+120-fight slice, so fractional and negative weights become measurable
+instead of noise-chased. Guardrail: the meta-model stays at member-count
+coefficients; anything richer re-opens the validation-overfit door the
+coarse grid deliberately closed (see the decision-layer cell's 6-point
+scar). No new tuning studies; same gates.
+(Far-future, contingent, not queued: dynamic ensemble selection / KNORA —
+per-fight member selection by local OOF competence. Only worth a look if
+the roster reaches ~5+ genuinely diverse families; with 2-3 correlated
+members and ~8k OOF fights the neighborhood competence estimates are
+noise. Revisit at roster growth, not before.)
+
+### 9. Beat-the-market betting rule        (last — no retrain, decision layer)
+Change: use the market as an input to bet selection instead of betting
+against it. The current value-bet rule stakes wherever model probability
+beats implied probability — which concentrates bets exactly where the model
+disagrees with a better-calibrated market (84% underdogs, −9.5% ROI in the
+close-vs-onesided segment). Candidate replacement: bet only when the model
+agrees with the market's direction AND its edge over the implied probability
+exceeds the vig (ride the market selectively, never fade it); compare
+against a shrunk blend (model proba shrunk toward the vig-free implied
+probability) as the staking input. Deliberately scheduled last, after every
+experiment (#4–8) has settled, so the rule is designed around the
+final model's calibration. Evaluated on the same OOF-with-odds fights via
+`scripts/odds_backtest.py` on the desktop — model artifacts unchanged, so
+no McNemar gate; the gate IS the ROI comparison against the current rule on
+identical fights.
+Expectation (written before the run): flat/Kelly ROI improves mainly by
+*not betting* the worst segment; total bet count drops sharply. If no
+positive-ROI rule exists at closing odds, that finding gets recorded
+honestly — the model then needs to get better, not the staking cleverer.
+
+Design constraints added 2026-08-11 (odds-conditioning discussion, after
+the 8-series settled the model): the numbers above (84% underdogs, −9.5%
+segment) describe the PRE-entry-5 model; the current model consumes
+closing odds as a feature, so it agrees with the market by construction
+and the betting surface is residual disagreements only (segment now ~125
+bets at −0.9%, underdog share 50%). Consequences the rule design must
+respect: (1) a copycat model places no bets — edges are genuine residuals,
+small by construction, so thresholds tuned finer than the residual noise
+floor are fiction; (2) all rule parameters (thresholds, segments,
+shrinkage) are selected on pooled OOF only — never the validation slice
+(§11 scar) — and evaluated against the current rule on identical fights;
+(3) the backtest's optimistic edge is now structural: we condition on the
+closing line AND bet at it; live betting happens at near-closing odds, so
+any accepted rule's expected ROI is an upper bound and the entry must say
+so; (4) the aggregate ROI is carried substantially by small-edge
+agreement bets (fragile to vig/line movement), while the disagreement
+segment currently loses — the rule should be free to bet WITH the
+market's direction on mispriced magnitude, and the "never fade" candidate
+above is one arm of the comparison, not an assumption.
+Direction-split preview (2026-08-11, current 8e model, same backtest):
+bets WITH the market's direction 2269, hit 71.1%, flat +2.4% / kelly
++8.3%; bets AGAINST it 2267, hit 40.8%, flat +9.8% / kelly +22.6%. The
+against-direction residuals carry most of the edge — the "never fade"
+arm (written against the pre-odds model's -9.5% pathology) would
+amputate the profitable half and is expected to lose the comparison;
+the live carve-out question is only the extreme-disagreement segment
+(close-vs-onesided, 125 bets, -0.9%).
+
+### Later: scorecards v2 (successor to the reverted entry 2)
+Same three decision-margin features, sourced from ufcstats' own judge
+totals instead of the static UFC-DataLab CSV (~4× coverage, refreshed
+weekly by the scraper). Worth a retrain only after the queue above settles.
+
+---
+
+### 1. Baseline v2 -- leak-free window search, OOF gate        2026-08-03, notebook at ee3ad47
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 229 columns remain
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'xgb_tuning_20260803_125404' (combined cap: 100 trials)...
+Shared study 'xgb_tuning_20260803_125404' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.6581
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 46 diff features
+Pooled test accuracy: 0.609  (n=110)
+95% CI (CLT):        [0.518, 0.700]
+Batch accuracy: 0.563 +/- 0.244 over 4 monthly batches
+Baseline accuracy: 0.600
+This run accuracy: 0.609
+New fixes 1 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Prediction: Ilia Topuria wins
+Confidence: 64.37% that Ilia Topuria wins
+```
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py):
+    accuracy:     model 61.2% vs market favourite 66.3%
+    prob quality: model log-loss 0.6422 vs market log-loss 0.6089
+    dollar value: flat ROI -0.5% (5368 bets, hit 39.0%), kelly ROI +0.9%,
+                  close-vs-onesided segment ROI -9.5% (1637 bets, hit 25.5%)
+
+$100 replay (last event, UFC Belgrade — Medić vs Rodríguez): the LOGGED
+(deployed-model) predictions returned $100 → $49 (net −$51). Baseline v2
+re-weighted the same three losing sides and found no value on Musayev — the
+one logged bet that paid off — so it returns $100 → $0 (net −$100).
+Caveat: that card predates the commit-card.json rule, so odds were
+reconstructed from the logged markdown (bet sides only); 3 of 7 fights had
+no odds and no stake from any model (none were bet originally either).
+One-card sample — noise-level evidence, recorded for the protocol not the
+decision.
+Decision: ACCEPTED — hygiene release as pre-registered (1 fix / 0 breaks vs
+the Jul-28 model on the test set); becomes the reference baseline. First
+artifact carrying oof/diff_pairs/train_end.
+
+---
+
+### 2. Judge-scorecard features        2026-08-04, notebook at ee3ad47
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Scorecards joined to 1000 decisions (25.4% of all decisions; coverage is mid-2020..late-2024 by data availability); winner agreement 99.8%
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 238 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'xgb_tuning_20260803_224925' (combined cap: 100 trials)...
+Shared study 'xgb_tuning_20260803_224925' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.6581
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 49 diff features
+Pooled test accuracy: 0.609  (n=110)
+95% CI (CLT):        [0.518, 0.700]
+Batch accuracy: 0.538 +/- 0.306 over 4 monthly batches
+Baseline accuracy: 0.609
+This run accuracy: 0.609
+New fixes 1 fights baseline got wrong
+New breaks 1 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6171 vs this run 0.6176)
+OOF fixes 101 / breaks 97; McNemar p-value: 0.8312  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 64.20% that Ilia Topuria wins
+```
+
+$100 replay (last event, UFC Belgrade — Medić vs Rodríguez): identical
+behaviour to baseline v2 — same three losing sides (re-weighted), no value
+found on Musayev: $100 → $0 (net −$100) vs the deployed model's −$51. Since
+baseline v2 *without* scorecards made the same bets, the scorecard features
+are not the differentiator on this card; n=1, noise-level evidence either
+way (same caveats as entry 1).
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py):
+    accuracy:     model 61.2% vs market favourite 66.3%
+    prob quality: model log-loss 0.6431 vs market log-loss 0.6089
+    dollar value: flat ROI -0.8% (5378 bets, hit 38.7%), kelly ROI +0.6%,
+                  close-vs-onesided segment ROI -9.8% (1728 bets, hit 25.5%)
+Baseline v2 leads on every metric here (higher flat ROI, higher kelly ROI,
+better segment ROI, better log-loss) — tie-break goes against scorecards.
+Decision: REVERTED — pooled-OOF McNemar was a statistical tie (p=0.8312);
+the profitability tie-break favors baseline v2 on every metric, and the
+$100 Belgrade replay showed no advantage either. Static coverage (mid-2020
+→late-2024, frozen) only shrinks going forward; a scorecards-v2 sourced from
+ufcstats' own judge totals (~4x coverage, weekly-refreshed) is the queued
+successor idea.
+
+### 3. Career-average decay basis — two-round search, status quo kept        2026-08-04, decided WITHOUT a gating retrain
+Change investigated (one variable): the `avg_*` EWM decay basis — wall-clock
+halflife (round 1, desktop GPU), then fight-count halflives vs a flat career
+mean, every candidate pin-eligible (round 2, cloud CPU, committed CSVs).
+Round-1 results are recorded in the queue notes above. Round 2 (proxy CV:
+`avg_*_diff` block alone, default XGBoost, pinned 72/6 window, pre-holdout):
+
+```
+halflife 2 fights : AUC 0.5372
+halflife 3 fights : AUC 0.5307
+halflife 5 fights : AUC 0.5306   <- production formula
+halflife 8 fights : AUC 0.5355
+halflife 12 fights: AUC 0.5336
+halflife 20 fights: AUC 0.5383   <- nominal top
+flat (no decay)   : AUC 0.5333
+3.0y wall-clock   : AUC 0.5281   <- round-1 winner, now LAST
+```
+
+The ordering is erratic (2 and 20 fights on top, 3/5 at the bottom — no
+dose-response curve) and round 1's winner finished last in round 2:
+rankings that don't replicate are fold noise, not signal. Autocorrelation
+(both units, floor-decay fits): pooled correlations decay extremely slowly
+(0.177 → 0.119 over 6 years; 0.176 → 0.110 over 11 fights); fits mostly
+degenerate (floor pinned at 0), with `sig_str_frac` the one stat showing an
+identified fast form component over a real floor (a=0.105, h=1.23y).
+Finding: fighter stat profiles are highly persistent, and short-term form
+is already carried by dedicated features (`prev_win`, streaks,
+`days_since_last`, Elo) — the career-average decay formula is a non-factor
+for this model.
+Market comparison / McNemar / $100 replay: N/A — no candidate shipped; the
+model and artifacts are unchanged (baseline v2 remains current).
+Decision: KEEP the production 5-fight halflife (`AVG_SPEC` pinned
+`("fights", 5)`); the wall-clock change was REVERTED before ever training a
+gated model. The decay question is CLOSED — don't re-tune it without new
+evidence. (Possible far-future lead, not queued: `sig_str_frac`'s fast form
+component hints per-family decay could matter for accuracy-type stats
+specifically.)
+
+---
+
+### 4. Finish-rate shrinkage toward weight-class priors (K=5)        2026-08-05, notebook at f7dff1f
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 229 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Worker storage env vars not both set -- desktop-only tuning.
+Shared study 'exp4_shrinkage' complete: 100 trials total (desktop + laptop combined). Best AUC: 0.6160
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 46 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.601 +/- 0.201 over 4 monthly batches
+Baseline accuracy: 0.618
+This run accuracy: 0.627
+New fixes 1 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6171 vs this run 0.6171)
+OOF fixes 143 / breaks 143; McNemar p-value: 0.9528  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 64.56% that Ilia Topuria wins
+```
+
+Run note: the "XGBoost device: cuda" line is a probe false-positive — this
+cloud box has no GPU; XGBoost accepted device='cuda' with a silent CPU
+fallback instead of erroring, so training ran on CPU as intended. Tighten
+the probe to also reject fallback warnings. Run executed on cloud CPU with
+resumable Optuna storage across two container restarts (trials survived;
+that mechanism shipped as f7dff1f).
+$100 replay (last event): N/A — weekly Routine paused, no card logged
+since UFC Belgrade; that card's reconstruction is covered in entries 1-2.
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-05):
+    accuracy:     model 61.2% vs market favourite 66.3% (both models)
+    prob quality: shrinkage log-loss 0.6432 vs baseline 0.6422
+                  (market 0.6089)
+    dollar value: flat ROI -0.7% (5390 bets) vs baseline -0.5%,
+                  kelly +0.4% vs +0.9%, close-vs-onesided segment -10.6%
+                  (1736 bets) vs -9.5%
+Baseline v2 leads on every metric — the tie-break goes against shrinkage,
+the same pattern as the scorecards (entry 2).
+Decision: REVERTED — accuracy gate was a symmetric null (143 fixes / 143
+breaks) and the market comparison favours baseline v2 across the board.
+Notable: two consecutive feature experiments have now nulled on accuracy
+while slightly worsening market log-loss; the model's probability quality
+appears saturated on this information set, which is exactly the case for
+#5 (odds as a feature) being next.
+
+---
+
+### 5. Odds as a model feature (market-implied probability)        2026-08-07, notebook at 6f848bc
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 231 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp5_odds' (combined cap: 100 trials)...
+Shared study 'exp5_odds' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7081
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 46 diff features
+Pooled test accuracy: 0.655  (n=110)
+95% CI (CLT):        [0.566, 0.743]
+Batch accuracy: 0.579 +/- 0.229 over 4 monthly batches
+Baseline accuracy: 0.609
+This run accuracy: 0.655
+New fixes 10 fights baseline got wrong
+New breaks 5 fights baseline got right
+Test-set McNemar p-value: 0.3018 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6171 vs this run 0.6601)
+OOF fixes 955 / breaks 617; McNemar p-value: 0.0000  <-- primary gate
+Statistically significant difference, favoring: this run
+Prediction: Ilia Topuria wins
+Confidence: 56.47% that Ilia Topuria wins
+```
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-07):
+    accuracy:     model 67.4% vs market favourite 66.3%
+    prob quality: model log-loss 0.5997 vs market log-loss 0.6089 — first
+                  model to beat the market's own log-loss (stretch goal;
+                  odds-blind baseline 0.6422)
+    dollar value: flat ROI +1.0% (4397 bets, hit 40.9%), kelly ROI +14.0%,
+                  close-vs-onesided segment ROI -5.1% (218 bets, hit 29.8%)
+                  — the segment collapsed from baseline's 1637 bets at
+                  -9.5%, the predicted by-construction shrink of market
+                  disagreements; the residual disagreements still lose,
+                  just far less often and for far less money
+
+$100 replay (last event, UFC Belgrade — full-card reconstruction 2026-08-07):
+run-5 returns $100 → $115.75 (net +$15.75), picks 6/7 on the predictable
+fights (7 of 14 skipped: Serbia-debut fighters with no UFC history). Six
+value bets, all market-agreed favourites at small edges; the one loss
+(Klein, the card's only wrong pick) is absorbed by five wins. Same card:
+logged model $49, baseline v2 $0. Caveats: odds are DraftKings fight-day
+pairs fetched post-hoc from the card's betting-splits article (the log
+only recorded bet-side prices), not a logged closing line; and one card
+is noise-level evidence either way — the pooled backtest is the signal.
+
+Decision: ACCEPTED — every pre-registered success criterion met: pooled-OOF
+McNemar decisively favours odds-aware (fixes 955 / breaks 617, p ≈ 0,
+acc 0.6171 → 0.6601) AND log-loss moved past the market's 0.6089 (the
+stretch goal: the model adds value beyond the price). Becomes the
+reference baseline. Unlocks phase 2 (own-odds logging in the weekly job,
+still gated on the user re-enabling the Routine) and entry 9's betting
+rule, which should now be designed around a model that agrees with the
+market by construction.
+
+---
+
+### 6. Absorbed/defensive stats (opponent output vs the fighter)        2026-08-07, notebook at e6b8d65
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 249 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp6_absorbed' (combined cap: 100 trials)...
+Shared study 'exp6_absorbed' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7096
+Laptop joined shared study 'exp6_absorbed_lgbm' (combined cap: 100 trials)...
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 52 diff features
+Pooled test accuracy: 0.645  (n=110)
+95% CI (CLT):        [0.556, 0.735]
+Batch accuracy: 0.598 +/- 0.161 over 4 monthly batches
+Baseline accuracy: 0.655
+This run accuracy: 0.645
+New fixes 3 fights baseline got wrong
+New breaks 4 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6601 vs this run 0.6622)
+OOF fixes 131 / breaks 114; McNemar p-value: 0.3067  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.95% that Ilia Topuria wins
+```
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-07):
+    accuracy:     model 67.6% vs market favourite 66.3% (run-5 baseline 67.4%)
+    prob quality: model log-loss 0.5963 vs market log-loss 0.6089
+                  (run-5 baseline 0.5997 — gap to market widens in our favour)
+    dollar value: flat ROI +2.1% (4317 bets, hit 45.8%), kelly ROI +15.9%,
+                  close-vs-onesided segment ROI +4.2% (189 bets, hit 32.3%)
+                  — the segment that defined the project's failure mode
+                  (−9.5% odds-blind, −5.1% at run 5) is POSITIVE for the
+                  first time; underdog share of bets 84% → 73%
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entry 5): $100 → $112.46 (net +$12.46), picks 6/7, same bets as run 5
+with slightly different stakes (run 5: $115.75). One-card noise either way.
+
+Decision: ACCEPTED via the market tie-break — the pooled-OOF McNemar is a
+statistical tie (fixes 131 / breaks 114, p=0.31; acc 0.6601 → 0.6622), and
+the protocol's tie-break goes to the market comparison, which run 6 wins
+on every line (log-loss, flat/Kelly ROI, and the first-ever positive
+close-vs-onesided segment). Contrast with entry 4: same null accuracy
+gate, opposite tie-break verdict, opposite decision. Absorbed/defensive
+stats stay in; run 6 becomes the reference baseline.
+
+---
+
+### 7. Opponent-adjusted performance (output vs opponent's allowed average)        2026-08-08, notebook at 0fc677e
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.587 +/- 0.162 over 4 monthly batches
+Baseline accuracy: 0.645
+This run accuracy: 0.627
+New fixes 0 fights baseline got wrong
+New breaks 2 fights baseline got right
+Test-set McNemar p-value: 0.5000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6622 vs this run 0.6623)
+OOF fixes 129 / breaks 128; McNemar p-value: 1.0000  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.40% that Ilia Topuria wins
+```
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-08):
+    accuracy:     model 67.8% vs market favourite 66.3% (run-6 baseline 67.6%)
+    prob quality: model log-loss 0.5958 vs market log-loss 0.6089
+                  (run-6 baseline 0.5963 — a 0.0005 improvement, within
+                  plausible refit noise; flagged below)
+    dollar value: flat ROI +2.1% (4384 bets, hit 47.1%; baseline +2.1%),
+                  kelly ROI +15.8% (baseline +15.9%),
+                  close-vs-onesided segment ROI +6.3% (211 bets, hit 33.2%;
+                  baseline +4.2%); underdog share 73% → 69%
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-6): $100 → $115.59 (net +$15.59), picks 6/7. One-card noise.
+
+Decision: ACCEPTED, marginally — the weakest accept in the log, recorded
+as such. The pooled-OOF McNemar is a perfect null (fixes 129 / breaks 128,
+p=1.0), and the tie-break market comparison leans positive on its primary
+metric (log-loss −0.0005), accuracy (+0.2), and the close-vs-onesided
+segment (+4.2% → +6.3%) while flat/Kelly ROI are a wash — nothing
+regressed. Honest caveat: the winning margins are individually within
+refit noise; the acceptance rests on the tie-break's letter plus the
+directional consistency with entries 5-6, not on any decisive line. If a
+future run needs schema slimming, these 18 columns are the first
+candidates for an ablation. Run 7 becomes the reference baseline.
+
+---
+
+### 8a. CatBoost as third ensemble member        2026-08-10, notebook at 8f3cf4e
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp8a_catboost' (combined cap: 100 trials)...
+Shared study 'exp8a_catboost' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7109
+Laptop joined shared study 'exp8a_catboost_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.706026001246759
+Laptop joined shared study 'exp8a_catboost_catboost' (combined cap: 100 trials)...
+Shared study 'exp8a_catboost_catboost' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7122
+Best CatBoost AUC: 0.712202947882838
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Blend weights: lgbm=0.5 catboost=0.0 (XGB-only val AUC 0.769, LGBM-only 0.772, CatBoost-only 0.754)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.645  (n=110)
+95% CI (CLT):        [0.556, 0.735]
+Batch accuracy: 0.598 +/- 0.161 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.645
+New fixes 2 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 0.5000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6623 vs this run 0.6608)
+OOF fixes 184 / breaks 196; McNemar p-value: 0.5726  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 61.69% that Ilia Topuria wins
+```
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-10):
+    accuracy:     model 67.5% vs market favourite 66.3% (run-7 baseline 67.8%)
+    prob quality: model log-loss 0.5966 vs market log-loss 0.6089
+                  (run-7 baseline 0.5958 — a 0.0008 regression)
+    dollar value: flat ROI +3.2% (4513 bets, hit 47.2%; baseline +2.1%),
+                  kelly ROI +14.7% (baseline +15.8%),
+                  close-vs-onesided segment ROI +3.9% (258 bets, hit 32.9%;
+                  baseline +6.3%); underdog share 69% (unchanged)
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-7): $100 → $115.96 (net +$15.96), picks 6/7 — statistically
+identical to run-7's $115.59, as expected from a zero-weight change.
+(Reconstruction script recovered from the Aug-9 session transcript; the
+scratchpad original was lost to the power-off.)
+
+Decision: REVERTED. The headline result is that CatBoost never made the
+team: the validation blend weight search gave it 0.0 (CatBoost-only val
+AUC 0.754 vs XGB 0.769 / LGBM 0.772), despite posting the best tuning-CV
+AUC of any study (0.7122). The shipped ensemble was therefore
+architecturally identical to run-7 plus refit noise — and that noise leans
+negative: pooled-OOF McNemar null (fixes 184 / breaks 196, p=0.5726) with
+OOF accuracy down 0.6623 → 0.6608, and the market tie-break favours
+baseline on 4 of 5 metrics (accuracy, log-loss, kelly ROI, segment ROI;
+only flat ROI leans the other way). Run-7 artifacts restored as current;
+run 7 remains the reference baseline for 8b. The CatBoost tuning/dispatch
+infrastructure (shared_study_worker catboost family, CatBoostOnFrame,
+three-member blend plumbing) stays in the code — entry 8's standing
+instruction reuses it for every new model family, and predict.py serves
+two-member artifacts unchanged (cat fields default to absent/0.0).
+
+### Expectation for #8b (written before the run, 2026-08-10)
+TabPFN as the third-member candidate in 8a's now-reverted slot, against
+the run-7 baseline. No tuning study and no laptop dispatch — the entry-8
+spec gates dispatch on "if a config search exists", and TabPFN's core
+claim is that none does; XGB/LGBM still get fresh 100-trial shared
+studies. Fit check: ~4.8k mirrored rows per 72-month window ≤ its 10k
+pretraining limit, 267 features ≤ 500. Client note: tabpfn 8.2.0 with the
+openly-published v2 checkpoint pinned via model_path (the 8.x client's
+default v2.5+ weights sit behind a per-user license token a batch run
+can't accept; the pre-gate 2.x clients force pandas<3 / sklearn<1.7
+downgrades that break this repo's stack — both discovered the hard way
+tonight). Artifact keys generalised: catboost/cat_weight →
+extra_model/extra_weight; the TabPFN member is only persisted when it
+earns non-zero weight (a pickled TabPFN embeds its ~29MB transformer).
+Expected: decorrelated errors from a genuinely different model family
+give a small blend weight (0.25) and a mild log-loss polish; the honest
+prior after 8a is that the 120-fight validation slice gives the newcomer
+0.0 again and the gate stays null.
+
+---
+
+### 8b. TabPFN as third ensemble member        2026-08-10, notebook at 5deba43
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp8b_tabpfn' (combined cap: 100 trials)...
+Shared study 'exp8b_tabpfn' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7103
+Laptop joined shared study 'exp8b_tabpfn_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7091980782956236
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Blend weights: lgbm=0.0 tabpfn=0.0 (XGB-only val AUC 0.774, LGBM-only 0.750, TabPFN-only 0.752)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.585 +/- 0.152 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.627
+New fixes 1 fights baseline got wrong
+New breaks 1 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6623 vs this run 0.6612)
+OOF fixes 52 / breaks 61; McNemar p-value: 0.4517  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 59.52% that Ilia Topuria wins
+```
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, run on the desktop 2026-08-10):
+    accuracy:     model 67.5% vs market favourite 66.3% (run-7 baseline 67.8%)
+    prob quality: model log-loss 0.5960 vs market log-loss 0.6089
+                  (run-7 baseline 0.5958 — a 0.0002 regression, within noise)
+    dollar value: flat ROI +2.2% (4349 bets, hit 46.5%; baseline +2.1%),
+                  kelly ROI +15.9% (baseline +15.8%),
+                  close-vs-onesided segment ROI +2.9% (190 bets, hit 32.1%;
+                  baseline +6.3%); underdog share 71% (baseline 69%)
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-7): $100 → $109.27 (net +$9.27), picks 6/7 (run-7: $115.59).
+One-card noise.
+
+Decision: REVERTED. TabPFN earned 0.0 blend weight — and so did LGBM
+(XGB-only val AUC 0.774 vs LGBM 0.750, TabPFN 0.752), making this run's
+shipped ensemble XGB-only plus different-params refit noise. Two readings,
+both recorded: (1) TabPFN at zero tuning matched LGBM standalone on the
+slice — a real credential for the prior-fitted approach, just not additive
+here; (2) [corrected 2026-08-10, discovered during 8c: the run-7 baseline
+artifact ALSO carries lgbm_weight=0.0 — production has been XGB-only since
+run 7. The slice's LGBM weight has flip-flopped 0.0 (run 7) → 0.5 (8a) →
+0.0 (8b/8c) across four runs] — direct evidence the 120-fight weight grid
+is noise-dominated, exactly the failure mode queued experiment 8d (OOF
+stacking) exists to fix. Gate
+null-to-negative (p=0.4517, OOF acc 0.6623 → 0.6612), market tie-break
+favours baseline on accuracy, log-loss, and segment ROI (flat/kelly +0.1
+each way is noise). Run-7 artifacts restored; run 7 remains the reference
+baseline for 8c. TabPFN infra (TabPFNOnFrame, pinned v2 ckpt) stays in
+predict.py for future roster experiments.
+
+---
+
+### 8c. Logit-space blending        2026-08-10, notebook at 3c9f3ba
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7096779831694502
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.587 +/- 0.162 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.627
+New fixes 0 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6623 vs this run 0.6623)
+OOF fixes 0 / breaks 0; McNemar p-value: 0.0000  <-- primary gate
+Statistically significant difference, favoring: baseline
+Prediction: Ilia Topuria wins
+Confidence: 60.40% that Ilia Topuria wins
+```
+
+Market comparison (5786/7869 OOF fights matched to closing odds,
+scripts/odds_backtest.py, desktop 2026-08-10): IDENTICAL to baseline on
+every metric (log-loss 0.5958, accuracy 67.8%, same 4384 bets, flat +2.1%
+/ kelly +15.8% / segment +6.3%). $100 replay: identical, $115.59, 6/7.
+
+Decision: REVERTED — the experiment was a perfect NO-OP, and that is the
+finding. The weight grid picked lgbm_weight=0.0 (XGB-only val AUC 0.772
+vs LGBM 0.764 on this run's exp7-params members), and a logit pool over
+one member is the identity: the artifact's probabilities match baseline
+within 3e-8 (float noise). Two records:
+(1) The gate line "p=0.0000, favoring baseline" is a degenerate-case
+display artifact — fixes 0 / breaks 0 means zero discordant pairs, i.e.
+literally identical picks (provable at any shared weight w=0; also true
+at w=0.5 by logit antisymmetry), not a significant difference. The
+comparison cell's McNemar print should special-case zero discordant
+pairs; fix queued with 8d's cell surgery.
+(2) The run surfaced the real state of production: the accepted run-7
+baseline is XGB-ONLY (lgbm_weight=0.0 in the artifact), so blending-space
+is moot until some member earns non-zero weight. That question — does
+LGBM deserve fractional weight on 7.9k-fight OOF evidence rather than
+being zeroed/promoted by a 120-fight slice that has flip-flopped across
+four runs — is exactly experiment 8d. Logit-blend code fully reverted
+(notebook cells + predict.py's space param, per protocol rule 4: nothing
+stays because it "doesn't hurt"); 8d's logistic meta-learner operates in
+logit space inherently, so 8c's mechanism returns there if 8d ships.
+
+---
+
+### 8d. OOF-stacked blend weights        2026-08-10, notebook at 3198d11
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7096779831694502
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.627  (n=110)
+95% CI (CLT):        [0.537, 0.718]
+Batch accuracy: 0.587 +/- 0.162 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.627
+New fixes 0 fights baseline got wrong
+New breaks 0 fights baseline got right
+Test-set McNemar p-value: 1.0000 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6623 vs this run 0.6615)
+OOF fixes 46 / breaks 53; McNemar p-value: 0.5465  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 61.98% that Ilia Topuria wins
+```
+
+Stacker fit (not captured by the auto-log scraper): coefficients in logit
+space xgb=0.829, lgbm=0.356 on 7869 pooled OOF fights — LGBM earns real
+weight on the big sample, and the coefficients summing to 1.185 (>1) means
+the pool sharpens, the theoretically-expected signature of decorrelated
+members agreeing.
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, desktop 2026-08-10):
+    accuracy:     model 67.7% vs market favourite 66.3% (baseline 67.8%)
+    prob quality: model log-loss 0.5939 vs market log-loss 0.6089
+                  (baseline 0.5958 — a 0.0019 improvement, the largest
+                  log-loss move of the 8-series, on the primary metric)
+    dollar value: flat ROI +5.7% (4569 bets, hit 55.9%; baseline +2.1%,
+                  hit 47.1%), kelly ROI +13.6% (baseline +15.8%),
+                  close-vs-onesided segment ROI +5.8% (150 bets; baseline
+                  +6.3%, 211 bets); underdog share 69% → 51%
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-8b): $100 → $120.69 (net +$20.69), picks 6/7 — the best replay
+of the series (run-7 baseline $115.59). One-card noise, as always.
+
+Decision: ACCEPTED. The pick-level gate is null (fixes 46 / breaks 53,
+p=0.5465 — expected: stacking barely moves picks), so the market tie-break
+decides, and it is the clearest tie-break of the series: log-loss improved
+0.0019 (the metric that must close, now 0.0150 ahead of the market), flat
+ROI nearly tripled (+2.1% → +5.7%) with hit rate up 47.1% → 55.9% and
+underdog share down 69% → 51% — the sharper probabilities stopped
+over-betting longshots. Kelly ROI dips (+15.8% → +13.6%) and the segment
+thins (211 → 150 bets, +6.3% → +5.8%): both are consequences of the same
+recalibrated bet profile, traded against the flat-ROI and log-loss gains.
+Honest caveats: (1) the stacker is fit on the same pooled OOF the gate and
+backtest score — mitigated by its 2-coefficient capacity, but a
+fully-nested evaluation would refit it per window; (2) the Platt
+calibrator downstream is now near-redundant (double-fit on the same OOF)
+and survives only via its Brier non-regression assert. Run 8d becomes the
+reference baseline. Queued next: re-audition CatBoost (8a) and TabPFN
+(8b) under the stacker — both were rejected by the mechanism this entry
+just replaced.
+
+---
+
+### 8e. CatBoost re-audition under the OOF stacker        2026-08-10, notebook at 997facb
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7096779831694502
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.600  (n=110)
+95% CI (CLT):        [0.508, 0.692]
+Batch accuracy: 0.543 +/- 0.211 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.600
+New fixes 0 fights baseline got wrong
+New breaks 3 fights baseline got right
+Test-set McNemar p-value: 0.2500 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6615 vs this run 0.6640)
+OOF fixes 131 / breaks 111; McNemar p-value: 0.2219  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.13% that Ilia Topuria wins
+```
+
+Stacker fit (not captured by the auto-log scraper): coefficients in logit
+space xgb=0.573, lgbm=0.104, catboost=0.498 on 7869 pooled OOF fights.
+CatBoost enters nearly co-equal with XGB; LGBM's coefficient collapses
+0.356 → 0.104 — CatBoost supplies the same second opinion better, which
+is exactly what the correlated-members theory predicted a fair weighting
+would reveal.
+
+Market comparison (5786/7869 OOF fights matched to closing odds, 74%
+coverage, scripts/odds_backtest.py, desktop 2026-08-10; baseline = run 8d):
+    accuracy:     model 67.7% vs market favourite 66.3% (baseline 67.7%)
+    prob quality: model log-loss 0.5932 vs market log-loss 0.6089
+                  (baseline 0.5939 — improved again; the market lead is
+                  now 0.0157)
+    dollar value: flat ROI +6.1% (4536 bets, hit 55.9%; baseline +5.7%),
+                  kelly ROI +14.0% (baseline +13.6%),
+                  close-vs-onesided segment ROI -0.9% (125 bets, hit
+                  31.2%; baseline +5.8%, 150 bets) — the one regression,
+                  flagged below; underdog share 50% (unchanged)
+
+$100 replay (last event, UFC Belgrade — same full-card reconstruction as
+entries 5-8d): $100 → $138.75 (net +$38.75), picks 6/7 — best of the
+series (8d baseline $120.69). One-card noise, as always.
+
+Decision: ACCEPTED. First positive-leaning gate of the 8-series (fixes
+131 / breaks 111, p=0.2219, OOF acc 0.6615 → 0.6640 — still null, so the
+tie-break rules), and the tie-break favours the candidate on the primary
+metric (log-loss 0.5939 → 0.5932), flat ROI, kelly ROI, and the replay,
+with accuracy tied. Honest counterweights, recorded not buried: (1) the
+close-vs-onesided segment flipped +5.8% → -0.9% — but on 125 bets a
+handful of outcomes swing the sign, and the broad value-bet rule (4536
+bets) improved on both staking schemes; watch this line in 8f and the
+next weekly cards; (2) the 110-fight test-set sanity check leans against
+(0.627 → 0.600, fixes 0 / breaks 3, p=0.25) — noise-range on n=110, and
+the protocol demoted this line for exactly this reason, but it is the
+first accept where it points the other way. The 8a verdict is hereby
+overturned on better evidence: CatBoost was a real member wrongly zeroed
+by the 120-fight grid. Run 8e becomes the reference baseline. Queued
+next: TabPFN re-audition (8f) under the same mechanism.
+
+---
+
+
+### 8f. TabPFN re-audition under the OOF stacker        2026-08-10/11, notebook at 21c43f2 (reverted)
+Change (one variable): TabPFN as a FOURTH member (8b's rejected candidate,
+re-auditioned under 8d's stacker like 8e did for CatBoost). Same exp7
+member params as baseline; no tuning study (prior-fitted transformer).
+The retrain completed and produced valid numbers; the entry is
+hand-logged because the artifact was rebuilt three times for packaging
+and the final rebuild was abandoned (below).
+
+Stacker fit (7869 pooled OOF fights, logit space): xgb=0.366, lgbm=0.090,
+catboost=0.414, tabpfn=0.254 — a genuinely different function class
+earned a real seat on the big sample.
+
+Gate and sanity vs run-8e baseline:
+  Pooled-OOF McNemar: fixes 157 / breaks 161, p=0.8664 (null);
+  OOF acc 0.6640 → 0.6635. Test set (sanity): 0.627 → 0.618 (n=110,
+  CI [0.527, 0.709], fixes 1 / breaks 2, p=1.0).
+
+Market comparison (5786 OOF fights matched to closing odds):
+    accuracy:     67.6% vs market favourite 66.3% (baseline 67.7%)
+    prob quality: log-loss 0.5925 vs market 0.6089 (baseline 0.5932 —
+                  third consecutive improvement of the 8-series)
+    dollar value: flat ROI +6.2% (4526 bets, hit 58.0%; baseline +6.1%,
+                  55.9%), kelly +13.8% (baseline +14.0%), segment +3.0%
+                  (123 bets; baseline -0.9% — the 8e watch-flag
+                  recovered); underdog share 45%
+
+$100 replays: Belgrade $119.80 (baseline $138.75). Fresh out-of-sample
+card, UFC FN Gamrot vs Salkilld 2026-08-08 (12 fights incl. prelims, 6
+predictable — 5 debutants + one stance-data gap; DK fight-day odds,
+full-card reconstruction): baseline $121.21, TabPFN blend $138.98, both
+6/6 picks. The gap was pure probability quality via Kelly sizing: bigger
+stake on the winning Salkilld edge, and correctly NO value bet where the
+baseline burned $8.79 (Quarantillo). The only line neither model could
+overfit, and it agreed with the log-loss story.
+
+Decision: REVERTED — accepted on evidence, UNSHIPPABLE on serving. The
+tally favoured accept (log-loss, flat ROI, hit rate, segment, fresh-card
+replay vs noise-level dips in kelly/accuracy/test/Belgrade), and the user
+approved paying the engineering cost. Packaging then failed three ways in
+sequence, each real: (1) default fit_mode pickles TabPFN at ~228MB
+(cached preprocessed ensembles) — GitHub hard-rejects >100MB;
+fit_mode="low_memory" fixes this at ~39MB with identical predictions.
+(2) A CUDA-fitted estimator's pickle cannot be loaded on a CPU-only
+machine — and the weekly job is cloud CPU. (3) Refitting the persisted
+member on CPU to dodge (2) revealed the terminal problem: TabPFN CPU
+inference on this stack is catastrophically slow — an overnight run burned
+2.5 CPU-days without completing the notebook's val/test predictions, and
+a controlled test could not finish ONE 4800-context fit + 12-row predict
+in 9 minutes. The cloud weekly job could never serve this member. No
+packaging fixes an inference path that slow; serving would need a GPU (or
+Prior Labs' hosted API, unevaluated). Run-8e roster (XGB+LGBM+CatBoost)
+restored and remains the reference baseline. Revisit TabPFN only if
+serving gains a GPU; the evidence here says it would earn its seat.
+
+### Expectation for #8g (written before the run, 2026-08-11)
+Budget TabPFN: the 8f evidence says the full config (ctx 4800, 4
+estimators) earns its seat but cannot be served (CPU cost ~O(n^1.6),
+measured 500/1000/2000 ctx = 42/121/375s per single-estimator call; the
+weekly job is cloud CPU). 8g sweeps (ctx, n_estimators) in {2000,3000,
+4800}x{1,2,4} (6 configs, GPU OOF passes, one stacker per config) and
+pre-registers the selection: best stacked-OOF log-loss among configs with
+estimated CPU cost <= 1800s per card-sized batched call; ties within
+0.0005 log-loss go to the cheaper config. The chosen config is the run's
+single variable and passes the standard gate vs the 8e baseline.
+Persisted member: chosen config + device=cpu + fit_mode=low_memory +
+ignore_pretraining_limits (every 8f packaging rake dodged by design).
+Serving note: predict_winner is per-fight, so a 13-fight card costs ~13x
+one call until the weekly script batches — recorded as the upgrade path,
+not blocking (weekly is a batch job). Expected: the budget configs hold
+most of the full config's coefficient (in-context learners degrade
+gracefully under context subsampling); if the coefficient collapses at
+feasible budgets, the gate reverts and TabPFN's file closes as "GPU-only
+member, not worth hosted-API complexity".
+
+---
+
+### 8g. Budget TabPFN (CPU-servable) under the OOF stacker        2026-08-11, notebook at 7f2b683
+Auto-logged from the executed notebook's output cells:
+
+```
+XGBoost device: cuda
+Dropped 956 duplicate fight rows (8310 remain)
+Dropped 0 med_* duplicates of avg_* (r>0.95 both corners, pre-holdout); 267 columns remain
+Window pinned at (72, 6) -- skipping grid search
+Best window: 72 months train / 6 months test
+Training period: 2020-01-18 → 2026-01-18
+Laptop eGPU joined shared study 'exp7_oppadj' (combined cap: 100 trials)...
+Shared study 'exp7_oppadj' complete: 101 trials total (desktop + laptop combined). Best AUC: 0.7105
+Laptop joined shared study 'exp7_oppadj_lgbm' (combined cap: 100 trials)...
+Best LGBM AUC: 0.7096779831694502
+Validation: 120 fights (2026-01-18 → 2026-04-18)
+Test:       110 fights (2026-04-18 → 2026-07-18)
+Pooled OOF for export: 7869 fights
+diff_pairs verified for 58 diff features
+Pooled test accuracy: 0.582  (n=110)
+95% CI (CLT):        [0.490, 0.674]
+Batch accuracy: 0.531 +/- 0.204 over 4 monthly batches
+Baseline accuracy: 0.627
+This run accuracy: 0.582
+New fixes 0 fights baseline got wrong
+New breaks 5 fights baseline got right
+Test-set McNemar p-value: 0.0625 (sanity check only)
+Pooled-OOF comparison on 7869 aligned fights (baseline acc 0.6640 vs this run 0.6650)
+OOF fixes 137 / breaks 129; McNemar p-value: 0.6678  <-- primary gate
+No statistically significant difference — could be noise
+Prediction: Ilia Topuria wins
+Confidence: 60.12% that Ilia Topuria wins
+```
+
+$100 replay (last event): (fill in from weekly-predictions-log)
+Decision: (ACCEPT / REVERT -- primary gate is the pooled-OOF McNemar line)
+
+Sweep table (the compute/power curve the run was asked for; stacked-OOF
+log-loss on 7869 fights, 3-member baseline reference 0.60087):
+    ctx=2000 n_est=1: 0.60077, coef -0.053, ~375s/call
+    ctx=2000 n_est=2: 0.59990, coef +0.207, ~750s/call
+    ctx=3000 n_est=1: 0.60039, coef -0.123, ~717s/call  <- selected
+    ctx=3000 n_est=2: 0.60028, coef +0.176, ~1435s/call
+    ctx=4800 n_est=2: 0.60007, coef +0.217, ~3044s/call
+    ctx=4800 n_est=4: 0.59986, coef +0.253, ~6087s/call (8f reference)
+Selection post-mortem: the pre-registered tie-break (cheaper within
+0.0005) traded a 4% compute saving into shipping the negative-coefficient
+variant over (2000,2)'s +0.207 — a rule flaw, recorded so the next sweep
+constrains to positive coefficients.
+
+Market comparison (5786 OOF fights matched to closing odds, baseline =
+run 8e): log-loss 0.5934 vs baseline 0.5932 (PRIMARY metric regressed;
+market 0.6089); accuracy 67.7% (tie); flat +5.7% hit 55.1% (baseline
++6.1%/55.9%); kelly +14.2% (baseline +14.0%); segment -2.3%, 139 bets
+(baseline -0.9%, 125).
+
+Test set (sanity): 0.627 -> 0.582, fixes 0 / breaks 5, p=0.0625 — the
+worst sanity line of the series. $100 replays (GPU-remapped member for
+evaluation speed): Belgrade $139.62 (baseline $138.75), Gamrot card
+$123.93 (baseline $121.21) — both marginal positives, one-card noise.
+Measured serving cost of the shipped member: ~12 min PER FIGHT on CPU
+(per-fight predict_winner path), ~1-2h per card until the weekly script
+batches.
+
+Decision: REVERTED, and the TabPFN file is CLOSED. The pick gate is null
+(fixes 137 / breaks 129, p=0.6678), the tie-break's primary metric went
+the wrong way, the test-set sanity check is nearly-significantly negative,
+and the shipped member's coefficient is negative — a stacker exploiting
+single-estimator noise as a weak contrarian signal, not added skill. The
+sweep answers the balance question definitively: TabPFN's coefficient
+degrades smoothly with budget (0.253 full -> +0.207 at the best feasible
+config -> negative at single-estimator configs), and even the best
+feasible config's OOF gain (~0.001) matches what just failed to survive
+translation to the market numbers. At CPU-servable compute, TabPFN's
+additive value sits inside the noise floor at material serving cost.
+Pre-registered reversal condition met: GPU-only member, not worth
+hosted-API complexity. Run-8e roster restored; wrapper-level max_context
+stays in predict.py (inert infra, same precedent as the 8a/8b wrappers).
+Revisit only if serving gains a GPU — then start from (4800,4), which
+remains the only config with demonstrated market-side value.
+
+### Expectation for #9 (written before the run, 2026-08-11)
+Five pre-registered arms, all discrete (no tuned thresholds — with one
+backtest to both fit and score, a fine grid would be fiction; see the
+design constraints above):
+  A. CURRENT: bet any side whose kelly edge at the posted price is
+     positive; kelly-proportional stakes capped at 0.25 (status quo).
+  B. CARVE-OUT: A minus the close-vs-onesided segment
+     (|p-0.5| <= 0.10 and vig-free favourite >= 0.65) — remove the one
+     segment that measurably loses.
+  C. VIG FLOOR: A, but a side must clear the round's overround
+     (p*odds - 1 > vig) — edges smaller than the bookmaker's margin are
+     noise by construction.
+  D. NEVER-FADE: C restricted to sides that are also the market's
+     favourite (the original spec's candidate; the direction-split
+     preview above predicts this loses badly).
+  E. SHRUNK STAKING: sides and stakes from p' = (p + vig-free implied)/2
+     (fixed 50% shrink, no tuning) — epistemic humility as a staking rule.
+Decision rule (pre-registered): winner must beat A on BOTH flat and
+kelly ROI on the full pool AND keep the same sign of improvement on both
+temporal halves (split at the median fight date); ties go to the simpler
+rule; if nothing beats A cleanly, A stays and that finding is the entry.
+All numbers are upper bounds (closing-odds conditioning, no vig slippage
+beyond posted prices, no line movement) and the entry must say so.
+
+### 9. Beat-the-market betting rule        2026-08-11, decided (no retrain)
+Run per the pre-registration above: scripts/betting_rule_compare.py, 5786
+pooled-OOF fights matched to closing odds, production 8e artifact. Full
+table (flat / kelly ROI; halves split at median fight date):
+
+    A current    4536 bets, hit 55.9%: +6.1% / +14.0%  (H1 +11.3/+20.8, H2 +0.9/+4.8)
+    B carveout   4411 bets, hit 56.6%: +6.3% / +15.0%  (H1 +12.3/+22.9, H2 +0.3/+4.7)
+    C vigfloor   3288 bets, hit 54.6%: +9.4% / +16.0%  (H1 +10.8/+18.7, H2 +8.0/+12.9)
+    D neverfade  1414 bets, hit 72.8%: +6.4% / +10.4%  (H1 +11.1/+15.6, H2 +1.7/+4.4)
+    E shrunk     3340 bets, hit 54.6%: +9.2% / +27.9%  (H1 +10.9/+29.9, H2 +7.4/+23.8)
+
+Decision: RULE A STAYS, per the pre-registered letter — no arm beat A on
+both schemes AND held sign-consistency on both halves (C and E each dip
+~0.5pp below A on H1 flat; B's gain vanishes in H2; D lost outright as
+the direction-split preview predicted). Honest notes: (1) E nearly
+doubles kelly ROI with both halves strongly positive on kelly — its one
+failing cell is noise-sized, and its mechanism (shrinkage toward the
+market tames kelly's oversized-disagreement stakes) is principled; but
++27.9% is the best of five draws on the selection dataset and kelly ROI
+is the most winner's-curse-prone metric here, so the letter holds.
+(2) A's edge is collapsing in recent data (H2 flat +0.9%) while C and E
+hold +7-8% — worth watching regardless of rule choice. (3) Last-event
+sanity (Gamrot card): A $121.21, C $129.83, E $131.75.
+Resolution: C and E are now SHADOW-LOGGED in the weekly job
+(send_weekly_predictions.py — own $100 splits, display-only, never
+staked) so genuinely held-out cards adjudicate the noise-level tiebreak
+prospectively. Promotion criterion (pre-registered now): after 10 logged
+events, promote a shadow rule iff it beats A on cumulative $100-replay
+return AND was ahead on at least 6 of the 10 cards; otherwise A stands.
+All backtest ROIs remain upper bounds (closing-odds conditioning — see
+the design constraints above). The queued experiment list is now empty:
+entries 5-9 all decided.

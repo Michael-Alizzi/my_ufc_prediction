@@ -84,9 +84,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-artifacts = load_artifacts()
-history = load_history()
-fighters = list_fighters(history)
+# Streamlit reruns this whole script on every widget interaction; without
+# caching, each click re-unpickled 7MB of models and re-read a 7MB parquet.
+@st.cache_resource
+def _load():
+    artifacts = load_artifacts()
+    history = load_history()
+    return artifacts, history, list_fighters(history)
+
+
+artifacts, history, fighters = _load()
 
 # Fight-card layout: red corner, weight class, blue corner.
 with st.container(key="corner_row"):
@@ -137,6 +144,7 @@ if st.button("Predict", type="primary"):
                 red, blue, weight_class, title_fight, total_round_number,
                 history, artifacts,
                 event_country=event_country.strip() or None,
+                odds_r=odds_red, odds_b=odds_blue,
             )
             confidence = proba if winner == red else 1 - proba
             st.success(f"**{winner}** wins")
