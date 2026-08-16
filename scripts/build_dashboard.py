@@ -226,9 +226,9 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   <div class="stamp">Model vs market, graded weekly &middot; updated __UPDATED__</div>
   <nav id="tabs" role="tablist">
     <button role="tab" data-tab="performance" aria-selected="true">Performance</button>
-    <button role="tab" data-tab="faq" aria-selected="false">FAQ</button>
     <button role="tab" data-tab="methodology" aria-selected="false">Methodology</button>
     <button role="tab" data-tab="dictionary" aria-selected="false">Data dictionary</button>
+    <button role="tab" data-tab="faq" aria-selected="false">FAQ</button>
   </nav>
 </header>
 
@@ -261,9 +261,9 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     </div>
   </section>
 
-  <section id="tab-faq" role="tabpanel" hidden><article class="doc">__FAQ__</article></section>
   <section id="tab-methodology" role="tabpanel" hidden><article class="doc">__METHODOLOGY__</article></section>
   <section id="tab-dictionary" role="tabpanel" hidden><article class="doc">__DICTIONARY__</article></section>
+  <section id="tab-faq" role="tabpanel" hidden><article class="doc">__FAQ__</article></section>
 </main>
 <footer>Rebuilt by the Friday scoring Routine from <code>ledger.md</code> on the weekly-predictions-log branch.</footer>
 <div id="tooltip"></div>
