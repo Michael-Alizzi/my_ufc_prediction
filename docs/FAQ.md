@@ -105,6 +105,19 @@ above 2.00 — underdogs — pay more than the stake. This asymmetry is also why
 loss costs the full $1.00 (at odds 1.40 you need ~71% winners just to break
 even, so 55.9% on bets priced to imply ~52% is a thin, real edge).
 
+### What use is the Kelly size column in the History bet table?
+
+It's the conviction column: the share of bankroll the staking discipline
+would commit to that bet, scaled by how far the model's probability beats
+the price (capped at 25%). It distinguishes a maximum-conviction bet (25%)
+from a technically-value-but-barely one (0.1%) that flat P/L treats as
+equals, and it reconciles the two ROI numbers: flat ROI weights all bets
+equally, Kelly ROI weights by this column. Kelly ROI running *above* flat
+ROI means the model's highest-conviction bets have been its most profitable
+— evidence the probabilities are informative, not just directionally right.
+(The P/L column itself is flat-$1, so Kelly size is context rather than
+row-level accounting.)
+
 ### Does the History replay skip no-value fights, the way the live rule does?
 
 Yes — the replay and the weekly job share the same condition (and the same
