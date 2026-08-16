@@ -326,6 +326,56 @@ the model expects to LOSE — a near-coin-flip priced as a lock is value on
 the underdog. Model edge over bookmakers is unproven; the $100 framing caps
 worst-case loss by design.
 
+### 13.1 The four staking rules (A staked; C/E/F shadow-logged)
+
+All four rules share the machinery above — the value test, the Kelly
+fraction (capped at $k \le 0.25$), and the proportional bankroll split.
+They differ only in *which probability they trust* and *which edges they
+act on*. A is staked with real money; C, E and F compute their own
+hypothetical splits on every card, logged and graded but never staked
+(EXPERIMENTS.md entries 9–10; promotion is decided by the pre-registered
+10-event forward record, not by backtests).
+
+Throughout, $o_r, o_b$ are the two corners' decimal odds, $p$ is the model
+probability for red, and the market's vig-free belief is
+$$m = \frac{1/o_r}{1/o_r + 1/o_b},\qquad
+\text{vig} = \frac{1}{o_r} + \frac{1}{o_b} - 1 .$$
+
+**Rule A — Kelly value (production).**
+Bet any side with $p\,o - 1 > 0$; stake $\propto k$.
+*Plain:* trust the model's probability outright, bet every positive edge,
+however thin. A bets the most fights (~78% of those with odds) because
+even 1–2¢ edges qualify.
+
+**Rule C — vig floor.**
+Bet only when $\max(\text{edge}_r, \text{edge}_b) > \text{vig}$.
+*Plain:* an edge smaller than the bookmaker's own margin (~5–6%) is
+indistinguishable from noise, so demand the edge clear the vig before any
+money moves. C drops A's thin-edge short-odds favourites — about a quarter
+of A's bets — which lowers its hit rate but raises profit per bet.
+
+**Rule E — shrunk staking (fixed 50/50).**
+Replace $p$ with $p' = (p + m)/2$, then apply rule A's test and staking to
+$p'$. *Plain:* concede up front that the market is half right. Only bets
+where value survives that concession get staked, and stakes shrink toward
+what the humbler probability justifies — taming Kelly's oversized bets
+exactly where the model disagrees hardest with the market (where it is
+most likely wrong). Epistemic humility as a staking rule.
+
+**Rule F — fitted blend (measured trust, entry 10).**
+Blend in log-odds space at a *fitted* weight:
+$$\operatorname{logit}(p') = \lambda\,\operatorname{logit}(p)
++ (1-\lambda)\,\operatorname{logit}(m),\qquad \lambda = 0.746,$$
+then apply rule A's test and staking to $p'$. $\lambda$ was fitted once by
+maximum likelihood on the 5,786 pooled-OOF fights with closing odds and is
+FROZEN for the trial. *Plain:* E asserts the model deserves half the say;
+F measures how much say the model has actually earned (~75%, partly
+because the market is already one of the model's features) and blends at
+that weight. The held-out backtest warns that the fitted weight chases the
+past — E beat F out-of-sample because the model's edge decays over time —
+so F's pre-registered expectation is to lose to E; the weekly shadow log
+adjudicates.
+
 ## 14. Serving-time reconstruction
 
 **Math.** Serving builds a feature row from each fighter's most recent

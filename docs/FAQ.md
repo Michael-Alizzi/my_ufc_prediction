@@ -66,6 +66,28 @@ at a quarter of the bankroll, and was fixed a priori rather than tuned
 half-/quarter-Kelly discount is the same humility idea; rule E's
 shrink-toward-market is its more principled cousin.
 
+### Instead of a fixed 25% cap, can we measure how correct the model's probability is and use that?
+
+Yes — the measurement exists and was run (Aug 2026). Blend model and
+market in log-odds space, `logit(p') = λ·logit(model) + (1−λ)·logit(market)`,
+and fit λ by maximum likelihood on the first half of history: **λ ≈ 0.78**
+— the model's estimate earns ~78% of the say (high partly because the
+odds-aware model already contains the market as a feature). But scored on
+the held-out second half, the fitted blend (kelly ROI +5.0%) beat raw rule
+A (+4.1%) yet clearly lost to rule E's crude fixed 50/50 shrink (+9.2%).
+The reason: the model's edge decays over time, so a trust weight fitted on
+the strong years is overconfident in the weak ones — a fitted parameter
+chases the past, a humble fixed shrink is robust to the drift (the same
+winner's-curse logic behind entry 9's no-tuned-thresholds rule). Side
+findings: with any shrinkage the 25% cap becomes nearly redundant
+(uncapped +5.5% ≈ capped), and the odds-aware model narrowly beats the
+market's own log-loss on recent data (0.6073 vs 0.6081). Net: the idea is
+right, and rule E — currently in the live 10-event trial — is its robust
+implementation. The fitted version now also runs live as **shadow rule F**
+(entry 10): λ frozen at 0.746 (full-pool fit, never refit mid-trial), so
+the forward ledger adjudicates E-vs-F directly; pre-registered expectation
+is that E outperforms it.
+
 ### Worked example — UFC 330 (Aug 2026, $50 bankroll)
 
 Step 1, the value test (`p × odds`), model probability vs Sportsbet price:
@@ -207,7 +229,7 @@ instead: the fights-with-odds tile (5,786) vs rule A bets (4,536), and the
 bet-rate column. Passing on a fight is the rule working, and every skipped
 fight was still evaluated.
 
-### What are shadow rules C and E, and why are they logged but not staked?
+### What are shadow rules C, E and F, and why are they logged but not staked?
 
 Entry 9 backtested five staking rules on 5,786 historical fights. Rule A won on the
 pre-registered criteria, but two losers looked suspiciously good:
@@ -220,7 +242,12 @@ pre-registered criteria, but two losers looked suspiciously good:
   bets where value survives conceding the market is half right; tames Kelly's
   oversized stakes exactly where the model disagrees hardest with the market.
 
-Both beat A on parts of the backtest (E's Kelly ROI was +27.9% vs A's +14.0%, and
+A third shadow, **F ("fitted blend", entry 10, added Aug 16)**, blends the
+model's probability with the market's in log-odds space at a fitted,
+frozen trust weight (λ = 0.746) before betting — the measured version of
+E's fixed 50/50; its 10-event clock starts from its first logged card.
+
+Both C and E beat A on parts of the backtest (E's Kelly ROI was +27.9% vs A's +14.0%, and
 both held up better in the most recent half of the data, where A's edge collapsed
 to +0.9% flat), but neither met the pre-registered promotion bar — and the best of
 five candidates on the *same dataset used to choose* is exactly where the winner's

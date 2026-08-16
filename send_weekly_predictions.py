@@ -18,6 +18,7 @@ the delivery mechanism; there is no email path.
 import argparse
 import json
 import logging
+import math
 import os
 import shutil
 from datetime import datetime
@@ -28,6 +29,12 @@ from predict import kelly_edge, load_artifacts, load_history, predict_winner
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Rule F's model-trust weight (EXPERIMENTS.md entry 10): share of the say the
+# model's logit gets vs the vig-free market's. Fitted once by maximum
+# likelihood on the full pooled-OOF-with-odds set (5,786 fights, Aug 2026)
+# and FROZEN for the forward trial — never refit mid-trial.
+LAMBDA_F = 0.746
 
 
 def make_predictions(fights, history, artifacts, event_country=None, bankroll=100):
@@ -92,11 +99,13 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                 if k > 0:
                     bet_on, bet_odds, kelly = name, float(o), k
 
-            # Shadow rules C (vig floor) and E (shrunk staking) — logged
-            # alongside the production rule A, never staked. EXPERIMENTS.md
-            # entry 9: both beat A on the full backtest but tripped the
-            # pre-registered halves-consistency clause; the forward record
-            # logged here adjudicates on genuinely held-out cards.
+            # Shadow rules C (vig floor), E (shrunk staking) and F (fitted
+            # blend) — logged alongside the production rule A, never staked.
+            # C/E: EXPERIMENTS.md entry 9 (beat A on the full backtest but
+            # tripped the halves-consistency clause). F: entry 10 — logit-space
+            # blend of model and vig-free market at the model-trust weight
+            # fitted on the pooled-OOF pool (frozen; never refit mid-trial).
+            # The forward record logged here adjudicates on held-out cards.
             shadow = {}
             if fight.get("odds1") and fight.get("odds2"):
                 o1, o2 = float(fight["odds1"]), float(fight["odds2"])
@@ -113,6 +122,15 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                     k = kelly_edge(p_, o_)
                     if k > 0:
                         shadow["E"] = (n, o_, k)
+                logit = lambda x: math.log(x / (1 - x))  # noqa: E731
+                pc = min(max(proba, 1e-6), 1 - 1e-6)
+                pf = 1 / (1 + math.exp(-(LAMBDA_F * logit(pc)
+                                         + (1 - LAMBDA_F) * logit(imp1))))
+                for n, p_, o_ in ((fight["fighter1"], pf, o1),
+                                  (fight["fighter2"], 1 - pf, o2)):
+                    k = kelly_edge(p_, o_)
+                    if k > 0:
+                        shadow["F"] = (n, o_, k)
 
             predictions.append({
                 "fighter1": fight["fighter1"],
@@ -152,7 +170,7 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
             )
 
     # Shadow bankrolls: each rule's own $100 split, display-only.
-    for rule in ("C", "E"):
+    for rule in ("C", "E", "F"):
         picks = [p for p in predictions if p.get("shadow", {}).get(rule)]
         total = sum(p["shadow"][rule][2] for p in picks)
         for p in picks:
@@ -172,7 +190,7 @@ def format_predictions_markdown(event_title, predictions, bankroll=100):
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        f"| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking ${bankroll} total) | Shadow rules (C vig-floor / E shrunk, not staked) |",
+        f"| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking ${bankroll} total) | Shadow rules (C vig-floor / E shrunk / F fitted-blend, not staked) |",
         "|---|---|---|---|---|---|---|",
     ]
     for p in predictions:
