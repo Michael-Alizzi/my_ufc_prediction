@@ -51,6 +51,21 @@ job uses the fractions as **relative weights** to split a fixed bankroll, not as
 literal fractions of total wealth — more conservative than true Kelly, but it keeps
 the core insight: stake proportional to edge, discounted by payoff asymmetry.
 
+### Why is the Kelly fraction capped at 25%?
+
+Because full Kelly is only optimal if the model's probability is exactly
+right, and Kelly bets biggest precisely where the model disagrees with the
+market most — which, given the market's better calibration overall, is
+where the model is most likely wrong. Overbetting is an asymmetric sin:
+past the true Kelly fraction growth degrades, and past ~2× it turns
+negative — you can lose money on a genuinely profitable edge by staking
+too much. The cap truncates exactly those least-trustworthy bets (normal
+bets size at 1–15% and never feel it), bounds the single-fight worst case
+at a quarter of the bankroll, and was fixed a priori rather than tuned
+(entry 9's pre-registration bans fitted thresholds). Practitioners' usual
+half-/quarter-Kelly discount is the same humility idea; rule E's
+shrink-toward-market is its more principled cousin.
+
 ### Worked example — UFC 330 (Aug 2026, $50 bankroll)
 
 Step 1, the value test (`p × odds`), model probability vs Sportsbet price:
