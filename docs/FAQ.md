@@ -153,6 +153,23 @@ closing odds (BestFightOdds via the mma-ai dataset, median across books)
 for the replay and training; Sportsbet (staking) + de-vigged AU-median
 (feature input) for the live weekly card.
 
+### Walk me through one row of the History bet table
+
+Take: `2025-10-04 · Jiri Prochazka over Khalil Rountree Jr. · 1.55 · 64.5%
+· 17.0% · +$0.55 · +$0.09 · won`.
+
+The rule backed Prochazka at closing odds **1.55** ($1 returns $1.55 on a
+win). **Market win % 64.5** is that price as a probability (`1/1.55`) — the
+market's rating of Prochazka, and the exact win rate where the bet breaks
+even. **Kelly size 17.0%** is the stake the Kelly formula sets from how far
+the model's probability sits above 64.5% — run backwards, 17% at 1.55
+implies the model had him at ~70.5%, so the column measures the
+model–market disagreement (tiny edge → 1–2%, huge edge → the 25% cap).
+He **won**, so: **flat P/L +$0.55** (staked the whole $1, kept odds−1),
+**Kelly P/L +$0.09** (staked only 17¢, kept 17¢ × 0.55). One sentence:
+market said 64.5%, model said ~70.5%, the 6-point gap justified a 17%
+stake, and the win paid 55¢ per flat dollar or 9¢ per Kelly dollar.
+
 ### Does the History replay skip no-value fights, the way the live rule does?
 
 Yes — the replay and the weekly job share the same condition (and the same
