@@ -706,9 +706,9 @@ if (!HIST) {
   const rows = HIST.bets.A.slice().reverse();
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
     <h2>Every rule-A bet, newest first</h2>
-    <p class="sub">Both P/L columns are per $1 of bankroll: flat stakes the whole $1; Kelly stakes only the kelly-size share of it (capped 25%).</p>
+    <p class="sub">Market win % is the odds-implied probability (1/odds, vig included) — the win rate at which the bet breaks even. Both P/L columns are per $1 of bankroll: flat stakes the whole $1; Kelly stakes only the kelly-size share of it (capped 25%).</p>
     <div class="chart-scroll"><table id="bets-table">
-      <tr><th>Date</th><th>Bet</th><th class="num">Odds</th><th class="num">Kelly size</th><th class="num">Flat P/L per $1</th><th class="num">Kelly P/L per $1</th><th></th></tr>
+      <tr><th>Date</th><th>Bet</th><th class="num">Odds</th><th class="num">Market win %</th><th class="num">Kelly size</th><th class="num">Flat P/L per $1</th><th class="num">Kelly P/L per $1</th><th></th></tr>
     </table></div>
     <p style="text-align:center;margin:12px 0 0"><button id="more-bets" style="cursor:pointer;background:var(--chip);color:var(--ink);border:1px solid var(--border);border-radius:5px;padding:7px 16px;font:600 13px system-ui">Show 50 more</button></p>
   </div>`);
@@ -725,7 +725,9 @@ if (!HIST) {
       const kfmt = (kpl >= 0 ? "+$" : "−$") +
         (Math.abs(kpl) >= 0.005 || kpl === 0 ? Math.abs(kpl).toFixed(2) : Math.abs(kpl).toFixed(3));
       return `<tr><td>${d}</td><td><strong>${esc(on)}</strong> <span style="color:var(--muted)">over ${esc(vs)}</span></td>
-        <td class="num">${odds.toFixed(2)}</td><td class="num">${(k * 100).toFixed(1)}%</td>
+        <td class="num">${odds.toFixed(2)}</td>
+        <td class="num">${(100 / odds).toFixed(1)}%</td>
+        <td class="num">${(k * 100).toFixed(1)}%</td>
         <td class="num ${cls(pl)}">${sign$(pl)}</td>
         <td class="num ${cls(kpl)}">${kfmt}</td>
         <td style="padding-left:14px">${w ? "✅ won" : "❌ lost"}</td></tr>`;
