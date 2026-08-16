@@ -105,6 +105,18 @@ above 2.00 — underdogs — pay more than the stake. This asymmetry is also why
 loss costs the full $1.00 (at odds 1.40 you need ~71% winners just to break
 even, so 55.9% on bets priced to imply ~52% is a thin, real edge).
 
+### Does the History replay skip no-value fights, the way the live rule does?
+
+Yes — the replay and the weekly job share the same condition (and the same
+code, `predict.py:kelly_edge`): a bet is placed only when the model's win
+probability **exceeds** the odds-implied probability (`p × odds − 1 > 0`,
+i.e. `p > 1/odds`), and skipped when neither side clears it. The Replay
+summary's *bet rate* column shows the discipline: rule A staked only 78% of
+the 5,786 fights — the rest are the historical equivalent of the weekly
+"$0 (no value)" rows — and C's vig floor bets just 57%. So the replayed ROI
+is the return on the bets the rule would actually have placed, not on
+blanket-betting every fight.
+
 ### What are shadow rules C and E, and why are they logged but not staked?
 
 Entry 9 backtested five staking rules on 5,786 historical fights. Rule A won on the
