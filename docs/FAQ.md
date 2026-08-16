@@ -361,6 +361,17 @@ in the meantime (results are results), it just means the scoring notification is
 same-weekend. Moving scoring to Sunday evening AEST would grade same-weekend if
 that ever matters more than the Friday rhythm.
 
+### Is the dashboard's Performance tab actually necessary, separate from Live trial?
+
+Debatable — both tabs read the same ledger. The current split: Performance
+answers "how is my actual money doing" (rule A tiles + the per-event
+charts), Live trial answers "which discipline is winning the experiment"
+(comparison table, promotion strip, backtest reference). With only ~10
+events in play and all four rules drawn together anyway, merging them into
+one tab is a defensible simplification; the split earns its keep mainly if
+the charts grow (more events, more rules) or if A's real-money view should
+stay uncluttered by experiment context. Current state: kept separate.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
