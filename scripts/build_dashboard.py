@@ -571,15 +571,16 @@ if (!HIST) {
 
   // metrics per rule within the selected year: flat = $1/bet; kelly = stake-weighted
   function metrics(r, yr) {
-    let flat = 0, kst = 0, kpr = 0, won = 0, n = 0;
+    let flat = 0, kst = 0, kpr = 0, won = 0, n = 0, imp = 0;
     for (const row of HIST.bets[r]) {
       if (yr && !row[0].startsWith(yr)) continue;
       const [odds, k, w] = row.slice(-3);
       n++; flat += w ? odds - 1 : -1;
       kst += k; kpr += w ? k * (odds - 1) : -k; won += w;
+      imp += 1 / odds;
     }
-    return {n, flat, hit: n ? 100 * won / n : 0, flatROI: n ? 100 * flat / n : 0,
-            kellyROI: kst ? 100 * kpr / kst : 0};
+    return {n, flat, hit: n ? 100 * won / n : 0, avgImp: n ? 100 * imp / n : 0,
+            flatROI: n ? 100 * flat / n : 0, kellyROI: kst ? 100 * kpr / kst : 0};
   }
 
   function renderTiles(yr) {
@@ -683,19 +684,20 @@ if (!HIST) {
   // per-rule replay summary (rebuilt per year filter)
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
     <h2>Replay summary by rule</h2>
-    <p class="sub">Same fights, three disciplines. Kelly ROI weights each bet by its kelly stake (how the weekly bankroll is actually split).</p>
+    <p class="sub">Same fights, three disciplines. Avg market win % is what the odds predicted for that rule's bets — a hit rate above it is where the profit comes from. Kelly ROI weights each bet by its kelly stake (how the weekly bankroll is actually split).</p>
     <div class="chart-scroll"><table id="hist-summary"></table></div>
   </div>`);
   function renderSummary(yr) {
     document.getElementById("hist-summary").innerHTML =
-      `<tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>` +
+      `<tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Avg market win %</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>` +
       RULES.map(r => {
         const m = metrics(r, yr), fights = fightsIn(yr);
-        if (!m.n) return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
+        if (!m.n) return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
         return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td>
           <td class="num">${m.n.toLocaleString()}</td>
           <td class="num">${fights ? (100 * m.n / fights).toFixed(0) + "%" : "—"}</td>
           <td class="num">${m.hit.toFixed(1)}%</td>
+          <td class="num" title="the hit rate the market predicted for these bets">${m.avgImp.toFixed(1)}%</td>
           <td class="num ${cls(m.flat)}">${sign$(m.flat)}</td>
           <td class="num ${cls(m.flat)}">${(m.flatROI >= 0 ? "+" : "") + m.flatROI.toFixed(1)}%</td>
           <td class="num ${cls(m.kellyROI)}">${(m.kellyROI >= 0 ? "+" : "") + m.kellyROI.toFixed(1)}%</td></tr>`;
