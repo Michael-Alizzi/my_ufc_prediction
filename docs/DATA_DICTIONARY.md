@@ -90,7 +90,31 @@ EXPERIMENTS.md). `ledger.md` — per-event graded returns for rules A/C/E
 Skip-unchanged-retrain logic diffs the freshly scraped CSVs against the
 committed copies (the raw CSVs are tracked in git since Aug 2026).
 
-## 6. Complete column inventory (auto-generated)
+## 6. Displayed metrics (dashboard tables, ledger, predictions output)
+
+Every derived column shown on the Octagon Ledger dashboard or in the weekly
+files, defined once. `p` = model win probability, `odds` = decimal odds,
+`stake` = dollars risked.
+
+| Column | Definition |
+|---|---|
+| **Odds** (decimal) | Total payout per $1 staked, stake included: $1 at 1.55 returns $1.55. Implied win probability = `1/odds` (vig included). |
+| **Confidence** | The model's win probability for its predicted winner (`max(p, 1−p)`). |
+| **Kelly fraction / Kelly size** | `(p·odds − 1)/(odds − 1)`, capped at 0.25 — the growth-optimal share of bankroll for the bet. The weekly job uses the fractions as relative weights to split the card's bankroll. |
+| **Edge** | `p·odds − 1`: expected profit per $1 staked. Positive = value bet. |
+| **Vig** | `1/odds_r + 1/odds_b − 1`: the bookmaker's margin on the fight (rule C's floor). |
+| **Staked** | Dollars actually risked (void bets excluded — stake returned). |
+| **Returned** | Dollars paid back on wins: `Σ stake·odds` over winning bets. |
+| **Net / P/L** | `returned − staked`. Per-$1 rows: a win shows `odds − 1` (profit, stake netted out), a loss shows −$1.00. |
+| **ROI** | `net / staked`. *Flat* ROI stakes $1 per bet; *Kelly* ROI weights each bet by its kelly fraction (uncompounded). |
+| **Hit rate** | `bets won / bets placed` (voids excluded). Not comparable across rules without odds context — short-odds rules hit more by construction. |
+| **Bet rate** | `bets placed / fights with odds` — how often the rule finds value at all (the skipped remainder is the "$0 (no value)" discipline). |
+| **Bets won/placed/void** (ledger) | Counts per event: graded wins, graded bets, and voided fights (cancelled/late-changed — stake returned, excluded from staked/hit). |
+| **Cards ahead of A** | Events where the shadow rule's net beat rule A's on the same card — the ≥6-of-10 promotion criterion's counter. |
+| **Trial progress** | Events scored so far out of the pre-registered 10 (EXPERIMENTS.md entry 9). |
+| **Cumulative return** | Running sum of per-event net (Performance chart) or per-bet flat P/L (History chart). |
+
+## 7. Complete column inventory (auto-generated)
 
 Every literal column name, so nothing has to be inferred from the family
 descriptions above. Paired columns are listed once: an `r_`/`b_` pair like
