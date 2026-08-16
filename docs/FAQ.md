@@ -124,9 +124,15 @@ Just the bets placed: `bets won / bets placed` (voids excluded). Rule A's
 55.9% means 55.9% of its 4,536 placed bets won — the ~1,250 fights it
 declined don't enter the calculation at all; they only show in the *bet
 rate* column. This is also why a lower hit rate can coexist with higher
-ROI: C and E bet less often at slightly longer odds, so each win pays more.
-(The dashboard's replay-summary column header originally read just "Hit" —
-it says "Hit rate" now.)
+ROI — and why "fewer bets" does NOT mean "higher hit rate", which was worth
+verifying numerically. Selectivity here filters for bigger *edge*, not
+likelier winners, and big edges live at longer odds: C's median bet is at
+2.15 (47% implied) vs A's 1.93, and the 1,248 bets A places but C drops are
+short-odds favourites (median 1.52) winning 59.4% — C throws away precisely
+the high-hit, low-payoff bets. Both rules beat their bets' implied win
+probability (A 55.9% vs 53.0%, C 54.6% vs 49.9%), which is where the ROI
+comes from. (The dashboard's replay-summary column header originally read
+just "Hit" — it says "Hit rate" now.)
 
 ### Does the History replay skip no-value fights, the way the live rule does?
 

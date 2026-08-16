@@ -117,6 +117,8 @@ def backtest(odds_path, artifact_path):
             bets["E"].append(row(ks_r > 0, ks_r if ks_r > 0 else ks_b, "E"))
     return {"fights": len(df), "span": [df["date_d"].min().strftime("%Y-%m-%d"),
                                         df["date_d"].max().strftime("%Y-%m-%d")],
+            "fights_by_year": {str(y): int(n) for y, n in
+                               df["date_d"].dt.year.value_counts().items()},
             "bets": bets}
 
 
@@ -216,8 +218,8 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   .card .sub { font-size: 12.5px; color: var(--muted); margin: 0 0 12px; }
   .legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--ink-2);
             margin-bottom: 8px; flex-wrap: wrap; }
-  .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px;
-            border-radius: 2px; margin-right: 6px; }
+  .legend span::before, .legend .lgbtn::before { content: ""; display: inline-block;
+            width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; }
   .legend .lgbtn { background: none; border: 1px solid transparent; cursor: pointer;
             font: 12.5px system-ui; color: var(--ink-2); padding: 2px 9px;
             border-radius: 5px; }
@@ -556,43 +558,54 @@ if (!HIST) {
      the odds source is unlicensed upstream, so it is never committed) next to
      ensemble.joblib. The next scheduled rebuild restores this tab.</div>`);
 } else {
-  // metrics per rule: flat = $1 per bet; kelly = stake-proportional, per $100
-  const M = {};
-  for (const r of RULES) {
-    const b = HIST.bets[r];
-    let flat = 0, kst = 0, kpr = 0, won = 0;
-    for (const row of b) {
-      const [odds, k, w] = row.slice(-3);
-      flat += w ? odds - 1 : -1;
-      kst += k; kpr += w ? k * (odds - 1) : -k; won += w;
-    }
-    M[r] = {n: b.length, hit: 100 * won / b.length, flat, flatROI: 100 * flat / b.length,
-            kellyROI: 100 * kpr / kst};
-  }
-  const yrs = (new Date(HIST.span[1]).getFullYear() - new Date(HIST.span[0]).getFullYear());
-  htile("Fights with odds", HIST.fights.toLocaleString(), HIST.span[0].slice(0, 4) + "–" + HIST.span[1].slice(0, 4) + " (" + yrs + " years)");
-  htile("Rule A bets", M.A.n.toLocaleString(), M.A.hit.toFixed(1) + "% hit rate");
-  htile("Flat $1 per bet", sign$(M.A.flat), M.A.flatROI.toFixed(1) + "% ROI on " + M.A.n.toLocaleString() + " × $1", cls(M.A.flat));
-  htile("Kelly ROI", (M.A.kellyROI >= 0 ? "+" : "") + M.A.kellyROI.toFixed(1) + "%", "stake-weighted, uncompounded", cls(M.A.kellyROI));
-
-  // cumulative flat profit by month, filterable by rule and year
-  const W = 940, H = 320, L = 52, R = 86, T = 16, B = 34;
+  // one year filter drives the whole tab: tiles, chart, summary, bet table
   const allMonths = [...new Set(RULES.flatMap(r => HIST.bets[r].map(b => b[0].slice(0, 7))))].sort();
   const histYears = [...new Set(allMonths.map(m => m.slice(0, 4)))];
+  htiles.insertAdjacentHTML("beforebegin",
+    `<div class="legend" style="margin:0 0 12px;align-items:center">
+       <span style="font-weight:600;color:var(--ink)">Historical replay</span>
+       <select id="hist-yr" style="margin-left:auto"><option value="">All years (${HIST.span[0].slice(0, 4)}–${HIST.span[1].slice(0, 4)})</option>${histYears.map(y => `<option>${y}</option>`).join("")}</select>
+     </div>`);
+  const yrSelH = document.getElementById("hist-yr");
+  const fightsIn = yr => yr ? (HIST.fights_by_year || {})[yr] || 0 : HIST.fights;
+
+  // metrics per rule within the selected year: flat = $1/bet; kelly = stake-weighted
+  function metrics(r, yr) {
+    let flat = 0, kst = 0, kpr = 0, won = 0, n = 0;
+    for (const row of HIST.bets[r]) {
+      if (yr && !row[0].startsWith(yr)) continue;
+      const [odds, k, w] = row.slice(-3);
+      n++; flat += w ? odds - 1 : -1;
+      kst += k; kpr += w ? k * (odds - 1) : -k; won += w;
+    }
+    return {n, flat, hit: n ? 100 * won / n : 0, flatROI: n ? 100 * flat / n : 0,
+            kellyROI: kst ? 100 * kpr / kst : 0};
+  }
+
+  function renderTiles(yr) {
+    htiles.innerHTML = "";
+    const A = metrics("A", yr);
+    const span = yr || HIST.span[0].slice(0, 4) + "–" + HIST.span[1].slice(0, 4);
+    htile("Fights with odds", fightsIn(yr).toLocaleString(), span);
+    htile("Rule A bets", A.n.toLocaleString(), A.n ? A.hit.toFixed(1) + "% hit rate" : "—");
+    htile("Flat $1 per bet", A.n ? sign$(A.flat) : "—", A.n ? A.flatROI.toFixed(1) + "% ROI on " + A.n.toLocaleString() + " × $1" : "—", A.n ? cls(A.flat) : "");
+    htile("Kelly ROI", A.n ? (A.kellyROI >= 0 ? "+" : "") + A.kellyROI.toFixed(1) + "%" : "—", "stake-weighted, uncompounded", A.n ? cls(A.kellyROI) : "");
+  }
+
+  // cumulative flat profit by month; rules toggle here, year comes from the tab filter
+  const W = 940, H = 320, L = 52, R = 86, T = 16, B = 34;
   const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
-    <h2>If we'd bet $1 on every value bet since ${HIST.span[0].slice(0, 4)}</h2>
-    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same ${HIST.fights.toLocaleString()} fights (pooled out-of-fold predictions — the model never trained on the fight it predicts — matched to closing odds). Upper bounds: closing-odds conditioning, no line movement. Click a rule to toggle it; picking a year restarts the running total at $0 for that year.</p>
+    <h2>If we'd bet $1 on every value bet</h2>
+    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement. Click a rule to toggle it; the year filter above restarts the running total at $0 for that year.</p>
     <div class="legend" id="hist-controls">
       <button class="lgbtn lA" data-r="A" aria-pressed="true">A &middot; kelly value</button>
       <button class="lgbtn lC" data-r="C" aria-pressed="true">C &middot; vig floor</button>
       <button class="lgbtn lE" data-r="E" aria-pressed="true">E &middot; shrunk</button>
-      <select id="hist-yr"><option value="">All years</option>${histYears.map(y => `<option>${y}</option>`).join("")}</select>
     </div>
     <div class="chart-scroll"><svg id="histchart" viewBox="0 0 ${W} ${H}" style="min-width:640px;width:100%"></svg></div>
   </div>`);
   const hsvg = document.getElementById("histchart");
-  const yrSelH = document.getElementById("hist-yr");
   let hMonths = [], hCum = {}, hActive = [...RULES];
   let hxS = i => i, hyS = v => v;
 
@@ -600,6 +613,7 @@ if (!HIST) {
     const yr = yrSelH.value;
     hMonths = allMonths.filter(m => !yr || m.startsWith(yr));
     if (!hActive.length || !hMonths.length) {
+      // (no rules toggled on, or a year with no bets)
       hsvg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">no rules selected — click a rule above to bring it back</text>`;
       return;
     }
@@ -651,7 +665,6 @@ if (!HIST) {
       document.querySelector(`#hist-controls [data-r="${r}"]`).getAttribute("aria-pressed") === "true");
     drawHist();
   }));
-  yrSelH.addEventListener("change", drawHist);
 
   hsvg.addEventListener("pointermove", e => {
     const xhair = hsvg.querySelector("#xhair");
@@ -667,27 +680,33 @@ if (!HIST) {
   });
   hsvg.addEventListener("pointerleave", () => { hsvg.querySelector("#xhair")?.setAttribute("visibility", "hidden"); tipHide(); });
 
-  // per-rule replay summary
+  // per-rule replay summary (rebuilt per year filter)
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
     <h2>Replay summary by rule</h2>
     <p class="sub">Same fights, three disciplines. Kelly ROI weights each bet by its kelly stake (how the weekly bankroll is actually split).</p>
-    <div class="chart-scroll"><table>
-      <tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>
-      ${RULES.map(r => `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td>
-        <td class="num">${M[r].n.toLocaleString()}</td>
-        <td class="num">${(100 * M[r].n / HIST.fights).toFixed(0)}%</td>
-        <td class="num">${M[r].hit.toFixed(1)}%</td>
-        <td class="num ${cls(M[r].flat)}">${sign$(M[r].flat)}</td>
-        <td class="num ${cls(M[r].flat)}">${(M[r].flatROI >= 0 ? "+" : "") + M[r].flatROI.toFixed(1)}%</td>
-        <td class="num ${cls(M[r].kellyROI)}">${(M[r].kellyROI >= 0 ? "+" : "") + M[r].kellyROI.toFixed(1)}%</td></tr>`).join("")}
-    </table></div>
+    <div class="chart-scroll"><table id="hist-summary"></table></div>
   </div>`);
+  function renderSummary(yr) {
+    document.getElementById("hist-summary").innerHTML =
+      `<tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>` +
+      RULES.map(r => {
+        const m = metrics(r, yr), fights = fightsIn(yr);
+        if (!m.n) return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
+        return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td>
+          <td class="num">${m.n.toLocaleString()}</td>
+          <td class="num">${fights ? (100 * m.n / fights).toFixed(0) + "%" : "—"}</td>
+          <td class="num">${m.hit.toFixed(1)}%</td>
+          <td class="num ${cls(m.flat)}">${sign$(m.flat)}</td>
+          <td class="num ${cls(m.flat)}">${(m.flatROI >= 0 ? "+" : "") + m.flatROI.toFixed(1)}%</td>
+          <td class="num ${cls(m.kellyROI)}">${(m.kellyROI >= 0 ? "+" : "") + m.kellyROI.toFixed(1)}%</td></tr>`;
+      }).join("");
+  }
 
-  // the literal bets, rule A, newest first
+  // the literal bets, rule A, newest first (year filter from the tab)
   const rows = HIST.bets.A.slice().reverse();
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
     <h2>Every rule-A bet, newest first</h2>
-    <p class="sub">${rows.length.toLocaleString()} bets. Both P/L columns are per $1 of bankroll: flat stakes the whole $1; Kelly stakes only the kelly-size share of it (capped 25%). <select id="yr-filter"><option value="">All years</option></select></p>
+    <p class="sub">Both P/L columns are per $1 of bankroll: flat stakes the whole $1; Kelly stakes only the kelly-size share of it (capped 25%).</p>
     <div class="chart-scroll"><table id="bets-table">
       <tr><th>Date</th><th>Bet</th><th class="num">Odds</th><th class="num">Kelly size</th><th class="num">Flat P/L per $1</th><th class="num">Kelly P/L per $1</th><th></th></tr>
     </table></div>
@@ -695,9 +714,6 @@ if (!HIST) {
   </div>`);
   const table = document.getElementById("bets-table");
   const moreBtn = document.getElementById("more-bets");
-  const yrSel = document.getElementById("yr-filter");
-  [...new Set(rows.map(b => b[0].slice(0, 4)))].forEach(y =>
-    yrSel.insertAdjacentHTML("beforeend", `<option>${y}</option>`));
   let shown = 0, filtered = rows;
   function renderMore() {
     const next = filtered.slice(shown, shown + 50);
@@ -717,15 +733,24 @@ if (!HIST) {
     moreBtn.style.display = shown >= filtered.length ? "none" : "";
   }
   function resetTable() {
-    table.querySelectorAll("tr:not(:first-child)").forEach(tr => tr.remove());
+    // slice(1) not :not(:first-child): appended rows can land in a second
+    // implicit tbody, whose own first row the selector would spare
+    [...table.querySelectorAll("tr")].slice(1).forEach(tr => tr.remove());
     shown = 0; renderMore();
   }
-  yrSel.addEventListener("change", () => {
-    filtered = yrSel.value ? rows.filter(b => b[0].startsWith(yrSel.value)) : rows;
-    resetTable();
-  });
   moreBtn.addEventListener("click", renderMore);
-  renderMore();
+
+  // the one year filter drives everything on the tab
+  function applyYear() {
+    const yr = yrSelH.value;
+    renderTiles(yr);
+    drawHist();
+    renderSummary(yr);
+    filtered = yr ? rows.filter(b => b[0].startsWith(yr)) : rows;
+    resetTable();
+  }
+  yrSelH.addEventListener("change", applyYear);
+  applyYear();
 }
 
 // -- data-dictionary search ------------------------------------------------
