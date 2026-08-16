@@ -353,6 +353,15 @@ Two cloud Routines, both AEST, no PC involved:
 
 Retraining is **not** scheduled — see above.
 
+### An event just finished — why doesn't the dashboard show it yet?
+
+The trial tables read `ledger.md`, which is written only when the card is
+*officially scored* (`scripts/score_card.py`, run by the Friday Routine) —
+not when the fights end. Between the event and its scoring run the
+dashboard correctly shows the pre-event state. Scoring can be run early by
+hand when results are in (UFC 330 was scored the Sunday it finished, at
+Michael's request); the Friday run then finds nothing left to score.
+
 ### Why is a card scored 5–6 days after it happens?
 
 Cards run Saturday night US time — Sunday afternoon AEST — and the scoring Routine
