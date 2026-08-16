@@ -404,29 +404,34 @@ that ever matters more than the Friday rhythm.
 
 ### What's the difference between the Performance and Experiments tabs?
 
-**Performance** is forward-looking — the next logged card with a plain
-payout calculator per fight (pick a corner, enter a stake, see the
-return). **Experiments** is backward-looking — rule A's trajectory tiles
-and charts, the rule explainer, the live comparison table, the promotion
+**Performance** is the money view: a profit/loss-so-far tile (rule A,
+real money), a bankroll allocator for the upcoming card, and every past
+event listed with its net — click one open for the per-fight detail.
+**Experiments** is the research view: the rule explainer up top, rule A's
+trajectory tiles and charts, the live comparison table, the promotion
 strip, and the backtest reference. (Performance held the trajectory
-material itself until Aug 17, when it was replaced by the calculator and
-that content moved into Experiments.)
+material itself until Aug 17, when that moved into Experiments and
+Performance became the money/betting view described here.)
 
-### What does the Performance tab's payout calculator show, and why doesn't it always have numbers?
+### What's on the Performance tab, and why do some things say "no value" or show no numbers?
 
-It reads the most recently logged card (`card.json` on
-`weekly-predictions-log`) and shows every fight with odds: the model's
-pick and confidence, a corner selector, and a stake field defaulting to
-rule A's own recommendation — blank/zero where the rule found no value in
-that fight (most fights, by design; see "why do most fights get $0").
-Change the corner or stake freely; it's a plain `stake × odds` calculator,
-not a re-run of the model. It reads whatever's currently logged, so right
-after a card is fought (before the next Thursday job posts a new one) it
-shows that same card with a "this card has already happened" banner —
-the calculator still works, it's just for a settled fight. Confidence can
-differ slightly from the original card-day run because the event's host
-country isn't persisted anywhere the rebuild can recover, so home-crowd
-features come back blank.
+Three parts, top to bottom. **Profit/loss so far** sums rule A's net
+across every scored event — the real-money total. **Upcoming card** is a
+bankroll allocator for the most recently logged card (`card.json` on
+`weekly-predictions-log`): enter a total $ and it splits across whichever
+fights the model finds value in, proportional to Kelly fraction — the
+exact split `send_weekly_predictions.py` uses, live-recomputed client-side
+as you type. Right after a card is fought (before Thursday's job posts a
+new one) this section shows a "this card has already happened" note
+instead, since betting on a settled fight makes no sense. **Past events**
+lists every scored event (staked → returned, net) with a click-to-expand
+detail table per fight — pick, confidence, odds, and what rule A actually
+staked, reconstructed by replaying the exact card.json git-committed for
+that event (not editable; it's a historical record, not a calculator).
+Most fights show "no value"/$0 by design — see "why do most fights get
+$0". Confidence can differ slightly from each original run because the
+event's host country isn't persisted anywhere the rebuild can recover, so
+home-crowd features come back blank.
 
 ### Where do I see how the bets are going?
 
