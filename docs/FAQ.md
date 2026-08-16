@@ -118,6 +118,16 @@ ROI means the model's highest-conviction bets have been its most profitable
 (The P/L column itself is flat-$1, so Kelly size is context rather than
 row-level accounting.)
 
+### Is the hit rate computed over all fights, or just the bets placed?
+
+Just the bets placed: `bets won / bets placed` (voids excluded). Rule A's
+55.9% means 55.9% of its 4,536 placed bets won — the ~1,250 fights it
+declined don't enter the calculation at all; they only show in the *bet
+rate* column. This is also why a lower hit rate can coexist with higher
+ROI: C and E bet less often at slightly longer odds, so each win pays more.
+(The dashboard's replay-summary column header originally read just "Hit" —
+it says "Hit rate" now.)
+
 ### Does the History replay skip no-value fights, the way the live rule does?
 
 Yes — the replay and the weekly job share the same condition (and the same

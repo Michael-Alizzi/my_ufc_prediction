@@ -327,7 +327,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
       <h2>Backtest reference &middot; why C and E are being trialled</h2>
       <p class="sub">5,786 historical fights at closing odds (entry 9). H2 = the more recent half. All ROIs are upper bounds.</p>
       <div class="chart-scroll"><table>
-        <tr><th>Rule</th><th class="num">Bets</th><th class="num">Hit</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th><th class="num">H2 flat</th></tr>
+        <tr><th>Rule</th><th class="num">Bets</th><th class="num">Hit rate</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th><th class="num">H2 flat</th></tr>
         <tr><td><span class="rule-dot fA"></span>A &mdash; kelly value (staked)</td><td class="num">4,536</td><td class="num">55.9%</td><td class="num">+6.1%</td><td class="num">+14.0%</td><td class="num">+0.9%</td></tr>
         <tr><td><span class="rule-dot fC"></span>C &mdash; vig floor (shadow)</td><td class="num">3,288</td><td class="num">54.6%</td><td class="num">+9.4%</td><td class="num">+16.0%</td><td class="num">+8.0%</td></tr>
         <tr><td><span class="rule-dot fE"></span>E &mdash; shrunk staking (shadow)</td><td class="num">3,340</td><td class="num">54.6%</td><td class="num">+9.2%</td><td class="num">+27.9%</td><td class="num">+7.4%</td></tr>
@@ -672,7 +672,7 @@ if (!HIST) {
     <h2>Replay summary by rule</h2>
     <p class="sub">Same fights, three disciplines. Kelly ROI weights each bet by its kelly stake (how the weekly bankroll is actually split).</p>
     <div class="chart-scroll"><table>
-      <tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>
+      <tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>
       ${RULES.map(r => `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td>
         <td class="num">${M[r].n.toLocaleString()}</td>
         <td class="num">${(100 * M[r].n / HIST.fights).toFixed(0)}%</td>
