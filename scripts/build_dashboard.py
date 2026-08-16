@@ -18,6 +18,7 @@ import argparse
 import json
 import os
 import re
+import sys
 from datetime import datetime, timezone, timedelta
 
 import markdown
@@ -69,14 +70,67 @@ def summarise(events):
     return total
 
 
+def backtest(odds_path, artifact_path):
+    """Replay entry 9's arms A/C/E bet-by-bet over the pooled-OOF fights
+    matched to historical closing odds. Returns None when the inputs aren't
+    present (odds_train.csv is gitignored — mma-ai upstream is unlicensed —
+    so it must be rebuilt via scripts/fetch_training_odds.py per container).
+    Rule definitions mirror scripts/betting_rule_compare.py exactly."""
+    if not (os.path.exists(odds_path) and os.path.exists(artifact_path)):
+        return None
+    import joblib
+    import pandas as pd
+    sys.path.insert(0, ".")
+    from predict import kelly_edge
+    oof = joblib.load(artifact_path)["oof"].copy()
+    oof["date_d"] = pd.to_datetime(oof["date_d"])
+    odds = pd.read_csv(odds_path, parse_dates=["date_d"])
+    df = (oof.merge(odds, on=["r_fighter", "b_fighter", "date_d"])
+             .sort_values("date_d"))
+
+    bets = {"A": [], "C": [], "E": []}
+    for r in df.itertuples():
+        k_r, k_b = kelly_edge(r.proba, r.odds_r), kelly_edge(1 - r.proba, r.odds_b)
+        imp_r_vf = (1 / r.odds_r) / (1 / r.odds_r + 1 / r.odds_b)
+        vig = 1 / r.odds_r + 1 / r.odds_b - 1
+        date = r.date_d.strftime("%Y-%m-%d")
+
+        def row(on_red, k, rule):
+            on, vs = ((r.r_fighter, r.b_fighter) if on_red
+                      else (r.b_fighter, r.r_fighter))
+            odds_ = r.odds_r if on_red else r.odds_b
+            won = int(bool(r.y) == on_red)
+            k = round(min(k, 0.25), 4)
+            if rule == "A":  # names only where the table shows them
+                return [date, on.title(), vs.title(), round(odds_, 2), k, won]
+            return [date, round(odds_, 2), k, won]
+
+        if k_r > 0 or k_b > 0:
+            bets["A"].append(row(k_r > 0, k_r if k_r > 0 else k_b, "A"))
+        edge_r, edge_b = r.proba * r.odds_r - 1, (1 - r.proba) * r.odds_b - 1
+        if max(edge_r, edge_b) > vig:
+            on_red = edge_r > edge_b
+            bets["C"].append(row(on_red, k_r if on_red else k_b, "C"))
+        ps = (r.proba + imp_r_vf) / 2
+        ks_r, ks_b = kelly_edge(ps, r.odds_r), kelly_edge(1 - ps, r.odds_b)
+        if ks_r > 0 or ks_b > 0:
+            bets["E"].append(row(ks_r > 0, ks_r if ks_r > 0 else ks_b, "E"))
+    return {"fights": len(df), "span": [df["date_d"].min().strftime("%Y-%m-%d"),
+                                        df["date_d"].max().strftime("%Y-%m-%d")],
+            "bets": bets}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ledger", default="ledger.md")
+    ap.add_argument("--odds", default="odds_train.csv")
+    ap.add_argument("--artifact", default="ensemble.joblib")
     ap.add_argument("--out", default="dashboard.html")
     args = ap.parse_args()
 
     events = parse_ledger(args.ledger)
     data = {"events": events, "totals": summarise(events)}
+    hist = backtest(args.odds, args.artifact)
 
     md = markdown.Markdown(extensions=["tables", "fenced_code"])
     docs_html = {key: md.reset().convert(open(path).read()) if os.path.exists(path)
@@ -93,12 +147,14 @@ def main():
     aest = datetime.now(timezone(timedelta(hours=10)))
     html = (TEMPLATE
             .replace("__DATA__", json.dumps(data))
+            .replace("__HIST__", json.dumps(hist))
             .replace("__UPDATED__", aest.strftime("%-d %b %Y, %-I:%M %p AEST"))
             .replace("__FAQ__", docs_html["faq"])
             .replace("__METHODOLOGY__", docs_html["methodology"])
             .replace("__DICTIONARY__", docs_html["dictionary"]))
     open(args.out, "w").write(html)
-    print(f"wrote {args.out}: {len(events)} scored event(s)")
+    print(f"wrote {args.out}: {len(events)} scored event(s), "
+          f"backtest {'%d fights' % hist['fights'] if hist else 'ABSENT'}")
 
 
 TEMPLATE = r"""<title>Octagon Ledger</title>
@@ -226,6 +282,8 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   <div class="stamp">Model vs market, graded weekly &middot; updated __UPDATED__</div>
   <nav id="tabs" role="tablist">
     <button role="tab" data-tab="performance" aria-selected="true">Performance</button>
+    <button role="tab" data-tab="trial" aria-selected="false">Live trial</button>
+    <button role="tab" data-tab="history" aria-selected="false">History</button>
     <button role="tab" data-tab="methodology" aria-selected="false">Methodology</button>
     <button role="tab" data-tab="dictionary" aria-selected="false">Data dictionary</button>
     <button role="tab" data-tab="faq" aria-selected="false">FAQ</button>
@@ -236,6 +294,13 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   <section id="tab-performance" role="tabpanel">
     <div class="tiles" id="tiles"></div>
     <div id="charts"></div>
+  </section>
+
+  <section id="tab-trial" role="tabpanel" hidden>
+    <div class="card" style="margin-top:0">
+      <h2>The experiment</h2>
+      <p class="sub" style="margin-bottom:0">Rule A (kelly-proportional value betting) is staked with real money every card. Two challengers that looked better in the recent backtest — C, which ignores edges smaller than the bookmaker's margin, and E, which shrinks the model's probability halfway toward the market's before betting — run as shadows on identical cards. Neither was promotable from the backtest alone (winner's-curse risk), so the tiebreak runs prospectively, below.</p>
+    </div>
 
     <div class="card">
       <h2>Rule comparison &middot; live record</h2>
@@ -259,6 +324,11 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
         <tr><td><span class="rule-dot fE"></span>E &mdash; shrunk staking (shadow)</td><td class="num">3,340</td><td class="num">54.6%</td><td class="num">+9.2%</td><td class="num">+27.9%</td><td class="num">+7.4%</td></tr>
       </table></div>
     </div>
+  </section>
+
+  <section id="tab-history" role="tabpanel" hidden>
+    <div class="tiles" id="hist-tiles"></div>
+    <div id="hist-body"></div>
   </section>
 
   <section id="tab-methodology" role="tabpanel" hidden><article class="doc">__METHODOLOGY__</article></section>
@@ -454,6 +524,156 @@ rt.innerHTML = `<tr><th>Rule</th><th class="num">Events</th><th class="num">Stak
       <td class="num">${t.hit === null ? "—" : t.hit + "% (" + t.won + "/" + t.placed + ")"}</td>
       <td class="num">${r === "A" ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
   }).join("");
+
+// -- history: the full what-if replay --------------------------------------
+const HIST = __HIST__;
+const htiles = document.getElementById("hist-tiles");
+const hbody = document.getElementById("hist-body");
+function htile(k, v, s, vClass) {
+  htiles.insertAdjacentHTML("beforeend",
+    `<div class="tile"><div class="k">${k}</div><div class="v ${vClass || ""}">${v}</div><div class="s">${s}</div></div>`);
+}
+if (!HIST) {
+  hbody.insertAdjacentHTML("beforeend",
+    `<div class="empty" style="margin-top:0"><strong>Replay data not in this build.</strong><br>
+     It needs odds_train.csv (rebuilt per container by scripts/fetch_training_odds.py —
+     the odds source is unlicensed upstream, so it is never committed) next to
+     ensemble.joblib. The next scheduled rebuild restores this tab.</div>`);
+} else {
+  // metrics per rule: flat = $1 per bet; kelly = stake-proportional, per $100
+  const M = {};
+  for (const r of RULES) {
+    const b = HIST.bets[r];
+    let flat = 0, kst = 0, kpr = 0, won = 0;
+    for (const row of b) {
+      const [odds, k, w] = row.slice(-3);
+      flat += w ? odds - 1 : -1;
+      kst += k; kpr += w ? k * (odds - 1) : -k; won += w;
+    }
+    M[r] = {n: b.length, hit: 100 * won / b.length, flat, flatROI: 100 * flat / b.length,
+            kellyROI: 100 * kpr / kst};
+  }
+  const yrs = (new Date(HIST.span[1]).getFullYear() - new Date(HIST.span[0]).getFullYear());
+  htile("Fights with odds", HIST.fights.toLocaleString(), HIST.span[0].slice(0, 4) + "–" + HIST.span[1].slice(0, 4) + " (" + yrs + " years)");
+  htile("Rule A bets", M.A.n.toLocaleString(), M.A.hit.toFixed(1) + "% hit rate");
+  htile("Flat $1 per bet", sign$(M.A.flat), M.A.flatROI.toFixed(1) + "% ROI on " + M.A.n.toLocaleString() + " × $1", cls(M.A.flat));
+  htile("Kelly ROI", (M.A.kellyROI >= 0 ? "+" : "") + M.A.kellyROI.toFixed(1) + "%", "stake-weighted, uncompounded", cls(M.A.kellyROI));
+
+  // cumulative flat profit by month, one series per rule
+  const months = [...new Set(RULES.flatMap(r => HIST.bets[r].map(b => b[0].slice(0, 7))))].sort();
+  const mi = new Map(months.map((m, i) => [m, i]));
+  const cumH = {};
+  for (const r of RULES) {
+    const per = new Array(months.length).fill(0);
+    for (const row of HIST.bets[r]) {
+      const [odds, , w] = row.slice(-3);
+      per[mi.get(row[0].slice(0, 7))] += w ? odds - 1 : -1;
+    }
+    let acc = 0;
+    cumH[r] = per.map(v => +(acc += v).toFixed(2));
+  }
+  const W = 940, H = 320, L = 52, R = 86, T = 16, B = 34;
+  const hMax = Math.max(...RULES.map(r => Math.max(...cumH[r]))),
+        hMin = Math.min(0, ...RULES.map(r => Math.min(...cumH[r])));
+  const yS = v => T + (hMax - v) / (hMax - hMin || 1) * (H - T - B);
+  const xS = i => L + i / Math.max(1, months.length - 1) * (W - L - R);
+  let hg = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = hMin + (hMax - hMin) * i / 4, y = yS(v);
+    hg += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>
+           <text x="${L - 8}" y="${y + 4}" text-anchor="end">${(v < 0 ? "−$" : "$") + Math.abs(Math.round(v))}</text>`;
+  }
+  hg += `<line class="zero" x1="${L}" x2="${W - R}" y1="${yS(0)}" y2="${yS(0)}"/>`;
+  months.forEach((m, i) => {
+    if (m.endsWith("-01") && +m.slice(0, 4) % 2 === 1)
+      hg += `<text x="${xS(i)}" y="${H - B + 18}" text-anchor="middle">${m.slice(0, 4)}</text>`;
+  });
+  for (const r of RULES)
+    hg += `<polyline class="s${r}" fill="none" stroke-width="2" stroke-linejoin="round"
+            points="${cumH[r].map((v, i) => xS(i).toFixed(1) + "," + yS(v).toFixed(1)).join(" ")}"/>`;
+  const hEnds = RULES.map(r => ({r, y: yS(cumH[r][months.length - 1])})).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < hEnds.length; i++)
+    if (hEnds[i].y - hEnds[i - 1].y < 14) hEnds[i].y = hEnds[i - 1].y + 14;
+  for (const e2 of hEnds)
+    hg += `<text class="end-label t${e2.r}" x="${W - R + 8}" y="${e2.y + 4}">${e2.r} ${sign$(cumH[e2.r][months.length - 1])}</text>`;
+  hg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--axis)" stroke-dasharray="3,3" visibility="hidden"/>`;
+
+  hbody.insertAdjacentHTML("beforeend", `<div class="card">
+    <h2>If we'd bet $1 on every rule-A-style value bet since ${HIST.span[0].slice(0, 4)}</h2>
+    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same ${HIST.fights.toLocaleString()} fights (pooled out-of-fold predictions — the model never trained on the fight it predicts — matched to closing odds). Upper bounds: closing-odds conditioning, no line movement.</p>
+    <div class="legend"><span class="lA">A &middot; kelly value</span><span class="lC">C &middot; vig floor</span><span class="lE">E &middot; shrunk</span></div>
+    <div class="chart-scroll"><svg id="histchart" viewBox="0 0 ${W} ${H}" style="min-width:640px;width:100%">${hg}</svg></div>
+  </div>`);
+  const hsvg = document.getElementById("histchart");
+  const xhair = document.getElementById("xhair");
+  hsvg.addEventListener("pointermove", e => {
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(hsvg.getScreenCTM().inverse());
+    if (pt.x < L || pt.x > W - R) { xhair.setAttribute("visibility", "hidden"); return tipHide(); }
+    const i = Math.round((pt.x - L) / (W - L - R) * (months.length - 1));
+    xhair.setAttribute("x1", xS(i)); xhair.setAttribute("x2", xS(i));
+    xhair.setAttribute("visibility", "visible");
+    tipShow(`<div class="t">${months[i]}</div>` + RULES.map(r =>
+      `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(cumH[r][i])}">${sign$(cumH[r][i])}</span></div>`).join(""),
+      e.clientX, e.clientY);
+  });
+  hsvg.addEventListener("pointerleave", () => { xhair.setAttribute("visibility", "hidden"); tipHide(); });
+
+  // per-rule replay summary
+  hbody.insertAdjacentHTML("beforeend", `<div class="card">
+    <h2>Replay summary by rule</h2>
+    <p class="sub">Same fights, three disciplines. Kelly ROI weights each bet by its kelly stake (how the weekly bankroll is actually split).</p>
+    <div class="chart-scroll"><table>
+      <tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>
+      ${RULES.map(r => `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td>
+        <td class="num">${M[r].n.toLocaleString()}</td>
+        <td class="num">${(100 * M[r].n / HIST.fights).toFixed(0)}%</td>
+        <td class="num">${M[r].hit.toFixed(1)}%</td>
+        <td class="num ${cls(M[r].flat)}">${sign$(M[r].flat)}</td>
+        <td class="num ${cls(M[r].flat)}">${(M[r].flatROI >= 0 ? "+" : "") + M[r].flatROI.toFixed(1)}%</td>
+        <td class="num ${cls(M[r].kellyROI)}">${(M[r].kellyROI >= 0 ? "+" : "") + M[r].kellyROI.toFixed(1)}%</td></tr>`).join("")}
+    </table></div>
+  </div>`);
+
+  // the literal bets, rule A, newest first
+  const rows = HIST.bets.A.slice().reverse();
+  hbody.insertAdjacentHTML("beforeend", `<div class="card">
+    <h2>Every rule-A bet, newest first</h2>
+    <p class="sub">${rows.length.toLocaleString()} bets. Stake shown as kelly size (share of a bankroll unit, capped 25%); P/L is per $1 flat. <select id="yr-filter"><option value="">All years</option></select></p>
+    <div class="chart-scroll"><table id="bets-table">
+      <tr><th>Date</th><th>Bet</th><th class="num">Odds</th><th class="num">Kelly size</th><th></th><th class="num">P/L per $1</th></tr>
+    </table></div>
+    <p style="text-align:center;margin:12px 0 0"><button id="more-bets" style="cursor:pointer;background:var(--chip);color:var(--ink);border:1px solid var(--border);border-radius:5px;padding:7px 16px;font:600 13px system-ui">Show 50 more</button></p>
+  </div>`);
+  const table = document.getElementById("bets-table");
+  const moreBtn = document.getElementById("more-bets");
+  const yrSel = document.getElementById("yr-filter");
+  [...new Set(rows.map(b => b[0].slice(0, 4)))].forEach(y =>
+    yrSel.insertAdjacentHTML("beforeend", `<option>${y}</option>`));
+  let shown = 0, filtered = rows;
+  function renderMore() {
+    const next = filtered.slice(shown, shown + 50);
+    shown += next.length;
+    table.insertAdjacentHTML("beforeend", next.map(b => {
+      const [d, on, vs, odds, k, w] = b;
+      const pl = w ? odds - 1 : -1;
+      return `<tr><td>${d}</td><td><strong>${esc(on)}</strong> <span style="color:var(--muted)">over ${esc(vs)}</span></td>
+        <td class="num">${odds.toFixed(2)}</td><td class="num">${(k * 100).toFixed(1)}%</td>
+        <td>${w ? "✅ won" : "❌ lost"}</td>
+        <td class="num ${cls(pl)}">${sign$(pl)}</td></tr>`;
+    }).join(""));
+    moreBtn.style.display = shown >= filtered.length ? "none" : "";
+  }
+  function resetTable() {
+    table.querySelectorAll("tr:not(:first-child)").forEach(tr => tr.remove());
+    shown = 0; renderMore();
+  }
+  yrSel.addEventListener("change", () => {
+    filtered = yrSel.value ? rows.filter(b => b[0].startsWith(yrSel.value)) : rows;
+    resetTable();
+  });
+  moreBtn.addEventListener("click", renderMore);
+  renderMore();
+}
 
 // -- promotion slots -------------------------------------------------------
 const slots = document.getElementById("slots");

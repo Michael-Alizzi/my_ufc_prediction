@@ -68,8 +68,10 @@ def dump_odds(dump_path):
          "-t", "event_mapping", "-f", "-", dump_path],
         capture_output=True, text=True, check=True)
     t = parse_copy_tables(out.stdout, {"odds", "fighter_mapping", "event_mapping"})
-    odds = (t["odds"].merge(t["fighter_mapping"], on="fighter_id")
-                     .merge(t["event_mapping"], on="event_id"))
+    # suffixes: newer dumps duplicate fighter_name onto the odds table itself;
+    # keep the left column unsuffixed so the merge works on both vintages
+    odds = (t["odds"].merge(t["fighter_mapping"], on="fighter_id", suffixes=("", "_fm"))
+                     .merge(t["event_mapping"], on="event_id", suffixes=("", "_em")))
     odds["closing_odds"] = pd.to_numeric(odds["closing_odds"], errors="coerce")
     odds = odds[odds["closing_odds"] > 1.0].dropna(subset=["closing_odds"])
     odds["name"] = odds["fighter_name"].map(norm)
