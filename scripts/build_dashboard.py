@@ -305,7 +305,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   <div class="stamp">Model vs market, graded weekly &middot; updated __UPDATED__</div>
   <nav id="tabs" role="tablist">
     <button role="tab" data-tab="performance" aria-selected="true">Performance</button>
-    <button role="tab" data-tab="trial" aria-selected="false">Live trial</button>
+    <button role="tab" data-tab="trial" aria-selected="false">Experiments</button>
     <button role="tab" data-tab="history" aria-selected="false">History</button>
     <button role="tab" data-tab="methodology" aria-selected="false">Methodology</button>
     <button role="tab" data-tab="dictionary" aria-selected="false">Data dictionary</button>

@@ -402,12 +402,12 @@ in the meantime (results are results), it just means the scoring notification is
 same-weekend. Moving scoring to Sunday evening AEST would grade same-weekend if
 that ever matters more than the Friday rhythm.
 
-### What's the difference between the Performance and Live trial tabs — and are both needed?
+### What's the difference between the Performance and Experiments tabs — and are both needed?
 
 They read the same ledger but answer different questions. **Performance**
 is the trajectory view — "how is the money doing": rule A's headline
-tiles plus the cumulative-return and net-per-event charts. **Live trial**
-is the decision view — "who's winning the experiment": the rule
+tiles plus the cumulative-return and net-per-event charts. **Experiments**
+(formerly "Live trial") is the decision view — "who's winning the experiment": the rule
 explainer, the comparison table with the promotion-feeding columns (cards
 ahead of A), the 10-slot promotion strip, and the backtest reference.
 Whether the split is necessary is debatable: with ~10 events and all four
