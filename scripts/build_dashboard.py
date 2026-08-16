@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """Build dashboard.html: the betting-performance dashboard + docs, one file.
 
-Reads ledger.md (the entry-9 A/C/E record appended by score_card.py on the
-weekly-predictions-log branch) and the three docs/*.md, and emits a single
-self-contained HTML page: a Performance tab (charts + tables driven by an
-embedded JSON blob) and one tab per doc. No network access at view time — the
-Friday scoring Routine regenerates the file and republishes it as an Artifact
-after each card is graded.
+Reads ledger.md (the entry-9 A/C/E/F record appended by score_card.py on the
+weekly-predictions-log branch), the most recently logged card.json (for the
+Performance tab's payout calculator), and the three docs/*.md, emitting a
+single self-contained HTML page: Performance (next card + calculator),
+Experiments (rule trajectory + comparison), History (full backtest replay),
+and one tab per doc. No network access at view time — the Friday scoring
+Routine regenerates the file and republishes it as an Artifact after each
+card is graded.
 
 Usage (from repo root, with ledger.md checked out of the log branch):
     python3 scripts/build_dashboard.py [--ledger ledger.md] [--out dashboard.html]
 
-A missing/empty ledger is fine: the Performance tab renders its empty state
+A missing/empty ledger is fine: Experiments renders its empty state
 (backtest reference numbers + "first grading pending").
 """
 import argparse
@@ -68,6 +70,58 @@ def summarise(events):
         t["roi"] = round(100 * t["net"] / t["staked"], 1) if t["staked"] else None
         t["hit"] = round(100 * t["won"] / t["placed"], 1) if t["placed"] else None
     return total
+
+
+def git_show(ref):
+    """Read a file from a git ref without touching the working tree or index
+    (unlike `git checkout <ref> -- file`, which stages the file and has twice
+    landed stray files on master via this script's own commits)."""
+    import subprocess
+    out = subprocess.run(["git", "show", ref], capture_output=True, text=True)
+    return out.stdout if out.returncode == 0 else None
+
+
+def next_card(events, artifact_path="ensemble.joblib", history_path="fighter_history.parquet"):
+    """The most recently logged card (weekly-predictions-log branch) with
+    live odds and the model's own recommended bet per fight, for the
+    Performance tab's payout calculator. None if nothing is logged yet or
+    the artifacts this container needs aren't present."""
+    import subprocess
+    subprocess.run(["git", "fetch", "origin", "weekly-predictions-log"],
+                   capture_output=True)
+    raw = git_show("origin/weekly-predictions-log:card.json")
+    if not raw or not (os.path.exists(artifact_path) and os.path.exists(history_path)):
+        return None
+    fights = json.loads(raw)
+    pred_md = git_show("origin/weekly-predictions-log:predictions_output.md") or ""
+    title_m = re.search(r"^## UFC Predictions: (.+)$", pred_md, re.M)
+    title = title_m.group(1) if title_m else "Upcoming card"
+    bankroll_m = re.search(r"risking \$(\d+)", pred_md)
+    bankroll = int(bankroll_m.group(1)) if bankroll_m else 50
+
+    sys.path.insert(0, ".")
+    from predict import load_artifacts, load_history
+    from send_weekly_predictions import make_predictions
+    # event_country isn't persisted anywhere the rebuild can recover, so
+    # home-crowd features come back NaN here -- confidence can differ
+    # slightly from the original run's; the caption says so.
+    preds = make_predictions(fights, load_history(), load_artifacts(),
+                             bankroll=bankroll)
+
+    rows = []
+    for p, f in zip(preds, fights):
+        if p.get("prediction") in ("error", "no data") or not (f.get("odds1") and f.get("odds2")):
+            continue
+        rows.append({"f1": f["fighter1"], "f2": f["fighter2"],
+                     "weight_class": p.get("weight_class", f.get("weight_class", "?")),
+                     "pick": p.get("prediction"), "confidence": p.get("confidence"),
+                     "odds1": float(f["odds1"]), "odds2": float(f["odds2"]),
+                     "bet_on": p.get("bet_on"), "stake": p.get("stake_amt", 0)})
+    if not rows:
+        return None
+    # already scored? ledger event names are a prefix of the "(date)"-suffixed title
+    decided = any(e["event"] in title for e in events)
+    return {"event": title, "bankroll": bankroll, "decided": decided, "fights": rows}
 
 
 def backtest(odds_path, artifact_path):
@@ -141,6 +195,7 @@ def main():
     events = parse_ledger(args.ledger)
     data = {"events": events, "totals": summarise(events)}
     hist = backtest(args.odds, args.artifact)
+    upcoming = next_card(events, args.artifact)
 
     md = markdown.Markdown(extensions=["tables", "fenced_code"])
     docs_html = {key: md.reset().convert(open(path).read()) if os.path.exists(path)
@@ -158,6 +213,7 @@ def main():
     html = (TEMPLATE
             .replace("__DATA__", json.dumps(data))
             .replace("__HIST__", json.dumps(hist))
+            .replace("__NEXT__", json.dumps(upcoming))
             .replace("__UPDATED__", aest.strftime("%-d %b %Y, %-I:%M %p AEST"))
             .replace("__FAQ__", docs_html["faq"])
             .replace("__METHODOLOGY__", docs_html["methodology"])
@@ -315,12 +371,14 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
 
 <main>
   <section id="tab-performance" role="tabpanel">
-    <div class="tiles" id="tiles"></div>
-    <div id="charts"></div>
+    <div id="next-card-body"></div>
   </section>
 
   <section id="tab-trial" role="tabpanel" hidden>
-    <div class="card" style="margin-top:0">
+    <div class="tiles" id="tiles"></div>
+    <div id="charts"></div>
+
+    <div class="card">
       <h2>The experiment</h2>
       <p class="sub" style="margin-bottom:0">Rule A (kelly-proportional value betting) is staked with real money every card. Two challengers that looked better in the recent backtest — C, which ignores edges smaller than the bookmaker's margin, and E, which shrinks the model's probability halfway toward the market's before betting — run as shadows on identical cards. Neither was promotable from the backtest alone (winner's-curse risk), so the tiebreak runs prospectively, below. A third shadow, F (entry 10, added Aug 16), blends the model's probability with the market's at a fitted, frozen trust weight (&lambda;=0.746) before betting — the measured version of E's fixed 50/50 humility; its 10-event clock starts from its first logged card.</p>
     </div>
@@ -569,6 +627,83 @@ rt.innerHTML = `<tr><th>Rule</th><th class="num">Events</th><th class="num">Stak
       <td class="num">${t.hit === null ? "—" : t.hit + "% (" + t.won + "/" + t.placed + ")"}</td>
       <td class="num">${r === "A" ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
   }).join("");
+
+// -- next card: payout calculator -------------------------------------------
+const NEXT = __NEXT__;
+const nextBody = document.getElementById("next-card-body");
+if (!NEXT) {
+  nextBody.insertAdjacentHTML("beforeend",
+    `<div class="empty" style="margin-top:0"><strong>No upcoming card logged yet.</strong><br>
+     This fills in once the Thursday card-day job posts the next card's
+     odds and predictions — check back after 1&nbsp;PM AEST Thursday.</div>`);
+} else {
+  const banner = NEXT.decided
+    ? `<div class="empty" style="margin-top:0;text-align:left">
+        <strong>This card has already happened.</strong> See the Experiments
+        tab for the graded result — the next upcoming card replaces this
+        once Thursday's job runs.
+      </div>`
+    : "";
+  nextBody.insertAdjacentHTML("beforeend", `
+    <div class="card" style="margin-top:0">
+      <h2>${esc(NEXT.event)}</h2>
+      <p class="sub">Enter any stake to see what it returns at these odds. The corner
+        and $ amount default to the model's own rule-A recommendation (blank if it
+        found no value in that fight); change either freely — this is a plain
+        payout calculator, not a re-run of the model. Predicted without knowing the
+        event's host country, so confidence can differ slightly from the original
+        card-day run.</p>
+    </div>
+    ${banner}
+    <div id="next-fights"></div>`);
+  const fightsEl = document.getElementById("next-fights");
+  fightsEl.insertAdjacentHTML("beforeend", NEXT.fights.map((f, i) => {
+    const pickIsF1 = f.pick && f.pick.toLowerCase() === f.f1.toLowerCase();
+    const defaultCorner = f.bet_on
+      ? (f.bet_on.toLowerCase() === f.f1.toLowerCase() ? "1" : "2")
+      : (pickIsF1 ? "1" : "2");
+    const noValue = !f.bet_on;
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">
+        <div>
+          <strong>${esc(f.f1)}</strong> <span style="color:var(--muted)">vs</span>
+          <strong>${esc(f.f2)}</strong>
+          <span style="color:var(--muted);font-size:12.5px"> &middot; ${esc(f.weight_class)}</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--ink-2)">model picks
+          <strong style="color:var(--ink)">${esc(f.pick)}</strong> (${esc(f.confidence)})
+          ${noValue ? '<span style="color:var(--muted)"> &middot; no value either side</span>' : ""}</div>
+      </div>
+      <div class="calc-row" data-i="${i}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px">
+        <select class="corner-pick" style="font:13px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 8px">
+          <option value="1" ${defaultCorner === "1" ? "selected" : ""}>${esc(f.f1)} @ ${f.odds1.toFixed(2)}</option>
+          <option value="2" ${defaultCorner === "2" ? "selected" : ""}>${esc(f.f2)} @ ${f.odds2.toFixed(2)}</option>
+        </select>
+        <label style="font-size:13px;color:var(--ink-2)">Stake $
+          <input type="number" class="stake-input" min="0" step="1"
+            value="${f.stake || ""}" placeholder="0"
+            style="width:80px;font:13px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 8px;margin-left:4px"></label>
+        <span class="calc-out" style="font-size:13.5px;font-weight:600"></span>
+      </div>
+    </div>`;
+  }).join(""));
+
+  function recalc(row) {
+    const i = +row.dataset.i, f = NEXT.fights[i];
+    const corner = row.querySelector(".corner-pick").value;
+    const stake = parseFloat(row.querySelector(".stake-input").value) || 0;
+    const odds = corner === "1" ? f.odds1 : f.odds2;
+    const out = row.querySelector(".calc-out");
+    if (stake <= 0) { out.textContent = ""; return; }
+    const returns = stake * odds, profit = returns - stake;
+    out.innerHTML = `Returns ${fmt$(returns)} &middot; <span class="${cls(profit)}">${sign$(profit)} profit</span>`;
+  }
+  fightsEl.querySelectorAll(".calc-row").forEach(row => {
+    recalc(row);
+    row.querySelector(".corner-pick").addEventListener("change", () => recalc(row));
+    row.querySelector(".stake-input").addEventListener("input", () => recalc(row));
+  });
+}
 
 // -- history: the full what-if replay --------------------------------------
 const HIST = __HIST__;

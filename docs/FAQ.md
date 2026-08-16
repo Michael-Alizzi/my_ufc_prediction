@@ -402,18 +402,31 @@ in the meantime (results are results), it just means the scoring notification is
 same-weekend. Moving scoring to Sunday evening AEST would grade same-weekend if
 that ever matters more than the Friday rhythm.
 
-### What's the difference between the Performance and Experiments tabs — and are both needed?
+### What's the difference between the Performance and Experiments tabs?
 
-They read the same ledger but answer different questions. **Performance**
-is the trajectory view — "how is the money doing": rule A's headline
-tiles plus the cumulative-return and net-per-event charts. **Experiments**
-(formerly "Live trial") is the decision view — "who's winning the experiment": the rule
-explainer, the comparison table with the promotion-feeding columns (cards
-ahead of A), the 10-slot promotion strip, and the backtest reference.
-Whether the split is necessary is debatable: with ~10 events and all four
-rules drawn together, merging into one tab (tiles → charts → table →
-strip → reference) is a defensible simplification. Current state: kept
-separate.
+**Performance** is forward-looking — the next logged card with a plain
+payout calculator per fight (pick a corner, enter a stake, see the
+return). **Experiments** is backward-looking — rule A's trajectory tiles
+and charts, the rule explainer, the live comparison table, the promotion
+strip, and the backtest reference. (Performance held the trajectory
+material itself until Aug 17, when it was replaced by the calculator and
+that content moved into Experiments.)
+
+### What does the Performance tab's payout calculator show, and why doesn't it always have numbers?
+
+It reads the most recently logged card (`card.json` on
+`weekly-predictions-log`) and shows every fight with odds: the model's
+pick and confidence, a corner selector, and a stake field defaulting to
+rule A's own recommendation — blank/zero where the rule found no value in
+that fight (most fights, by design; see "why do most fights get $0").
+Change the corner or stake freely; it's a plain `stake × odds` calculator,
+not a re-run of the model. It reads whatever's currently logged, so right
+after a card is fought (before the next Thursday job posts a new one) it
+shows that same card with a "this card has already happened" banner —
+the calculator still works, it's just for a settled fight. Confidence can
+differ slightly from the original card-day run because the event's host
+country isn't persisted anywhere the rebuild can recover, so home-crowd
+features come back blank.
 
 ### Where do I see how the bets are going?
 
