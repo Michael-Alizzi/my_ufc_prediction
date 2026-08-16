@@ -178,6 +178,10 @@ automatically.
   session — the FAQ is the project's running Q&A record. Republish the
   dashboard artifact with it when practical (the Friday Routine republishes
   it weekly regardless).
+- **Docs and dashboard commits merge straight to master, no PR** (standing
+  permission, Aug 2026): changes touching only `docs/*`, `CLAUDE.md`, or
+  `scripts/build_dashboard.py`. Anything touching the model, pipeline,
+  serving, or betting code still goes through a PR Michael merges.
 - **Coding tasks load `/ponytail` at full intensity first** — laziest working
   solution, reuse existing machinery before writing new, shortest diff that
   works (the skill is checked into this repo).
