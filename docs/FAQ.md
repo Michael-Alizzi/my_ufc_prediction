@@ -117,6 +117,12 @@ the 5,786 fights — the rest are the historical equivalent of the weekly
 is the return on the bets the rule would actually have placed, not on
 blanket-betting every fight.
 
+The bet table itself lists **only placed bets** — skipped fights carry no
+stake or P/L, so they'd be empty rows. The passes show up in the aggregates
+instead: the fights-with-odds tile (5,786) vs rule A bets (4,536), and the
+bet-rate column. Passing on a fight is the rule working, and every skipped
+fight was still evaluated.
+
 ### What are shadow rules C and E, and why are they logged but not staked?
 
 Entry 9 backtested five staking rules on 5,786 historical fights. Rule A won on the
