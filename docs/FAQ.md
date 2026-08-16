@@ -166,7 +166,11 @@ the model's probability sits above 64.5% — run backwards, 17% at 1.55
 implies the model had him at ~70.5%, so the column measures the
 model–market disagreement (tiny edge → 1–2%, huge edge → the 25% cap).
 He **won**, so: **flat P/L +$0.55** (staked the whole $1, kept odds−1),
-**Kelly P/L +$0.09** (staked only 17¢, kept 17¢ × 0.55). One sentence:
+**Kelly P/L +$0.09** (staked only 17¢, kept 17¢ × 0.55). The 0.55 in both
+is the *profit rate of the odds*: $1 at 1.55 returns $1.55 = your $1 back
+plus $0.55 winnings, so `odds − 1` is profit per dollar staked and any
+win's profit is `stake × (odds − 1)` — the flat and Kelly columns just
+expose different stakes to the same rate. One sentence:
 market said 64.5%, model said ~70.5%, the 6-point gap justified a 17%
 stake, and the win paid 55¢ per flat dollar or 9¢ per Kelly dollar.
 
