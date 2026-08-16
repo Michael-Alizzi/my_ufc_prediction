@@ -229,6 +229,38 @@ instead: the fights-with-odds tile (5,786) vs rule A bets (4,536), and the
 bet-rate column. Passing on a fight is the rule working, and every skipped
 fight was still evaluated.
 
+### Why C, E, F — what happened to B and D?
+
+Entry 9 pre-registered five candidate rules, A through E, on the same
+5,786-fight backtest. Only three survived to become named, tracked rules;
+B and D were tried and **rejected outright** at that same decision point,
+which is why the trial reads A/C/E/F instead of A/B/C/D:
+
+- **B ("carve-out")** — rule A minus one specific losing segment
+  (near-coin-flip fights, `|p−0.5| ≤ 0.10`, where the market was already
+  one-sided, `≥ 0.65`). Looked promising on the full pool (+15.0% Kelly
+  vs A's +14.0%), but the gain came entirely from the first half of the
+  data and had vanished by the second (H2 Kelly +4.7% vs A's +4.8% — no
+  real edge left). Rejected: the pre-registered bar required beating A on
+  **both halves**, not just the pooled average, precisely to catch a
+  segment cut that only worked in hindsight.
+- **D ("never-fade")** — C's vig-floor filter, further restricted to only
+  bet the market's own favourite, never fade it. Its hit rate looked
+  spectacular (72.8%!) but that's the tell, not the win: restricting to
+  favourites inflates hit rate mechanically while gutting the payoff per
+  win, and its Kelly ROI (+10.4%) was the **worst of all five** candidates
+  — confirmed by a preview the entry ran *before* scoring D, predicting
+  exactly this failure from the direction split. Rejected outright, no
+  ambiguity.
+
+So B failed the "robust across time" test and D failed on raw numbers —
+neither one was close enough to be worth a live shadow slot. C and E
+passed the closer call (strong pooled numbers, one borderline half) and
+earned the prospective trial; F (entry 10) was added later as the fitted
+version of E's idea. The letters name the original five-arm registration,
+not a "rules so far" count — that's why the surviving three aren't
+relettered A/B/C.
+
 ### What are shadow rules C, E and F, and why are they logged but not staked?
 
 Entry 9 backtested five staking rules on 5,786 historical fights. Rule A won on the
