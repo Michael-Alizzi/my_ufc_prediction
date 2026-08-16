@@ -134,6 +134,19 @@ probability (A 55.9% vs 53.0%, C 54.6% vs 49.9%), which is where the ROI
 comes from. (The dashboard's replay-summary column header originally read
 just "Hit" — it says "Hit rate" now.)
 
+### Where does "implied probability" come from?
+
+From the odds themselves — no external data. Raw implied probability is
+`1/odds` (1.93 → 51.8%): the win rate at which the price is fair to you, so
+beating it is the break-even test. The two sides of a fight sum to ~105%,
+the excess being the bookmaker's margin (vig). The **vig-free** version
+normalizes the pair to 100% — `(1/odds_r) / (1/odds_r + 1/odds_b)` — giving
+the market's actual belief; it's what rule E shrinks toward and what the
+model's `market_prob` feature is built from. Odds sources: historical
+closing odds (BestFightOdds via the mma-ai dataset, median across books)
+for the replay and training; Sportsbet (staking) + de-vigged AU-median
+(feature input) for the live weekly card.
+
 ### Does the History replay skip no-value fights, the way the live rule does?
 
 Yes — the replay and the weekly job share the same condition (and the same
