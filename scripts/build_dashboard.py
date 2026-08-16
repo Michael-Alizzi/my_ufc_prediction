@@ -646,9 +646,9 @@ if (!HIST) {
   const rows = HIST.bets.A.slice().reverse();
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
     <h2>Every rule-A bet, newest first</h2>
-    <p class="sub">${rows.length.toLocaleString()} bets. Kelly size = share of a bankroll unit (capped 25%); flat P/L is per $1; Kelly P/L stakes kelly &times; the bankroll unit — shown per $1 (in cents) and per $100 (same number, different unit). <select id="yr-filter"><option value="">All years</option></select></p>
+    <p class="sub">${rows.length.toLocaleString()} bets. Both P/L columns are per $1 of bankroll: flat stakes the whole $1; Kelly stakes only the kelly-size share of it (capped 25%). <select id="yr-filter"><option value="">All years</option></select></p>
     <div class="chart-scroll"><table id="bets-table">
-      <tr><th>Date</th><th>Bet</th><th class="num">Odds</th><th class="num">Kelly size</th><th class="num">P/L per $1</th><th class="num">Kelly P/L per $1</th><th class="num">Kelly P/L per $100</th><th></th></tr>
+      <tr><th>Date</th><th>Bet</th><th class="num">Odds</th><th class="num">Kelly size</th><th class="num">Flat P/L per $1</th><th class="num">Kelly P/L per $1</th><th></th></tr>
     </table></div>
     <p style="text-align:center;margin:12px 0 0"><button id="more-bets" style="cursor:pointer;background:var(--chip);color:var(--ink);border:1px solid var(--border);border-radius:5px;padding:7px 16px;font:600 13px system-ui">Show 50 more</button></p>
   </div>`);
@@ -664,12 +664,13 @@ if (!HIST) {
     table.insertAdjacentHTML("beforeend", next.map(b => {
       const [d, on, vs, odds, k, w] = b;
       const pl = w ? odds - 1 : -1;
-      const kpl = pl * k * 100;  // stake = kelly × $100 bankroll unit
+      const kpl = pl * k;  // stake = kelly fraction of the $1
+      const kfmt = (kpl >= 0 ? "+$" : "−$") +
+        (Math.abs(kpl) >= 0.005 || kpl === 0 ? Math.abs(kpl).toFixed(2) : Math.abs(kpl).toFixed(3));
       return `<tr><td>${d}</td><td><strong>${esc(on)}</strong> <span style="color:var(--muted)">over ${esc(vs)}</span></td>
         <td class="num">${odds.toFixed(2)}</td><td class="num">${(k * 100).toFixed(1)}%</td>
         <td class="num ${cls(pl)}">${sign$(pl)}</td>
-        <td class="num ${cls(kpl)}">${(kpl >= 0 ? "+" : "−") + Math.abs(kpl).toFixed(1)}&cent;</td>
-        <td class="num ${cls(kpl)}">${sign$(kpl)}</td>
+        <td class="num ${cls(kpl)}">${kfmt}</td>
         <td style="padding-left:14px">${w ? "✅ won" : "❌ lost"}</td></tr>`;
     }).join(""));
     moreBtn.style.display = shown >= filtered.length ? "none" : "";
