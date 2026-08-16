@@ -370,16 +370,18 @@ in the meantime (results are results), it just means the scoring notification is
 same-weekend. Moving scoring to Sunday evening AEST would grade same-weekend if
 that ever matters more than the Friday rhythm.
 
-### Is the dashboard's Performance tab actually necessary, separate from Live trial?
+### What's the difference between the Performance and Live trial tabs — and are both needed?
 
-Debatable — both tabs read the same ledger. The current split: Performance
-answers "how is my actual money doing" (rule A tiles + the per-event
-charts), Live trial answers "which discipline is winning the experiment"
-(comparison table, promotion strip, backtest reference). With only ~10
-events in play and all four rules drawn together anyway, merging them into
-one tab is a defensible simplification; the split earns its keep mainly if
-the charts grow (more events, more rules) or if A's real-money view should
-stay uncluttered by experiment context. Current state: kept separate.
+They read the same ledger but answer different questions. **Performance**
+is the trajectory view — "how is the money doing": rule A's headline
+tiles plus the cumulative-return and net-per-event charts. **Live trial**
+is the decision view — "who's winning the experiment": the rule
+explainer, the comparison table with the promotion-feeding columns (cards
+ahead of A), the 10-slot promotion strip, and the backtest reference.
+Whether the split is necessary is debatable: with ~10 events and all four
+rules drawn together, merging into one tab (tiles → charts → table →
+strip → reference) is a defensible simplification. Current state: kept
+separate.
 
 ### Where do I see how the bets are going?
 
