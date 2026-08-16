@@ -183,6 +183,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     --good: #0ca30c; --bad: #e66767; --chip: #262624;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { background: var(--page); color: var(--ink); margin: 0;
          font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
   header { padding: 28px 24px 0; max-width: 1060px; margin: 0 auto; }
@@ -683,34 +684,65 @@ if (!HIST) {
 }
 
 // -- data-dictionary search ------------------------------------------------
-// filters definition-table rows and inventory column chips; headings stay put
+// with a query active, the tab shows ONLY the hits: matching definition rows
+// (with their table + section heading) and matching inventory chips (with
+// their group label). Everything else — prose, other sections — is hidden.
 const dictDoc = document.querySelector("#tab-dictionary .doc");
 const dictCount = document.getElementById("dict-count");
+const isListP = p => {
+  const chips = p.querySelectorAll("code");
+  if (chips.length < 6) return false;
+  const codeLen = [...chips].reduce((s, c) => s + c.textContent.length, 0);
+  return codeLen / p.textContent.length >= 0.9;  // pure column lists, not prose
+};
 document.getElementById("dict-search").addEventListener("input", e => {
   const q = e.target.value.trim().toLowerCase();
+  const els = [...dictDoc.children];
+  if (!q) {
+    els.forEach(el => { el.hidden = false; });
+    dictDoc.querySelectorAll("tr").forEach(tr => { tr.hidden = false; });
+    dictDoc.querySelectorAll("p code").forEach(c => { c.style.display = ""; });
+    dictCount.textContent = "";
+    return;
+  }
   let hits = 0;
-  for (const tr of dictDoc.querySelectorAll("tr")) {
-    if (tr.querySelector("th")) continue;
-    const hit = !q || tr.textContent.toLowerCase().includes(q);
-    tr.hidden = !hit;
-    if (q && hit) hits++;
-  }
-  for (const p of dictDoc.querySelectorAll("p")) {
-    const chips = p.querySelectorAll("code");
-    // inventory lists only: nearly all of the paragraph's text is code chips
-    if (chips.length < 6) continue;
-    const codeLen = [...chips].reduce((s, c) => s + c.textContent.length, 0);
-    if (codeLen / p.textContent.length < 0.9) continue;
-    for (const c of chips) {
-      const t = c.textContent.toLowerCase();
-      // two-way substring: chips are often base names inside grouped families
-      // (searching avg_r_kd must light up the `kd` chip under the avg_ group)
-      const hit = !q || t.includes(q) || q.includes(t);
-      c.style.display = hit ? "" : "none";
-      if (q && hit) hits++;
+  const keep = new Set();
+  els.forEach((el, i) => {
+    let hit = false;
+    if (el.tagName === "TABLE") {
+      for (const tr of el.querySelectorAll("tr")) {
+        if (tr.querySelector("th")) continue;
+        const m = tr.textContent.toLowerCase().includes(q);
+        tr.hidden = !m;
+        if (m) { hits++; hit = true; }
+      }
+    } else if (el.tagName === "P" && isListP(el)) {
+      for (const c of el.querySelectorAll("code")) {
+        const t = c.textContent.toLowerCase();
+        // two-way substring: searching avg_r_kd must light the `kd` chip
+        // inside the avg_/med_ groups, and searching kd the reverse
+        const m = t.includes(q) || q.includes(t);
+        c.style.display = m ? "" : "none";
+        if (m) { hits++; hit = true; }
+      }
     }
-  }
-  dictCount.textContent = q ? hits + " match" + (hits === 1 ? "" : "es") : "";
+    if (hit) {
+      keep.add(el);
+      // context: the group label right above a chip list, then the nearest
+      // heading(s) walking upward — one h3 and one h2
+      const prev = els[i - 1];
+      if (prev && prev.tagName === "P" && prev.textContent.trim().endsWith(":")) keep.add(prev);
+      let needH3 = true, needH2 = true;
+      for (let j = i - 1; j >= 0 && (needH3 || needH2); j--) {
+        const t = els[j].tagName;
+        if (t === "H3" && needH3) { keep.add(els[j]); needH3 = false; }
+        if (t === "H2") { if (needH2) keep.add(els[j]); needH2 = false; needH3 = false; }
+        if (t === "H1") break;
+      }
+    }
+  });
+  els.forEach(el => { el.hidden = !keep.has(el); });
+  dictCount.textContent = hits + " match" + (hits === 1 ? "" : "es");
 });
 
 // -- promotion slots -------------------------------------------------------
