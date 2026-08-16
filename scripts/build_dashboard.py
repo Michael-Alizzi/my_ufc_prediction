@@ -442,7 +442,8 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   <section id="tab-trial" role="tabpanel" hidden>
     <div class="card" style="margin-top:0">
       <h2>The experiment</h2>
-      <p class="sub" style="margin-bottom:0">Rule A (kelly-proportional value betting) is staked with real money every card. Two challengers that looked better in the recent backtest — C, which ignores edges smaller than the bookmaker's margin, and E, which shrinks the model's probability halfway toward the market's before betting — run as shadows on identical cards. Neither was promotable from the backtest alone (winner's-curse risk), so the tiebreak runs prospectively, below. A third shadow, F (entry 10, added Aug 16), blends the model's probability with the market's at a fitted, frozen trust weight (&lambda;=0.746) before betting — the measured version of E's fixed 50/50 humility; its 10-event clock starts from its first logged card.</p>
+      <p class="sub">Rule A (kelly-proportional value betting) is staked with real money every card. Two challengers that looked better in the recent backtest — C, which ignores edges smaller than the bookmaker's margin, and E, which shrinks the model's probability halfway toward the market's before betting — run as shadows on identical cards. Neither was promotable from the backtest alone (winner's-curse risk), so the tiebreak runs prospectively, below. A third shadow, F (entry 10, added Aug 16), blends the model's probability with the market's at a fitted, frozen trust weight (&lambda;=0.746) before betting — the measured version of E's fixed 50/50 humility; its 10-event clock starts from its first logged card.</p>
+      <p class="sub" style="margin-bottom:0">Pre-registered (EXPERIMENTS.md entry 9): after 10 scored events, a shadow rule replaces A only if it leads on cumulative return <em>and</em> was ahead on at least 6 cards. Filled squares are scored events.</p>
     </div>
 
     <div class="tiles" id="tiles"></div>
