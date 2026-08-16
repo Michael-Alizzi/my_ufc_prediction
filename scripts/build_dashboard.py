@@ -332,7 +332,14 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   </section>
 
   <section id="tab-methodology" role="tabpanel" hidden><article class="doc">__METHODOLOGY__</article></section>
-  <section id="tab-dictionary" role="tabpanel" hidden><article class="doc">__DICTIONARY__</article></section>
+  <section id="tab-dictionary" role="tabpanel" hidden>
+    <p style="max-width:72ch;margin:0 0 4px">
+      <input id="dict-search" type="search" placeholder="Search columns and definitions — e.g. elo, avg_r_kd, layoff"
+        style="width:100%;padding:9px 12px;font:14px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:6px">
+      <span id="dict-count" class="stamp"></span>
+    </p>
+    <article class="doc">__DICTIONARY__</article>
+  </section>
   <section id="tab-faq" role="tabpanel" hidden><article class="doc">__FAQ__</article></section>
 </main>
 <footer>Rebuilt by the Friday scoring Routine from <code>ledger.md</code> on the weekly-predictions-log branch.</footer>
@@ -674,6 +681,37 @@ if (!HIST) {
   moreBtn.addEventListener("click", renderMore);
   renderMore();
 }
+
+// -- data-dictionary search ------------------------------------------------
+// filters definition-table rows and inventory column chips; headings stay put
+const dictDoc = document.querySelector("#tab-dictionary .doc");
+const dictCount = document.getElementById("dict-count");
+document.getElementById("dict-search").addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  let hits = 0;
+  for (const tr of dictDoc.querySelectorAll("tr")) {
+    if (tr.querySelector("th")) continue;
+    const hit = !q || tr.textContent.toLowerCase().includes(q);
+    tr.hidden = !hit;
+    if (q && hit) hits++;
+  }
+  for (const p of dictDoc.querySelectorAll("p")) {
+    const chips = p.querySelectorAll("code");
+    // inventory lists only: nearly all of the paragraph's text is code chips
+    if (chips.length < 6) continue;
+    const codeLen = [...chips].reduce((s, c) => s + c.textContent.length, 0);
+    if (codeLen / p.textContent.length < 0.9) continue;
+    for (const c of chips) {
+      const t = c.textContent.toLowerCase();
+      // two-way substring: chips are often base names inside grouped families
+      // (searching avg_r_kd must light up the `kd` chip under the avg_ group)
+      const hit = !q || t.includes(q) || q.includes(t);
+      c.style.display = hit ? "" : "none";
+      if (q && hit) hits++;
+    }
+  }
+  dictCount.textContent = q ? hits + " match" + (hits === 1 ? "" : "es") : "";
+});
 
 // -- promotion slots -------------------------------------------------------
 const slots = document.getElementById("slots");
