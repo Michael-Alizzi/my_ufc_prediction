@@ -354,7 +354,14 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     <div id="hist-body"></div>
   </section>
 
-  <section id="tab-methodology" role="tabpanel" hidden><article class="doc">__METHODOLOGY__</article></section>
+  <section id="tab-methodology" role="tabpanel" hidden>
+    <p style="max-width:72ch;margin:0 0 4px">
+      <input id="methodology-search" type="search" placeholder="Search the methodology — e.g. elo, mirroring, kelly"
+        style="width:100%;padding:9px 12px;font:14px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:6px">
+      <span id="methodology-count" class="stamp"></span>
+    </p>
+    <article class="doc">__METHODOLOGY__</article>
+  </section>
   <section id="tab-dictionary" role="tabpanel" hidden>
     <p style="max-width:72ch;margin:0 0 4px">
       <input id="dict-search" type="search" placeholder="Search columns and definitions — e.g. elo, avg_r_kd, layoff"
@@ -363,7 +370,14 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     </p>
     <article class="doc">__DICTIONARY__</article>
   </section>
-  <section id="tab-faq" role="tabpanel" hidden><article class="doc">__FAQ__</article></section>
+  <section id="tab-faq" role="tabpanel" hidden>
+    <p style="max-width:72ch;margin:0 0 4px">
+      <input id="faq-search" type="search" placeholder="Search the FAQ — e.g. kelly, retrain, shadow"
+        style="width:100%;padding:9px 12px;font:14px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:6px">
+      <span id="faq-count" class="stamp"></span>
+    </p>
+    <article class="doc">__FAQ__</article>
+  </section>
 </main>
 <footer>Rebuilt by the Friday scoring Routine from <code>ledger.md</code> on the weekly-predictions-log branch.</footer>
 <div id="tooltip"></div>
@@ -842,6 +856,45 @@ document.getElementById("dict-search").addEventListener("input", e => {
   els.forEach(el => { el.hidden = !keep.has(el); });
   dictCount.textContent = hits + " match" + (hits === 1 ? "" : "es");
 });
+
+// -- prose-doc search (methodology, FAQ): section-level filtering ----------
+// a section = a heading (h1/h2/h3) plus everything until the next heading;
+// matching sections stay whole, an h3 hit also keeps its parent h2 heading
+function wireDocSearch(tab) {
+  const doc = document.querySelector(`#tab-${tab} .doc`);
+  const input = document.getElementById(`${tab}-search`);
+  const countEl = document.getElementById(`${tab}-count`);
+  const els = [...doc.children];
+  const units = [];
+  let cur = {h: null, els: [], parentH2: null}, lastH2 = null;
+  for (const el of els) {
+    if (/^H[123]$/.test(el.tagName)) {
+      if (cur.h || cur.els.length) units.push(cur);
+      if (el.tagName !== "H3") lastH2 = el;
+      cur = {h: el, els: [], parentH2: el.tagName === "H3" ? lastH2 : null};
+    } else cur.els.push(el);
+  }
+  units.push(cur);
+  input.addEventListener("input", () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { els.forEach(el => { el.hidden = false; }); countEl.textContent = ""; return; }
+    const keep = new Set();
+    let hits = 0;
+    for (const u of units) {
+      const text = ((u.h ? u.h.textContent : "") + " " +
+                    u.els.map(e => e.textContent).join(" ")).toLowerCase();
+      if (!text.includes(q)) continue;
+      hits++;
+      if (u.h) keep.add(u.h);
+      u.els.forEach(e => keep.add(e));
+      if (u.parentH2) keep.add(u.parentH2);
+    }
+    els.forEach(el => { el.hidden = !keep.has(el); });
+    countEl.textContent = hits + " section" + (hits === 1 ? "" : "s");
+  });
+}
+wireDocSearch("methodology");
+wireDocSearch("faq");
 
 // -- promotion slots -------------------------------------------------------
 const slots = document.getElementById("slots");
