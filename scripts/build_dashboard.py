@@ -137,30 +137,56 @@ def next_card(events, artifact_path="ensemble.joblib", history_path="fighter_his
     return {"event": title, "bankroll": bankroll, "decided": decided, "fights": rows}
 
 
+def _event_rule_stats(fights, preds):
+    """Per-rule (A/C/E/F) bet count and sum of market-implied win% for one
+    event, parsed from the same `shadow` strings scripts/score_card.py
+    grades from -- gives every rule (not just A) an odds trail for the
+    bet-rate/avg-market-win% chart metrics. Returns (fights_offered, stats)."""
+    stats = {r: {"bets": 0, "implied_sum": 0.0} for r in "ACEF"}
+    offered = 0
+    for p, f in zip(preds, fights):
+        if p.get("prediction") in ("error", "no data") or not (f.get("odds1") and f.get("odds2")):
+            continue
+        offered += 1
+        if p.get("bet_on") and p.get("bet_odds"):
+            stats["A"]["bets"] += 1
+            stats["A"]["implied_sum"] += 100.0 / p["bet_odds"]
+        for part in (p.get("shadow") or "").split(" / "):
+            if part.startswith(("C:", "E:", "F:")):
+                try:
+                    odds = float(part.split("(@")[1].rstrip(")"))
+                except (IndexError, ValueError):
+                    continue
+                rule = part[0]
+                stats[rule]["bets"] += 1
+                stats[rule]["implied_sum"] += 100.0 / odds
+    return offered, stats
+
+
 def event_history(events, artifact_path="ensemble.joblib", history_path="fighter_history.parquet"):
-    """Per-fight betting detail for every ledger event: which card.json
-    posted it (walking weekly-predictions-log's history, since the branch's
-    HEAD has usually moved on to a newer card by the time this builds),
-    replayed through the exact same prediction code to recover each fight's
-    pick, odds and rule-A stake. {} if artifacts are missing; an event with
-    no matching commit is silently skipped (its row renders "detail
-    unavailable")."""
+    """Per-fight betting detail AND per-rule aggregate stats (bet count,
+    avg market-implied win%, fights offered) for every ledger event: which
+    card.json posted it (walking weekly-predictions-log's history, since
+    the branch's HEAD has usually moved on to a newer card by the time this
+    builds), replayed through the exact same prediction code. Returns
+    ({} , {}) if artifacts are missing; an event with no matching commit is
+    silently skipped in both (its row renders "detail unavailable")."""
     if not events or not (os.path.exists(artifact_path) and os.path.exists(history_path)):
-        return {}
+        return {}, {}
     import subprocess
     fetch_log_branch()
     log = subprocess.run(["git", "log", "--format=%H", "origin/weekly-predictions-log",
                           "--", "card.json"], capture_output=True, text=True)
     shas = [s for s in log.stdout.split() if s] if log.returncode == 0 else []
     if not shas:
-        return {}
+        return {}, {}
 
     sys.path.insert(0, ".")
     from predict import load_artifacts, load_history
     from send_weekly_predictions import make_predictions
     artifacts, history = load_artifacts(), load_history()
 
-    out = {}
+    detail, stats = {}, {}
     for e in events:
         match_sha, match_pred = None, None
         for sha in shas:  # newest first -> first hit = most recent posting of this card
@@ -177,8 +203,11 @@ def event_history(events, artifact_path="ensemble.joblib", history_path="fighter
         bankroll_m = re.search(r"risking \$(\d+)", match_pred)
         bankroll = int(bankroll_m.group(1)) if bankroll_m else 50
         preds = make_predictions(fights, history, artifacts, bankroll=bankroll)
-        out[e["date"] + "|" + e["event"]] = _card_fights_rows(fights, preds)
-    return out
+        key = e["date"] + "|" + e["event"]
+        detail[key] = _card_fights_rows(fights, preds)
+        offered, rule_stats = _event_rule_stats(fights, preds)
+        stats[key] = {"offered": offered, "rules": rule_stats}
+    return detail, stats
 
 
 def backtest(odds_path, artifact_path):
@@ -238,6 +267,8 @@ def backtest(odds_path, artifact_path):
                                         df["date_d"].max().strftime("%Y-%m-%d")],
             "fights_by_year": {str(y): int(n) for y, n in
                                df["date_d"].dt.year.value_counts().items()},
+            "fights_by_month": {str(m): int(n) for m, n in
+                                df["date_d"].dt.strftime("%Y-%m").value_counts().items()},
             "bets": bets}
 
 
@@ -253,7 +284,7 @@ def main():
     data = {"events": events, "totals": summarise(events)}
     hist = backtest(args.odds, args.artifact)
     upcoming = next_card(events, args.artifact)
-    event_detail = event_history(events, args.artifact)
+    event_detail, event_stats = event_history(events, args.artifact)
 
     md = markdown.Markdown(extensions=["tables", "fenced_code"])
     docs_html = {key: md.reset().convert(open(path).read()) if os.path.exists(path)
@@ -273,6 +304,7 @@ def main():
             .replace("__HIST__", json.dumps(hist))
             .replace("__NEXT__", json.dumps(upcoming))
             .replace("__EVENT_DETAIL__", json.dumps(event_detail))
+            .replace("__EVENT_STATS__", json.dumps(event_stats))
             .replace("__UPDATED__", aest.strftime("%-d %b %Y, %-I:%M %p AEST"))
             .replace("__FAQ__", docs_html["faq"])
             .replace("__METHODOLOGY__", docs_html["methodology"])
@@ -431,7 +463,8 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
 <main>
   <section id="tab-performance" role="tabpanel">
     <div class="tiles" id="perf-tiles"></div>
-    <div class="card" id="upcoming-card" style="margin-top:16px"></div>
+    <div class="card" id="perf-chart" style="margin-top:16px"></div>
+    <div class="card" id="upcoming-card"></div>
     <div class="card">
       <h2>Past events</h2>
       <p class="sub">Click an event for every fight and what rule A staked on it.</p>
@@ -453,12 +486,6 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
       <h2>Rule comparison &middot; live record</h2>
       <p class="sub">Rule A is staked with real money; C (vig floor) and E (shrunk staking) are shadow-logged on identical cards.</p>
       <div class="chart-scroll"><table id="rule-table"></table></div>
-    </div>
-
-    <div class="card">
-      <h2>Promotion trial</h2>
-      <p class="sub">Pre-registered (EXPERIMENTS.md entry 9): after 10 scored events, a shadow rule replaces A only if it leads on cumulative return <em>and</em> was ahead on at least 6 cards. Filled squares are scored events.</p>
-      <div class="slots" id="slots"></div>
     </div>
 
     <div class="card">
@@ -567,115 +594,152 @@ if (n) {
 }
 
 // -- charts ----------------------------------------------------------------
-const charts = document.getElementById("charts");
-function card(title, sub) {
-  const d = document.createElement("div"); d.className = "card";
-  d.innerHTML = `<h2>${title}</h2><p class="sub">${sub}</p>
-    <div class="legend"><span class="lA">A &middot; staked</span><span class="lC">C &middot; shadow</span><span class="lE">E &middot; shadow</span><span class="lF">F &middot; shadow</span></div>`;
-  charts.appendChild(d); return d;
-}
 const shortName = t => esc(t.replace(/^UFC (Fight Night|on \w+)[:\s]*/i, "").split(":")[0].trim());
+const EVENT_STATS = __EVENT_STATS__;
 
-if (!n) {
-  charts.insertAdjacentHTML("beforeend",
-    `<div class="empty"><strong>No events scored yet.</strong><br>
-     The Friday Routine grades each completed card and fills this page in —
-     the cumulative-return and per-event charts appear after the first grading.</div>`);
-} else {
-  // cumulative net line chart, x = events (a $0 start point makes n=1 drawable)
-  const W = 940, H = 300, L = 46, R = 76, T = 16, B = 40;
-  const cum = {};
-  for (const r of RULES) {
-    let acc = 0;
-    cum[r] = [0].concat(ev.map(e => acc += (e.rules[r] ? e.rules[r].net : 0)));
+// One consolidated chart engine, reused for the Experiments tab (all rules)
+// and the Performance tab (rule A only): a metric selector switches what's
+// plotted -- net return, hit rate, bet rate, avg market win% -- as running
+// (cumulative-to-date) values, one axis at a time (never dual-axis). Marker
+// SIZE always reflects that event's real net $ swing regardless of which
+// metric is on screen, so the "how big was this event" cue survives every
+// view. x = events, with a $0/undefined start point so n=1 still draws.
+const METRIC_DEFS = {
+  net:     {label: "Net return ($)",
+            axisFmt: v => (v < 0 ? "−$" : "$") + Math.abs(Math.round(v)),
+            endFmt: v => sign$(v)},
+  hit:     {label: "Hit rate (%)", axisFmt: v => Math.round(v) + "%",
+            endFmt: v => v.toFixed(0) + "%"},
+  betrate: {label: "Bet rate (%)", axisFmt: v => Math.round(v) + "%",
+            endFmt: v => v.toFixed(0) + "%"},
+  market:  {label: "Avg market win (%)", axisFmt: v => Math.round(v) + "%",
+            endFmt: v => v.toFixed(0) + "%"},
+};
+function buildSeries(rules) {
+  const s = {}; for (const m of Object.keys(METRIC_DEFS)) s[m] = {};
+  for (const r of rules) {
+    let netAcc = 0, won = 0, placed = 0, offeredAcc = 0, implSum = 0, bets = 0;
+    s.net[r] = [0]; s.hit[r] = [0]; s.betrate[r] = [0]; s.market[r] = [0];
+    ev.forEach(e => {
+      const row = e.rules[r];
+      const st = EVENT_STATS[e.date + "|" + e.event];
+      const ruleSt = st && st.rules ? st.rules[r] : null;
+      netAcc += row ? row.net : 0;
+      won += row ? row.won : 0;
+      placed += row ? row.placed : 0;
+      offeredAcc += st ? st.offered : 0;
+      if (ruleSt) { implSum += ruleSt.implied_sum; bets += ruleSt.bets; }
+      s.net[r].push(netAcc);
+      s.hit[r].push(placed ? 100 * won / placed : 0);
+      s.betrate[r].push(offeredAcc ? 100 * placed / offeredAcc : 0);
+      s.market[r].push(bets ? implSum / bets : 0);
+    });
   }
-  const allY = RULES.flatMap(r => cum[r]).concat(ev.flatMap(e => RULES.map(r => e.rules[r] ? e.rules[r].net : 0)));
-  const yMax = Math.max(5, ...allY), yMin = Math.min(0, ...allY);
-  const pad = (yMax - yMin) * 0.08;
+  return s;
+}
+
+function drawMetricChart(svg, rules, metricKey, series) {
+  const def = METRIC_DEFS[metricKey];
+  const W = 940, H = 300, L = 46, R = 76, T = 16, B = 40, ticks = 4;
+  const cum = {}; rules.forEach(r => cum[r] = series[metricKey][r]);
+  const allY = rules.flatMap(r => cum[r]);
+  const yMax = Math.max(metricKey === "net" ? 5 : 10, ...allY), yMin = Math.min(0, ...allY);
+  const pad = (yMax - yMin) * 0.08 || 1;
   const ySc = v => T + (yMax + pad - v) / (yMax + pad - yMin + pad) * (H - T - B);
   const xSc = i => L + i / Math.max(1, n) * (W - L - R);
+  const maxAbsNet = Math.max(1, ...ev.flatMap(e => rules.map(r => Math.abs(e.rules[r] ? e.rules[r].net : 0))));
+  const rScale = v => 3.5 + (Math.abs(v) / maxAbsNet) * 6.5;  // marker radius 3.5-10px
 
-  let g = "", ticks = 4;
+  let g = "";
   for (let i = 0; i <= ticks; i++) {
     const v = yMin + (yMax - yMin) * i / ticks, y = ySc(v);
     g += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>
-          <text x="${L - 8}" y="${y + 4}" text-anchor="end">${(v < 0 ? "−$" : "$") + Math.abs(Math.round(v))}</text>`;
+          <text x="${L - 8}" y="${y + 4}" text-anchor="end">${def.axisFmt(v)}</text>`;
   }
   g += `<line class="zero" x1="${L}" x2="${W - R}" y1="${ySc(0)}" y2="${ySc(0)}"/>`;
   g += `<text x="${xSc(0)}" y="${H - B + 18}" text-anchor="middle">start</text>`;
-  ev.forEach((e, i) => {
-    g += `<text x="${xSc(i + 1)}" y="${H - B + 18}" text-anchor="middle">${shortName(e.event)}</text>`;
-  });
-  for (const r of RULES) {
+  ev.forEach((e, i) => g += `<text x="${xSc(i + 1)}" y="${H - B + 18}" text-anchor="middle">${shortName(e.event)}</text>`);
+  for (const r of rules) {
     const pts = cum[r].map((v, i) => xSc(i).toFixed(1) + "," + ySc(v).toFixed(1)).join(" ");
     g += `<polyline class="s${r}" points="${pts}" fill="none" stroke-width="2" stroke-linejoin="round"/>`;
     cum[r].forEach((v, i) => {
       if (i === 0) return;
-      g += `<circle class="f${r} pt" data-r="${r}" data-i="${i - 1}" cx="${xSc(i)}" cy="${ySc(v)}" r="4.5" stroke="var(--surface)" stroke-width="2"/>`;
+      const row = ev[i - 1].rules[r], rad = row ? rScale(row.net) : 3.5;
+      g += `<circle class="f${r} pt" data-r="${r}" data-i="${i - 1}" cx="${xSc(i)}" cy="${ySc(v)}" r="${rad.toFixed(1)}" stroke="var(--surface)" stroke-width="2"/>`;
     });
   }
-  // direct end labels, nudged apart if they collide (relief for light-mode aqua)
-  const ends = RULES.map(r => ({r, y: ySc(cum[r][n])})).sort((a, b) => a.y - b.y);
+  const ends = rules.map(r => ({r, y: ySc(cum[r][n])})).sort((a, b) => a.y - b.y);
   for (let i = 1; i < ends.length; i++)
     if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
   for (const e2 of ends)
-    g += `<text class="end-label t${e2.r}" x="${W - R + 8}" y="${e2.y + 4}">${e2.r} ${sign$(cum[e2.r][n])}</text>`;
+    g += `<text class="end-label t${e2.r}" x="${W - R + 8}" y="${e2.y + 4}">${e2.r} ${def.endFmt(cum[e2.r][n])}</text>`;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = g;
+}
 
-  const c1 = card("Cumulative return by event", "Running net profit per rule across scored cards — every rule replays the same $50 bankroll each event.");
-  c1.insertAdjacentHTML("beforeend",
-    `<div class="chart-scroll"><svg id="cumchart" viewBox="0 0 ${W} ${H}" style="min-width:640px;width:100%">${g}</svg></div>`);
-  c1.addEventListener("pointermove", e => {
+const METRIC_SUB = {
+  net: (n1) => `Cumulative net profit per rule; marker size is that event's net swing. ${n1 > 1 ? "Every rule replays the same $50 bankroll each event." : ""}`,
+  hit: () => "Running hit rate to date (cumulative wins &divide; cumulative bets placed) per rule.",
+  betrate: () => "Running bet rate to date (cumulative bets placed &divide; cumulative fights offered) per rule — how often each rule finds value.",
+  market: () => "Running average odds-implied win probability of each rule's own bets to date — higher means shorter-priced, safer picks.",
+};
+let chartSeq = 0;
+function initReturnChart(container, rules, title) {
+  if (!n) {
+    container.insertAdjacentHTML("beforeend",
+      `<h2>${title}</h2><div class="empty" style="margin-top:8px">
+       <strong>No events scored yet.</strong><br>
+       Fills in after the Friday Routine grades the first card.</div>`);
+    return;
+  }
+  const uid = "rc" + (chartSeq++);
+  const series = buildSeries(rules);
+  const legend = rules.length > 1
+    ? `<div class="legend">${rules.map(r => `<span class="l${r}">${r} &middot; ${r === "A" ? "staked" : "shadow"}</span>`).join("")}</div>`
+    : "";
+  const options = Object.entries(METRIC_DEFS).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join("");
+  container.insertAdjacentHTML("beforeend", `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0">${title}</h2>
+      <select id="${uid}-metric" style="font:12.5px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 8px">${options}</select>
+    </div>
+    <p class="sub" id="${uid}-sub"></p>${legend}
+    <div class="chart-scroll"><svg id="${uid}-svg" viewBox="0 0 940 300" style="min-width:640px;width:100%"></svg></div>`);
+  const sel = document.getElementById(uid + "-metric");
+  const subEl = document.getElementById(uid + "-sub");
+  const svgEl = document.getElementById(uid + "-svg");
+  function redraw() {
+    subEl.innerHTML = METRIC_SUB[sel.value](n);
+    drawMetricChart(svgEl, rules, sel.value, series);
+  }
+  sel.addEventListener("change", redraw);
+  redraw();
+
+  container.addEventListener("pointermove", e => {
     const t = e.target.closest(".pt");
     if (!t) return tipHide();
     const i = +t.dataset.i, r = t.dataset.r, row = ev[i].rules[r];
+    if (!row) return tipHide();
+    const st = EVENT_STATS[ev[i].date + "|" + ev[i].event];
+    const ruleSt = st && st.rules ? st.rules[r] : null;
+    const hit = row.placed ? Math.round(100 * row.won / row.placed) + "% (" + row.won + "/" + row.placed + ")" : "—";
+    const betRate = (st && st.offered) ? Math.round(100 * row.placed / st.offered) + "% (" + row.placed + "/" + st.offered + ")" : "—";
+    const mktAvg = (ruleSt && ruleSt.bets) ? (ruleSt.implied_sum / ruleSt.bets).toFixed(1) + "%" : "—";
     tipShow(`<div class="t">${esc(ev[i].event)}</div>
       <div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(row.net)}">${sign$(row.net)}</span></div>
       <div class="row"><span>staked → returned</span><span>${fmt$(row.staked)} → ${fmt$(row.returned)}</span></div>
-      <div class="row"><span>bets</span><span>${row.won}/${row.placed} won${row.void ? ", " + row.void + " void" : ""}</span></div>
-      <div class="row"><span>cumulative</span><span class="${cls(cum[r][i + 1])}">${sign$(cum[r][i + 1])}</span></div>`,
+      <div class="row"><span>hit rate</span><span>${hit}${row.void ? ", " + row.void + " void" : ""}</span></div>
+      <div class="row"><span>bet rate</span><span>${betRate}</span></div>
+      <div class="row"><span>avg market win</span><span>${mktAvg}</span></div>`,
       e.clientX, e.clientY);
   });
-  c1.addEventListener("pointerleave", tipHide);
-
-  // per-event net, grouped bars
-  const H2 = 240, bw = Math.min(26, (W - L - R) / n / 4);
-  let b = "";
-  for (let i = 0; i <= ticks; i++) {
-    const v = yMin + (yMax - yMin) * i / ticks;
-    const y = T + (yMax + pad - v) / (yMax + pad - yMin + pad) * (H2 - T - B);
-    b += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>
-          <text x="${L - 8}" y="${y + 4}" text-anchor="end">${(v < 0 ? "−$" : "$") + Math.abs(Math.round(v))}</text>`;
-  }
-  const ySc2 = v => T + (yMax + pad - v) / (yMax + pad - yMin + pad) * (H2 - T - B);
-  b += `<line class="zero" x1="${L}" x2="${W - R}" y1="${ySc2(0)}" y2="${ySc2(0)}"/>`;
-  ev.forEach((e, i) => {
-    const cx = L + (i + 0.5) / n * (W - L - R);
-    b += `<text x="${cx}" y="${H2 - B + 18}" text-anchor="middle">${shortName(e.event)}</text>`;
-    RULES.forEach((r, j) => {
-      const row = e.rules[r]; if (!row) return;
-      const x = cx + (j - 1) * (bw + 2) - bw / 2;
-      const y0 = ySc2(0), y1 = ySc2(row.net);
-      const top = Math.min(y0, y1), h = Math.max(2, Math.abs(y0 - y1));
-      const rx = `rx="4"`;
-      b += `<rect class="f${r} bar" data-r="${r}" data-i="${i}" x="${x.toFixed(1)}" y="${top.toFixed(1)}"
-             width="${bw}" height="${h.toFixed(1)}" ${rx}/>`;
-    });
-  });
-  const c2 = card("Net per event", "Each card graded independently: what the $50 came back as, minus the $50, per rule.");
-  c2.insertAdjacentHTML("beforeend",
-    `<div class="chart-scroll"><svg viewBox="0 0 ${W} ${H2}" style="min-width:640px;width:100%">${b}</svg></div>`);
-  c2.addEventListener("pointermove", e => {
-    const t = e.target.closest(".bar");
-    if (!t) return tipHide();
-    const i = +t.dataset.i, r = t.dataset.r, row = ev[i].rules[r];
-    tipShow(`<div class="t">${esc(ev[i].event)}</div>
-      <div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(row.net)}">${sign$(row.net)}</span></div>
-      <div class="row"><span>staked → returned</span><span>${fmt$(row.staked)} → ${fmt$(row.returned)}</span></div>
-      <div class="row"><span>hit</span><span>${row.won}/${row.placed}${row.void ? " (+" + row.void + " void)" : ""}</span></div>`,
-      e.clientX, e.clientY);
-  });
-  c2.addEventListener("pointerleave", tipHide);
+  container.addEventListener("pointerleave", tipHide);
 }
+
+const expChartCard = document.createElement("div");
+expChartCard.className = "card";
+document.getElementById("charts").appendChild(expChartCard);
+initReturnChart(expChartCard, RULES, "Return &amp; performance over time");
 
 // -- rule table ------------------------------------------------------------
 const rt = document.getElementById("rule-table");
@@ -710,6 +774,7 @@ if (n) {
     `<div class="tile"><div class="k">Profit / loss so far</div>
      <div class="v">&mdash;</div><div class="s">no events scored yet</div></div>`);
 }
+initReturnChart(document.getElementById("perf-chart"), ["A"], "Rule A over time");
 
 // upcoming card: bankroll allocator
 const upcomingEl = document.getElementById("upcoming-card");
@@ -853,12 +918,22 @@ if (!HIST) {
     htile("Kelly ROI", A.n ? (A.kellyROI >= 0 ? "+" : "") + A.kellyROI.toFixed(1) + "%" : "—", "stake-weighted, uncompounded", A.n ? cls(A.kellyROI) : "");
   }
 
-  // cumulative flat profit by month; rules toggle here, year comes from the tab filter
+  // per-month series (net $1/bet, hit rate, bet rate, avg market win%) by
+  // month; rules + metric toggle here, year comes from the tab filter
   const W = 940, H = 320, L = 52, R = 86, T = 16, B = 34;
   const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const histMetricSub = {
+    net: () => "Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement.",
+    hit: () => "Running hit rate to date (cumulative wins &divide; cumulative bets) per rule, by month.",
+    betrate: () => "Running bet rate to date (cumulative bets &divide; cumulative fights with odds that month) per rule — how often each rule finds value.",
+    market: () => "Running average odds-implied win probability of each rule's own bets to date — higher means shorter-priced, safer picks.",
+  };
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
-    <h2>If we'd bet $1 on every value bet</h2>
-    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement. Click a rule to toggle it; the range filter above restarts the running total at $0 at the start of the range.</p>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2 style="margin:0">If we'd bet $1 on every value bet</h2>
+      <select id="hist-metric" style="font:12.5px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 8px">${Object.entries(METRIC_DEFS).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join("")}</select>
+    </div>
+    <p class="sub" id="hist-sub"></p>
     <div class="legend" id="hist-controls">
       <button class="lgbtn lA" data-r="A" aria-pressed="true">A &middot; kelly value</button>
       <button class="lgbtn lC" data-r="C" aria-pressed="true">C &middot; vig floor</button>
@@ -868,40 +943,64 @@ if (!HIST) {
     <div class="chart-scroll"><svg id="histchart" viewBox="0 0 ${W} ${H}" style="min-width:640px;width:100%"></svg></div>
   </div>`);
   const hsvg = document.getElementById("histchart");
-  let hMonths = [], hCum = {}, hActive = [...RULES];
+  const hMetricSel = document.getElementById("hist-metric");
+  const hSubEl = document.getElementById("hist-sub");
+  let hMonths = [], hSeries = {}, hCum = {}, hActive = [...RULES];
   let hxS = i => i, hyS = v => v;
+
+  // full per-month series for every metric at once (cheap at this data size)
+  function computeHistSeries(months) {
+    const mi = new Map(months.map((m, i) => [m, i]));
+    const out = {};
+    for (const r of hActive) {
+      const netPer = new Array(months.length).fill(0), wonPer = new Array(months.length).fill(0);
+      const betsPer = new Array(months.length).fill(0), implPer = new Array(months.length).fill(0);
+      for (const row of HIST.bets[r]) {
+        const key = row[0].slice(0, 7);
+        if (!mi.has(key)) continue;
+        const [odds, , w] = row.slice(-3), idx = mi.get(key);
+        netPer[idx] += w ? odds - 1 : -1;
+        wonPer[idx] += w ? 1 : 0;
+        betsPer[idx] += 1;
+        implPer[idx] += 100 / odds;
+      }
+      let netAcc = 0, wonAcc = 0, betsAcc = 0, implAcc = 0, offAcc = 0;
+      const net = [], hit = [], betrate = [], market = [];
+      months.forEach((m, i) => {
+        netAcc += netPer[i]; wonAcc += wonPer[i]; betsAcc += betsPer[i]; implAcc += implPer[i];
+        offAcc += (HIST.fights_by_month || {})[m] || 0;
+        net.push(+netAcc.toFixed(2));
+        hit.push(betsAcc ? 100 * wonAcc / betsAcc : 0);
+        betrate.push(offAcc ? 100 * betsAcc / offAcc : 0);
+        market.push(betsAcc ? implAcc / betsAcc : 0);
+      });
+      out[r] = {net, hit, betrate, market};
+    }
+    return out;
+  }
 
   function drawHist() {
     // YR, not R: R is the chart's right margin in this scope
     const YR = yrRange(), single = YR[0] === YR[1], spanYears = +YR[1] - +YR[0] + 1;
+    const metric = hMetricSel.value, def = METRIC_DEFS[metric];
+    hSubEl.innerHTML = histMetricSub[metric]();
     hMonths = allMonths.filter(m => inRange(m, YR));
     if (!hActive.length || !hMonths.length) {
       // (no rules toggled on, or a year with no bets)
       hsvg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">no rules selected — click a rule above to bring it back</text>`;
       return;
     }
-    const mi = new Map(hMonths.map((m, i) => [m, i]));
-    hCum = {};
-    for (const r of hActive) {
-      const per = new Array(hMonths.length).fill(0);
-      for (const row of HIST.bets[r]) {
-        const key = row[0].slice(0, 7);
-        if (!mi.has(key)) continue;  // outside the range
-        const [odds, , w] = row.slice(-3);
-        per[mi.get(key)] += w ? odds - 1 : -1;
-      }
-      let acc = 0;
-      hCum[r] = per.map(v => +(acc += v).toFixed(2));
-    }
+    hSeries = computeHistSeries(hMonths);
+    hCum = {}; for (const r of hActive) hCum[r] = hSeries[r][metric];
     const vals = hActive.flatMap(r => hCum[r]);
-    const hMax = Math.max(1, ...vals), hMin = Math.min(0, ...vals);
+    const hMax = Math.max(metric === "net" ? 1 : 10, ...vals), hMin = Math.min(0, ...vals);
     hyS = v => T + (hMax - v) / (hMax - hMin || 1) * (H - T - B);
     hxS = i => L + i / Math.max(1, hMonths.length - 1) * (W - L - R);
     let hg = "";
     for (let i = 0; i <= 4; i++) {
       const v = hMin + (hMax - hMin) * i / 4, y = hyS(v);
       hg += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>
-             <text x="${L - 8}" y="${y + 4}" text-anchor="end">${(v < 0 ? "−$" : "$") + Math.abs(Math.round(v))}</text>`;
+             <text x="${L - 8}" y="${y + 4}" text-anchor="end">${def.axisFmt(v)}</text>`;
     }
     hg += `<line class="zero" x1="${L}" x2="${W - R}" y1="${hyS(0)}" y2="${hyS(0)}"/>`;
     hMonths.forEach((m, i) => {
@@ -916,11 +1015,12 @@ if (!HIST) {
     for (let i = 1; i < hEnds.length; i++)
       if (hEnds[i].y - hEnds[i - 1].y < 14) hEnds[i].y = hEnds[i - 1].y + 14;
     for (const e2 of hEnds)
-      hg += `<text class="end-label t${e2.r}" x="${W - R + 8}" y="${e2.y + 4}">${e2.r} ${sign$(hCum[e2.r][hMonths.length - 1])}</text>`;
+      hg += `<text class="end-label t${e2.r}" x="${W - R + 8}" y="${e2.y + 4}">${e2.r} ${def.endFmt(hCum[e2.r][hMonths.length - 1])}</text>`;
     hg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--axis)" stroke-dasharray="3,3" visibility="hidden"/>`;
     hsvg.innerHTML = hg;
   }
   drawHist();
+  hMetricSel.addEventListener("change", drawHist);
 
   document.querySelectorAll("#hist-controls .lgbtn").forEach(b => b.addEventListener("click", () => {
     b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
@@ -937,9 +1037,12 @@ if (!HIST) {
     const i = Math.round((pt.x - L) / (W - L - R) * (hMonths.length - 1));
     xhair.setAttribute("x1", hxS(i)); xhair.setAttribute("x2", hxS(i));
     xhair.setAttribute("visibility", "visible");
-    tipShow(`<div class="t">${hMonths[i]}</div>` + hActive.map(r =>
-      `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(hCum[r][i])}">${sign$(hCum[r][i])}</span></div>`).join(""),
-      e.clientX, e.clientY);
+    tipShow(`<div class="t">${hMonths[i]}</div>` + hActive.map(r => {
+      const s = hSeries[r];
+      return `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(s.net[i])}">${sign$(s.net[i])}</span></div>
+        <div class="row"><span>&nbsp;&nbsp;hit / bet rate</span><span>${s.hit[i].toFixed(0)}% / ${s.betrate[i].toFixed(0)}%</span></div>
+        <div class="row"><span>&nbsp;&nbsp;avg market win</span><span>${s.market[i].toFixed(1)}%</span></div>`;
+    }).join(""), e.clientX, e.clientY);
   });
   hsvg.addEventListener("pointerleave", () => { hsvg.querySelector("#xhair")?.setAttribute("visibility", "hidden"); tipHide(); });
 
@@ -1121,14 +1224,6 @@ function wireDocSearch(tab) {
 wireDocSearch("methodology");
 wireDocSearch("faq");
 
-// -- promotion slots -------------------------------------------------------
-const slots = document.getElementById("slots");
-for (let i = 0; i < 10; i++) {
-  const e = ev[i];
-  slots.insertAdjacentHTML("beforeend", e
-    ? `<div class="slot done" title="${esc(e.event)} (${e.date})"><span class="n">${i + 1}</span>${e.date.slice(5)}</div>`
-    : `<div class="slot"><span class="n">${i + 1}</span></div>`);
-}
 </script>
 """
 
