@@ -33,7 +33,7 @@ from send_weekly_predictions import make_predictions  # noqa: E402
 LEDGER = "ledger.md"
 COLLECTED = "collected_odds.csv"
 LEDGER_HEADER = (
-    "# Weekly betting ledger (rule A staked; C/E shadow -- EXPERIMENTS.md entry 9)\n\n"
+    "# Weekly betting ledger (rule A staked; C/E shadow per entry 9, F per entry 10)\n\n"
     "| Date | Event | Rule | Staked | Returned | Net | Bets won/placed/void |\n"
     "|---|---|---|---|---|---|---|\n"
 )
@@ -76,14 +76,14 @@ def main():
                              event_country=args.event_country,
                              bankroll=args.bankroll)
 
-    rules = {"A": [], "C": [], "E": []}
+    rules = {"A": [], "C": [], "E": [], "F": []}
     for p, f in zip(preds, fights):
         if p.get("stake_amt"):
             rules["A"].append((p["fighter1"], p["fighter2"], p["bet_on"],
                                p["bet_odds"], p["stake_amt"]))
         # shadow strings like "C: $50 on Donte Johnson (@1.40)"
         for part in (p.get("shadow") or "").split(" / "):
-            if part.startswith(("C:", "E:")):
+            if part.startswith(("C:", "E:", "F:")):
                 rule = part[0]
                 amt = int(part.split("$")[1].split(" ")[0])
                 name = part.split(" on ")[1].split(" (@")[0]

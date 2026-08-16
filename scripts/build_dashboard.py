@@ -27,7 +27,7 @@ DOCS = [("faq", "FAQ", "docs/FAQ.md"),
         ("methodology", "Methodology", "docs/METHODOLOGY.md"),
         ("dictionary", "Data dictionary", "docs/DATA_DICTIONARY.md")]
 
-ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|([^|]+)\|\s*([ACE])\s*"
+ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|([^|]+)\|\s*([ACEF])\s*"
                  r"\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)\s*\|\s*([+-][\d.]+)\s*"
                  r"\|\s*(\d+)/(\d+)/(\d+)\s*\|")
 
@@ -55,7 +55,7 @@ def parse_ledger(path):
 
 def summarise(events):
     total = {r: {"staked": 0.0, "returned": 0.0, "won": 0, "placed": 0,
-                 "void": 0, "ahead": 0} for r in "ACE"}
+                 "void": 0, "ahead": 0} for r in "ACEF"}
     for e in events:
         for r, row in e["rules"].items():
             t = total[r]
@@ -88,7 +88,10 @@ def backtest(odds_path, artifact_path):
     df = (oof.merge(odds, on=["r_fighter", "b_fighter", "date_d"])
              .sort_values("date_d"))
 
-    bets = {"A": [], "C": [], "E": []}
+    import math
+    lam = 0.746  # rule F model-trust weight (entry 10; frozen)
+    logit = lambda x: math.log(x / (1 - x))  # noqa: E731
+    bets = {"A": [], "C": [], "E": [], "F": []}
     for r in df.itertuples():
         k_r, k_b = kelly_edge(r.proba, r.odds_r), kelly_edge(1 - r.proba, r.odds_b)
         imp_r_vf = (1 / r.odds_r) / (1 / r.odds_r + 1 / r.odds_b)
@@ -115,6 +118,11 @@ def backtest(odds_path, artifact_path):
         ks_r, ks_b = kelly_edge(ps, r.odds_r), kelly_edge(1 - ps, r.odds_b)
         if ks_r > 0 or ks_b > 0:
             bets["E"].append(row(ks_r > 0, ks_r if ks_r > 0 else ks_b, "E"))
+        pc = min(max(r.proba, 1e-6), 1 - 1e-6)
+        pf = 1 / (1 + math.exp(-(lam * logit(pc) + (1 - lam) * logit(imp_r_vf))))
+        kf_r, kf_b = kelly_edge(pf, r.odds_r), kelly_edge(1 - pf, r.odds_b)
+        if kf_r > 0 or kf_b > 0:
+            bets["F"].append(row(kf_r > 0, kf_r if kf_r > 0 else kf_b, "F"))
     return {"fights": len(df), "span": [df["date_d"].min().strftime("%Y-%m-%d"),
                                         df["date_d"].max().strftime("%Y-%m-%d")],
             "fights_by_year": {str(y): int(n) for y, n in
@@ -165,7 +173,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
     --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7;
     --border: rgba(11,11,11,0.10);
-    --sA: #2a78d6; --sC: #eb6834; --sE: #1baf7a;
+    --sA: #2a78d6; --sC: #eb6834; --sE: #1baf7a; --sF: #eda100;
     --good: #006300; --bad: #d03b3b; --chip: #f0efec;
   }
   @media (prefers-color-scheme: dark) {
@@ -173,7 +181,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
       --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
       --muted: #898781; --grid: #2c2c2a; --axis: #383835;
       --border: rgba(255,255,255,0.10);
-      --sA: #3987e5; --sC: #d95926; --sE: #199e70;
+      --sA: #3987e5; --sC: #d95926; --sE: #199e70; --sF: #c98500;
       --good: #0ca30c; --bad: #e66767; --chip: #262624;
     }
   }
@@ -181,7 +189,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
     --muted: #898781; --grid: #2c2c2a; --axis: #383835;
     --border: rgba(255,255,255,0.10);
-    --sA: #3987e5; --sC: #d95926; --sE: #199e70;
+    --sA: #3987e5; --sC: #d95926; --sE: #199e70; --sF: #c98500;
     --good: #0ca30c; --bad: #e66767; --chip: #262624;
   }
   * { box-sizing: border-box; }
@@ -231,12 +239,16 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   .legend .lA::before { background: var(--sA); }
   .legend .lC::before { background: var(--sC); }
   .legend .lE::before { background: var(--sE); }
+  .legend .lF::before { background: var(--sF); }
   svg text { font: 11.5px system-ui, sans-serif; fill: var(--muted); }
   svg .end-label { font-weight: 700; font-size: 12px; }
   svg .end-label.tA { fill: var(--sA); } svg .end-label.tC { fill: var(--sC); }
   svg .end-label.tE { fill: var(--sE); }
+  svg .end-label.tF { fill: var(--sF); }
   .sA { stroke: var(--sA); } .sC { stroke: var(--sC); } .sE { stroke: var(--sE); }
+  .sF { stroke: var(--sF); }
   .fA { fill: var(--sA); } .fC { fill: var(--sC); } .fE { fill: var(--sE); }
+  .fF { fill: var(--sF); }
   .gridline { stroke: var(--grid); stroke-width: 1; }
   .zero { stroke: var(--axis); stroke-width: 1.5; }
   .chart-scroll { overflow-x: auto; }
@@ -310,7 +322,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   <section id="tab-trial" role="tabpanel" hidden>
     <div class="card" style="margin-top:0">
       <h2>The experiment</h2>
-      <p class="sub" style="margin-bottom:0">Rule A (kelly-proportional value betting) is staked with real money every card. Two challengers that looked better in the recent backtest — C, which ignores edges smaller than the bookmaker's margin, and E, which shrinks the model's probability halfway toward the market's before betting — run as shadows on identical cards. Neither was promotable from the backtest alone (winner's-curse risk), so the tiebreak runs prospectively, below.</p>
+      <p class="sub" style="margin-bottom:0">Rule A (kelly-proportional value betting) is staked with real money every card. Two challengers that looked better in the recent backtest — C, which ignores edges smaller than the bookmaker's margin, and E, which shrinks the model's probability halfway toward the market's before betting — run as shadows on identical cards. Neither was promotable from the backtest alone (winner's-curse risk), so the tiebreak runs prospectively, below. A third shadow, F (entry 10, added Aug 16), blends the model's probability with the market's at a fitted, frozen trust weight (&lambda;=0.746) before betting — the measured version of E's fixed 50/50 humility; its 10-event clock starts from its first logged card.</p>
     </div>
 
     <div class="card">
@@ -358,8 +370,8 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
 
 <script>
 const DATA = __DATA__;
-const RULES = ["A", "C", "E"];
-const RULE_NAME = {A: "A · kelly value", C: "C · vig floor", E: "E · shrunk"};
+const RULES = ["A", "C", "E", "F"];
+const RULE_NAME = {A: "A · kelly value", C: "C · vig floor", E: "E · shrunk", F: "F · fitted blend"};
 const fmt$ = v => (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2);
 const sign$ = v => (v >= 0 ? "+$" : "−$") + Math.abs(v).toFixed(2);
 const cls = v => v >= 0 ? "pos" : "neg";
@@ -420,7 +432,7 @@ const charts = document.getElementById("charts");
 function card(title, sub) {
   const d = document.createElement("div"); d.className = "card";
   d.innerHTML = `<h2>${title}</h2><p class="sub">${sub}</p>
-    <div class="legend"><span class="lA">A &middot; staked</span><span class="lC">C &middot; shadow</span><span class="lE">E &middot; shadow</span></div>`;
+    <div class="legend"><span class="lA">A &middot; staked</span><span class="lC">C &middot; shadow</span><span class="lE">E &middot; shadow</span><span class="lF">F &middot; shadow</span></div>`;
   charts.appendChild(d); return d;
 }
 const shortName = t => esc(t.replace(/^UFC (Fight Night|on \w+)[:\s]*/i, "").split(":")[0].trim());
@@ -564,16 +576,25 @@ if (!HIST) {
   htiles.insertAdjacentHTML("beforebegin",
     `<div class="legend" style="margin:0 0 12px;align-items:center">
        <span style="font-weight:600;color:var(--ink)">Historical replay</span>
-       <select id="hist-yr" style="margin-left:auto"><option value="">All years (${HIST.span[0].slice(0, 4)}–${HIST.span[1].slice(0, 4)})</option>${histYears.map(y => `<option>${y}</option>`).join("")}</select>
+       <label style="margin-left:auto;color:var(--muted);font-size:12.5px">From
+         <select id="hist-y1" style="margin-left:4px">${histYears.map(y => `<option>${y}</option>`).join("")}</select></label>
+       <label style="color:var(--muted);font-size:12.5px">To
+         <select id="hist-y2" style="margin-left:4px">${histYears.map((y, i) => `<option${i === histYears.length - 1 ? " selected" : ""}>${y}</option>`).join("")}</select></label>
      </div>`);
-  const yrSelH = document.getElementById("hist-yr");
-  const fightsIn = yr => yr ? (HIST.fights_by_year || {})[yr] || 0 : HIST.fights;
+  const y1Sel = document.getElementById("hist-y1"), y2Sel = document.getElementById("hist-y2");
+  const yrRange = () => {
+    const a = y1Sel.value, b = y2Sel.value;
+    return a <= b ? [a, b] : [b, a];  // swap if picked backwards
+  };
+  const inRange = (d, R) => d.slice(0, 4) >= R[0] && d.slice(0, 4) <= R[1];
+  const fightsIn = R => histYears.filter(y => y >= R[0] && y <= R[1])
+    .reduce((n, y) => n + ((HIST.fights_by_year || {})[y] || 0), 0);
 
   // metrics per rule within the selected year: flat = $1/bet; kelly = stake-weighted
-  function metrics(r, yr) {
+  function metrics(r, R) {
     let flat = 0, kst = 0, kpr = 0, won = 0, n = 0, imp = 0;
     for (const row of HIST.bets[r]) {
-      if (yr && !row[0].startsWith(yr)) continue;
+      if (!inRange(row[0], R)) continue;
       const [odds, k, w] = row.slice(-3);
       n++; flat += w ? odds - 1 : -1;
       kst += k; kpr += w ? k * (odds - 1) : -k; won += w;
@@ -583,11 +604,11 @@ if (!HIST) {
             flatROI: n ? 100 * flat / n : 0, kellyROI: kst ? 100 * kpr / kst : 0};
   }
 
-  function renderTiles(yr) {
+  function renderTiles(R) {
     htiles.innerHTML = "";
-    const A = metrics("A", yr);
-    const span = yr || HIST.span[0].slice(0, 4) + "–" + HIST.span[1].slice(0, 4);
-    htile("Fights with odds", fightsIn(yr).toLocaleString(), span);
+    const A = metrics("A", R);
+    const span = R[0] === R[1] ? R[0] : R[0] + "–" + R[1];
+    htile("Fights with odds", fightsIn(R).toLocaleString(), span);
     htile("Rule A bets", A.n.toLocaleString(), A.n ? A.hit.toFixed(1) + "% hit rate" : "—");
     htile("Flat $1 per bet", A.n ? sign$(A.flat) : "—", A.n ? A.flatROI.toFixed(1) + "% ROI on " + A.n.toLocaleString() + " × $1" : "—", A.n ? cls(A.flat) : "");
     htile("Kelly ROI", A.n ? (A.kellyROI >= 0 ? "+" : "") + A.kellyROI.toFixed(1) + "%" : "—", "stake-weighted, uncompounded", A.n ? cls(A.kellyROI) : "");
@@ -598,11 +619,12 @@ if (!HIST) {
   const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
     <h2>If we'd bet $1 on every value bet</h2>
-    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement. Click a rule to toggle it; the year filter above restarts the running total at $0 for that year.</p>
+    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement. Click a rule to toggle it; the range filter above restarts the running total at $0 at the start of the range.</p>
     <div class="legend" id="hist-controls">
       <button class="lgbtn lA" data-r="A" aria-pressed="true">A &middot; kelly value</button>
       <button class="lgbtn lC" data-r="C" aria-pressed="true">C &middot; vig floor</button>
       <button class="lgbtn lE" data-r="E" aria-pressed="true">E &middot; shrunk</button>
+      <button class="lgbtn lF" data-r="F" aria-pressed="true">F &middot; fitted blend</button>
     </div>
     <div class="chart-scroll"><svg id="histchart" viewBox="0 0 ${W} ${H}" style="min-width:640px;width:100%"></svg></div>
   </div>`);
@@ -611,8 +633,9 @@ if (!HIST) {
   let hxS = i => i, hyS = v => v;
 
   function drawHist() {
-    const yr = yrSelH.value;
-    hMonths = allMonths.filter(m => !yr || m.startsWith(yr));
+    // YR, not R: R is the chart's right margin in this scope
+    const YR = yrRange(), single = YR[0] === YR[1], spanYears = +YR[1] - +YR[0] + 1;
+    hMonths = allMonths.filter(m => inRange(m, YR));
     if (!hActive.length || !hMonths.length) {
       // (no rules toggled on, or a year with no bets)
       hsvg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">no rules selected — click a rule above to bring it back</text>`;
@@ -624,7 +647,7 @@ if (!HIST) {
       const per = new Array(hMonths.length).fill(0);
       for (const row of HIST.bets[r]) {
         const key = row[0].slice(0, 7);
-        if (!mi.has(key)) continue;
+        if (!mi.has(key)) continue;  // outside the range
         const [odds, , w] = row.slice(-3);
         per[mi.get(key)] += w ? odds - 1 : -1;
       }
@@ -643,8 +666,8 @@ if (!HIST) {
     }
     hg += `<line class="zero" x1="${L}" x2="${W - R}" y1="${hyS(0)}" y2="${hyS(0)}"/>`;
     hMonths.forEach((m, i) => {
-      const label = yr ? MN[+m.slice(5, 7) - 1]
-        : (m.endsWith("-01") && +m.slice(0, 4) % 2 === 1 ? m.slice(0, 4) : null);
+      const label = single ? MN[+m.slice(5, 7) - 1]
+        : (m.endsWith("-01") && (spanYears <= 8 || +m.slice(0, 4) % 2 === 1) ? m.slice(0, 4) : null);
       if (label) hg += `<text x="${hxS(i)}" y="${H - B + 18}" text-anchor="middle">${label}</text>`;
     });
     for (const r of hActive)
@@ -687,11 +710,11 @@ if (!HIST) {
     <p class="sub">Same fights, three disciplines. Avg market win % is what the odds predicted for that rule's bets — a hit rate above it is where the profit comes from. Kelly ROI weights each bet by its kelly stake (how the weekly bankroll is actually split).</p>
     <div class="chart-scroll"><table id="hist-summary"></table></div>
   </div>`);
-  function renderSummary(yr) {
+  function renderSummary(R) {
     document.getElementById("hist-summary").innerHTML =
       `<tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Avg market win %</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>` +
       RULES.map(r => {
-        const m = metrics(r, yr), fights = fightsIn(yr);
+        const m = metrics(r, R), fights = fightsIn(R);
         if (!m.n) return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
         return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td>
           <td class="num">${m.n.toLocaleString()}</td>
@@ -744,17 +767,18 @@ if (!HIST) {
   }
   moreBtn.addEventListener("click", renderMore);
 
-  // the one year filter drives everything on the tab
-  function applyYear() {
-    const yr = yrSelH.value;
-    renderTiles(yr);
+  // the one year range drives everything on the tab
+  function applyRange() {
+    const R = yrRange();
+    renderTiles(R);
     drawHist();
-    renderSummary(yr);
-    filtered = yr ? rows.filter(b => b[0].startsWith(yr)) : rows;
+    renderSummary(R);
+    filtered = rows.filter(b => inRange(b[0], R));
     resetTable();
   }
-  yrSelH.addEventListener("change", applyYear);
-  applyYear();
+  y1Sel.addEventListener("change", applyRange);
+  y2Sel.addEventListener("change", applyRange);
+  applyRange();
 }
 
 // -- data-dictionary search ------------------------------------------------

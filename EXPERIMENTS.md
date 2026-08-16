@@ -1293,3 +1293,35 @@ return AND was ahead on at least 6 of the 10 cards; otherwise A stands.
 All backtest ROIs remain upper bounds (closing-odds conditioning — see
 the design constraints above). The queued experiment list is now empty:
 entries 5-9 all decided.
+
+### 10. Rule F — fitted model-trust blend        2026-08-16, decided (no retrain)
+Michael's question: instead of the arbitrary 25% kelly cap, can we measure
+how correct the model's probability is and stake from that? The measured
+object is a logit-space opinion pool, logit(p') = λ·logit(model) +
+(1−λ)·logit(vig-free market), with λ fitted by maximum likelihood. On the
+5,786 pooled-OOF fights with closing odds (8e artifact): λ = 0.785 fitted
+on H1 only (honest-evaluation fit), λ = 0.746 on the full pool. Note the
+model already carries market_prob as a feature, which inflates λ.
+
+Held-out H2 evaluation (fit on H1, scored on H2; flat / kelly ROI):
+    A raw model, cap .25     2070 bets, hit 57.9%:  -0.1% /  +4.1%
+    E 50/50 shrink, cap .25  1249 bets, hit 55.0%:  +0.6% /  +9.2%
+    F blend .785, cap .25    1839 bets, hit 57.6%:  +0.4% /  +5.0%
+    F blend .785, UNCAPPED   1839 bets, hit 57.6%:  +0.4% /  +5.5%
+H2 log-loss: model .6073, market .6081 (entry-5 gap closed on recent
+data), blend .6062, E-style 50/50 prob-avg .6058.
+
+Findings: (1) the fitted blend beats raw A but LOSES to the crude fixed
+50/50 shrink out-of-sample — the model's edge decays over time, so a trust
+weight fitted on the strong years is overconfident in the weak ones; the
+same winner's-curse logic behind this file's no-tuned-thresholds rule. (2)
+With any shrinkage the 25% cap is nearly redundant (uncapped ≈ capped).
+Resolution: F joins the weekly shadow log anyway, per Michael, as the
+measured-humility arm (send_weekly_predictions.py LAMBDA_F = 0.746 — full-
+pool fit, FROZEN for the trial, never refit mid-trial; kelly split like
+C/E; scored by score_card.py; shown on the dashboard incl. the History
+replay). Pre-registered promotion criterion, same shape as entry 9's:
+after 10 logged events from F's first card (its clock starts later than
+C/E's), promote iff it beats A on cumulative replay return AND was ahead
+on at least 6 of its 10 cards. Expectation, stated now: E outperforms F on
+the forward record. All ROIs remain upper bounds.
