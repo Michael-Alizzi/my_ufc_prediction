@@ -1,7 +1,8 @@
 # FAQ
 
 Questions that have actually come up while running this project, with the answers
-worked out at the time. Deeper treatments: [METHODOLOGY.md](METHODOLOGY.md) (the
+worked out at the time. **Standing rule: every new question asked in-session gets
+appended here** (and the dashboard's FAQ tab republished with it). Deeper treatments: [METHODOLOGY.md](METHODOLOGY.md) (the
 maths behind every feature and the validation scheme), [DATA_DICTIONARY.md](DATA_DICTIONARY.md)
 (every column), and [../EXPERIMENTS.md](../EXPERIMENTS.md) (the run-by-run record —
 entry numbers cited below refer to it).
@@ -88,6 +89,21 @@ Most of the time the price already reflects everything the model knows, so
 `p × odds` lands below 1 on both sides and betting either would be −EV. A typical
 card has 8–9 no-bets out of 12; the discipline of passing is where the rule's ROI
 comes from.
+
+### In the History bet table, why does a win show less than $1? Is P/L the amount won excluding my stake?
+
+Yes — P/L is **profit on a $1 stake, with the stake netted out both ways**.
+Decimal odds include the stake in the payout: $1 on a fighter at 1.55 returns
+$1.55 total — your dollar back plus **$0.55 of winnings**, and +$0.55 is what
+the column shows. A loss is the whole stake gone: −$1.00. Sum every row and you
+get exactly what's in your pocket.
+
+Wins are usually under a dollar because the model's value bets are mostly
+short-priced favourites (odds 1.2–1.6), where profit per dollar is small. Odds
+above 2.00 — underdogs — pay more than the stake. This asymmetry is also why a
+55.9% hit rate only makes +6.1% ROI: the average win banks ~$0.40 while every
+loss costs the full $1.00 (at odds 1.40 you need ~71% winners just to break
+even, so 55.9% on bets priced to imply ~52% is a thin, real edge).
 
 ### What are shadow rules C and E, and why are they logged but not staked?
 
@@ -231,6 +247,15 @@ Two scars: SMTP is unreachable from the cloud environment, and a Gmail app passw
 was once leaked into git history wiring the old email path (revoked since —
 revoke-and-avoid, don't reintroduce). Delivery is the push to
 `weekly-predictions-log` plus a phone push notification.
+
+### Is the ponytail skill used in this project?
+
+Yes, at two levels: the skill itself is checked into the repo at
+`.claude/skills/ponytail/` (so it travels with the code to any machine), and a
+CLAUDE.md ground rule has coding tasks load it at full intensity first —
+laziest working solution, reuse before writing new, shortest diff that works.
+`ponytail:` comments in the notebook mark spots where that reasoning is
+recorded (e.g. why calibration was removed in the Threshold Selection cell).
 
 ### Why are the raw CSVs committed to git?
 

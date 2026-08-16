@@ -174,6 +174,10 @@ automatically.
 
 ## Session ground rules (standing user agreements)
 
+- **Every question Michael asks gets appended to `docs/FAQ.md`** in the same
+  session — the FAQ is the project's running Q&A record. Republish the
+  dashboard artifact with it when practical (the Friday Routine republishes
+  it weekly regardless).
 - **Coding tasks load `/ponytail` at full intensity first** — laziest working
   solution, reuse existing machinery before writing new, shortest diff that
   works (the skill is checked into this repo).
