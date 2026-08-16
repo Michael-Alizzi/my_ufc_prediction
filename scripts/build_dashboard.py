@@ -218,6 +218,14 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
             margin-bottom: 8px; flex-wrap: wrap; }
   .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px;
             border-radius: 2px; margin-right: 6px; }
+  .legend .lgbtn { background: none; border: 1px solid transparent; cursor: pointer;
+            font: 12.5px system-ui; color: var(--ink-2); padding: 2px 9px;
+            border-radius: 5px; }
+  .legend .lgbtn:hover { border-color: var(--border); }
+  .legend .lgbtn[aria-pressed="false"] { opacity: 0.35; }
+  .legend select { font: 12.5px system-ui; color: var(--ink); background: var(--surface);
+            border: 1px solid var(--border); border-radius: 5px; padding: 3px 6px;
+            margin-left: auto; }
   .legend .lA::before { background: var(--sA); }
   .legend .lC::before { background: var(--sC); }
   .legend .lE::before { background: var(--sE); }
@@ -567,64 +575,97 @@ if (!HIST) {
   htile("Flat $1 per bet", sign$(M.A.flat), M.A.flatROI.toFixed(1) + "% ROI on " + M.A.n.toLocaleString() + " × $1", cls(M.A.flat));
   htile("Kelly ROI", (M.A.kellyROI >= 0 ? "+" : "") + M.A.kellyROI.toFixed(1) + "%", "stake-weighted, uncompounded", cls(M.A.kellyROI));
 
-  // cumulative flat profit by month, one series per rule
-  const months = [...new Set(RULES.flatMap(r => HIST.bets[r].map(b => b[0].slice(0, 7))))].sort();
-  const mi = new Map(months.map((m, i) => [m, i]));
-  const cumH = {};
-  for (const r of RULES) {
-    const per = new Array(months.length).fill(0);
-    for (const row of HIST.bets[r]) {
-      const [odds, , w] = row.slice(-3);
-      per[mi.get(row[0].slice(0, 7))] += w ? odds - 1 : -1;
-    }
-    let acc = 0;
-    cumH[r] = per.map(v => +(acc += v).toFixed(2));
-  }
+  // cumulative flat profit by month, filterable by rule and year
   const W = 940, H = 320, L = 52, R = 86, T = 16, B = 34;
-  const hMax = Math.max(...RULES.map(r => Math.max(...cumH[r]))),
-        hMin = Math.min(0, ...RULES.map(r => Math.min(...cumH[r])));
-  const yS = v => T + (hMax - v) / (hMax - hMin || 1) * (H - T - B);
-  const xS = i => L + i / Math.max(1, months.length - 1) * (W - L - R);
-  let hg = "";
-  for (let i = 0; i <= 4; i++) {
-    const v = hMin + (hMax - hMin) * i / 4, y = yS(v);
-    hg += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>
-           <text x="${L - 8}" y="${y + 4}" text-anchor="end">${(v < 0 ? "−$" : "$") + Math.abs(Math.round(v))}</text>`;
-  }
-  hg += `<line class="zero" x1="${L}" x2="${W - R}" y1="${yS(0)}" y2="${yS(0)}"/>`;
-  months.forEach((m, i) => {
-    if (m.endsWith("-01") && +m.slice(0, 4) % 2 === 1)
-      hg += `<text x="${xS(i)}" y="${H - B + 18}" text-anchor="middle">${m.slice(0, 4)}</text>`;
-  });
-  for (const r of RULES)
-    hg += `<polyline class="s${r}" fill="none" stroke-width="2" stroke-linejoin="round"
-            points="${cumH[r].map((v, i) => xS(i).toFixed(1) + "," + yS(v).toFixed(1)).join(" ")}"/>`;
-  const hEnds = RULES.map(r => ({r, y: yS(cumH[r][months.length - 1])})).sort((a, b) => a.y - b.y);
-  for (let i = 1; i < hEnds.length; i++)
-    if (hEnds[i].y - hEnds[i - 1].y < 14) hEnds[i].y = hEnds[i - 1].y + 14;
-  for (const e2 of hEnds)
-    hg += `<text class="end-label t${e2.r}" x="${W - R + 8}" y="${e2.y + 4}">${e2.r} ${sign$(cumH[e2.r][months.length - 1])}</text>`;
-  hg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--axis)" stroke-dasharray="3,3" visibility="hidden"/>`;
-
+  const allMonths = [...new Set(RULES.flatMap(r => HIST.bets[r].map(b => b[0].slice(0, 7))))].sort();
+  const histYears = [...new Set(allMonths.map(m => m.slice(0, 4)))];
+  const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
-    <h2>If we'd bet $1 on every rule-A-style value bet since ${HIST.span[0].slice(0, 4)}</h2>
-    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same ${HIST.fights.toLocaleString()} fights (pooled out-of-fold predictions — the model never trained on the fight it predicts — matched to closing odds). Upper bounds: closing-odds conditioning, no line movement.</p>
-    <div class="legend"><span class="lA">A &middot; kelly value</span><span class="lC">C &middot; vig floor</span><span class="lE">E &middot; shrunk</span></div>
-    <div class="chart-scroll"><svg id="histchart" viewBox="0 0 ${W} ${H}" style="min-width:640px;width:100%">${hg}</svg></div>
+    <h2>If we'd bet $1 on every value bet since ${HIST.span[0].slice(0, 4)}</h2>
+    <p class="sub">Cumulative profit, $1 flat per bet, each rule applied to the same ${HIST.fights.toLocaleString()} fights (pooled out-of-fold predictions — the model never trained on the fight it predicts — matched to closing odds). Upper bounds: closing-odds conditioning, no line movement. Click a rule to toggle it; picking a year restarts the running total at $0 for that year.</p>
+    <div class="legend" id="hist-controls">
+      <button class="lgbtn lA" data-r="A" aria-pressed="true">A &middot; kelly value</button>
+      <button class="lgbtn lC" data-r="C" aria-pressed="true">C &middot; vig floor</button>
+      <button class="lgbtn lE" data-r="E" aria-pressed="true">E &middot; shrunk</button>
+      <select id="hist-yr"><option value="">All years</option>${histYears.map(y => `<option>${y}</option>`).join("")}</select>
+    </div>
+    <div class="chart-scroll"><svg id="histchart" viewBox="0 0 ${W} ${H}" style="min-width:640px;width:100%"></svg></div>
   </div>`);
   const hsvg = document.getElementById("histchart");
-  const xhair = document.getElementById("xhair");
+  const yrSelH = document.getElementById("hist-yr");
+  let hMonths = [], hCum = {}, hActive = [...RULES];
+  let hxS = i => i, hyS = v => v;
+
+  function drawHist() {
+    const yr = yrSelH.value;
+    hMonths = allMonths.filter(m => !yr || m.startsWith(yr));
+    if (!hActive.length || !hMonths.length) {
+      hsvg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">no rules selected — click a rule above to bring it back</text>`;
+      return;
+    }
+    const mi = new Map(hMonths.map((m, i) => [m, i]));
+    hCum = {};
+    for (const r of hActive) {
+      const per = new Array(hMonths.length).fill(0);
+      for (const row of HIST.bets[r]) {
+        const key = row[0].slice(0, 7);
+        if (!mi.has(key)) continue;
+        const [odds, , w] = row.slice(-3);
+        per[mi.get(key)] += w ? odds - 1 : -1;
+      }
+      let acc = 0;
+      hCum[r] = per.map(v => +(acc += v).toFixed(2));
+    }
+    const vals = hActive.flatMap(r => hCum[r]);
+    const hMax = Math.max(1, ...vals), hMin = Math.min(0, ...vals);
+    hyS = v => T + (hMax - v) / (hMax - hMin || 1) * (H - T - B);
+    hxS = i => L + i / Math.max(1, hMonths.length - 1) * (W - L - R);
+    let hg = "";
+    for (let i = 0; i <= 4; i++) {
+      const v = hMin + (hMax - hMin) * i / 4, y = hyS(v);
+      hg += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>
+             <text x="${L - 8}" y="${y + 4}" text-anchor="end">${(v < 0 ? "−$" : "$") + Math.abs(Math.round(v))}</text>`;
+    }
+    hg += `<line class="zero" x1="${L}" x2="${W - R}" y1="${hyS(0)}" y2="${hyS(0)}"/>`;
+    hMonths.forEach((m, i) => {
+      const label = yr ? MN[+m.slice(5, 7) - 1]
+        : (m.endsWith("-01") && +m.slice(0, 4) % 2 === 1 ? m.slice(0, 4) : null);
+      if (label) hg += `<text x="${hxS(i)}" y="${H - B + 18}" text-anchor="middle">${label}</text>`;
+    });
+    for (const r of hActive)
+      hg += `<polyline class="s${r}" fill="none" stroke-width="2" stroke-linejoin="round"
+              points="${hCum[r].map((v, i) => hxS(i).toFixed(1) + "," + hyS(v).toFixed(1)).join(" ")}"/>`;
+    const hEnds = hActive.map(r => ({r, y: hyS(hCum[r][hMonths.length - 1])})).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < hEnds.length; i++)
+      if (hEnds[i].y - hEnds[i - 1].y < 14) hEnds[i].y = hEnds[i - 1].y + 14;
+    for (const e2 of hEnds)
+      hg += `<text class="end-label t${e2.r}" x="${W - R + 8}" y="${e2.y + 4}">${e2.r} ${sign$(hCum[e2.r][hMonths.length - 1])}</text>`;
+    hg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--axis)" stroke-dasharray="3,3" visibility="hidden"/>`;
+    hsvg.innerHTML = hg;
+  }
+  drawHist();
+
+  document.querySelectorAll("#hist-controls .lgbtn").forEach(b => b.addEventListener("click", () => {
+    b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
+    hActive = RULES.filter(r =>
+      document.querySelector(`#hist-controls [data-r="${r}"]`).getAttribute("aria-pressed") === "true");
+    drawHist();
+  }));
+  yrSelH.addEventListener("change", drawHist);
+
   hsvg.addEventListener("pointermove", e => {
+    const xhair = hsvg.querySelector("#xhair");
+    if (!xhair) return;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(hsvg.getScreenCTM().inverse());
     if (pt.x < L || pt.x > W - R) { xhair.setAttribute("visibility", "hidden"); return tipHide(); }
-    const i = Math.round((pt.x - L) / (W - L - R) * (months.length - 1));
-    xhair.setAttribute("x1", xS(i)); xhair.setAttribute("x2", xS(i));
+    const i = Math.round((pt.x - L) / (W - L - R) * (hMonths.length - 1));
+    xhair.setAttribute("x1", hxS(i)); xhair.setAttribute("x2", hxS(i));
     xhair.setAttribute("visibility", "visible");
-    tipShow(`<div class="t">${months[i]}</div>` + RULES.map(r =>
-      `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(cumH[r][i])}">${sign$(cumH[r][i])}</span></div>`).join(""),
+    tipShow(`<div class="t">${hMonths[i]}</div>` + hActive.map(r =>
+      `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(hCum[r][i])}">${sign$(hCum[r][i])}</span></div>`).join(""),
       e.clientX, e.clientY);
   });
-  hsvg.addEventListener("pointerleave", () => { xhair.setAttribute("visibility", "hidden"); tipHide(); });
+  hsvg.addEventListener("pointerleave", () => { hsvg.querySelector("#xhair")?.setAttribute("visibility", "hidden"); tipHide(); });
 
   // per-rule replay summary
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
