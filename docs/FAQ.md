@@ -260,6 +260,18 @@ full $50 on Johnson alone — his 6.8% edge was the only one to clear C's 5.9% v
 floor, and the only one still positive after E's shrink (76.3% → 71.9%, and
 .719 × 1.40 = 1.006).
 
+### How did the four rules differ on an actual card? (UFC 330, Aug 2026)
+
+Same card, same model, four disciplines: **A** spread $50 over four edges
+($6 Makhachev, $16 Alvarez, $22 D. Johnson, $6 Magny), **C and E** each
+put all $50 on Donte Johnson (the only edge clearing their filters), **F**
+split $50 over three ($17 Alvarez, $29 Johnson, $4 Magny). Johnson won by
+first-round KO; Alvarez lost. Outcome: A won 3 of 4 bets yet finished at
+**$49.98** — thin favourite edges pay pennies and one loss erased them —
+while C and E returned **$70.00** (+$20) and F **$48.24** (−$1.76), dinged
+by its diluted Alvarez position. Humility beat diversification on this
+card; one card proves nothing, which is why the trial runs ten.
+
 ### How does a shadow rule get promoted to the real rule?
 
 Pre-registered in entry 9, before any card was scored: **after 10 logged events, a
