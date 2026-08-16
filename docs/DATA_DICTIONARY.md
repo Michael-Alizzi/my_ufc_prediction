@@ -89,3 +89,77 @@ EXPERIMENTS.md). `ledger.md` — per-event graded returns for rules A/C/E
 `odds_train.csv` by `scripts/fetch_training_odds.py` at retrain time.
 Skip-unchanged-retrain logic diffs the freshly scraped CSVs against the
 committed copies (the raw CSVs are tracked in git since Aug 2026).
+
+## 6. Complete column inventory (auto-generated)
+
+Every literal column name, so nothing has to be inferred from the family
+descriptions above. Paired columns are listed once: an `r_`/`b_` pair like
+`r_elo`+`b_elo` appears as `elo`, and a career aggregate like
+`avg_r_kd`+`avg_b_kd` appears under its `avg_`/`med_` group as `kd`.
+Regenerate after any retrain with the snippet at the end.
+
+### raw_fight_data.csv (41 columns, `;`-separated)
+
+`R_fighter` `B_fighter` `R_KD` `B_KD` `R_SIG_STR.` `B_SIG_STR.` `R_SIG_STR_pct` `B_SIG_STR_pct` `R_TOTAL_STR.` `B_TOTAL_STR.` `R_TD` `B_TD` `R_TD_pct` `B_TD_pct` `R_SUB_ATT` `B_SUB_ATT` `R_REV` `B_REV` `R_CTRL` `B_CTRL` `R_HEAD` `B_HEAD` `R_BODY` `B_BODY` `R_LEG` `B_LEG` `R_DISTANCE` `B_DISTANCE` `R_CLINCH` `B_CLINCH` `R_GROUND` `B_GROUND` `win_by` `last_round` `last_round_time` `Format` `Referee` `date` `location` `Fight_type` `Winner`
+
+### raw_fighter_details.csv (14 columns)
+
+`fighter_name` `Height` `Weight` `Reach` `Stance` `DOB` `SLpM` `Str_Acc` `SApM` `Str_Def` `TD_Avg` `TD_Acc` `TD_Def` `Sub_Avg`
+
+### fighter_history.parquet (344 columns)
+
+**Per-corner pairs `r_*`/`b_*` (60 pairs = 120 columns):**
+
+`age` `avg_loss_time` `avg_win_time` `bmi` `body_att` `body_frac` `body_lnd` `clinch_att` `clinch_frac` `clinch_lnd` `country` `ctrl` `current_losses` `current_win_frac` `current_wins` `days_since_last` `distance_att` `distance_frac` `distance_lnd` `dob_d` `elo` `fighter` `fights_last_365` `first_round_wins` `ground_att` `ground_frac` `ground_lnd` `h2h_wins` `head_att` `head_frac` `head_lnd` `height_cm` `home_crowd` `kd` `ko_loss_rate` `ko_win_rate` `leg_att` `leg_frac` `leg_lnd` `lose_streak` `market_prob` `prev_3_win` `prev_win` `reach_cm` `rev` `sig_str_att` `sig_str_frac` `sig_str_lnd` `stance` `sub_att` `sub_loss_rate` `sub_win_rate` `td_att` `td_frac` `td_lnd` `total_str_att` `total_str_frac` `total_str_lnd` `weight_kg` `win_streak`
+
+**Career averages `avg_r_*`/`avg_b_*` (43 stats = 86 columns):**
+
+`abs_ctrl` `abs_kd` `abs_sig_str_lnd` `abs_sub_att` `abs_td_lnd` `abs_total_str_lnd` `adj_ctrl` `adj_kd` `adj_sig_str_lnd` `adj_sub_att` `adj_td_lnd` `adj_total_str_lnd` `body_att` `body_frac` `body_lnd` `clinch_att` `clinch_frac` `clinch_lnd` `ctrl` `distance_att` `distance_frac` `distance_lnd` `ground_att` `ground_frac` `ground_lnd` `head_att` `head_frac` `head_lnd` `kd` `leg_att` `leg_frac` `leg_lnd` `rev` `sig_str_att` `sig_str_frac` `sig_str_lnd` `sub_att` `td_att` `td_frac` `td_lnd` `total_str_att` `total_str_frac` `total_str_lnd`
+
+**Career medians `med_r_*`/`med_b_*` (31 stats = 62 columns):**
+
+`body_att` `body_frac` `body_lnd` `clinch_att` `clinch_frac` `clinch_lnd` `ctrl` `distance_att` `distance_frac` `distance_lnd` `ground_att` `ground_frac` `ground_lnd` `head_att` `head_frac` `head_lnd` `kd` `leg_att` `leg_frac` `leg_lnd` `rev` `sig_str_att` `sig_str_frac` `sig_str_lnd` `sub_att` `td_att` `td_frac` `td_lnd` `total_str_att` `total_str_frac` `total_str_lnd`
+
+**Matchup diffs, red minus blue (58):**
+
+`age_diff` `avg_abs_ctrl_diff` `avg_abs_kd_diff` `avg_abs_sig_str_lnd_diff` `avg_abs_sub_att_diff` `avg_abs_td_lnd_diff` `avg_abs_total_str_lnd_diff` `avg_adj_ctrl_diff` `avg_adj_kd_diff` `avg_adj_sig_str_lnd_diff` `avg_adj_sub_att_diff` `avg_adj_td_lnd_diff` `avg_adj_total_str_lnd_diff` `avg_body_frac_diff` `avg_clinch_frac_diff` `avg_ctrl_diff` `avg_distance_frac_diff` `avg_ground_frac_diff` `avg_head_frac_diff` `avg_kd_diff` `avg_leg_frac_diff` `avg_loss_time_diff` `avg_rev_diff` `avg_sig_str_frac_diff` `avg_sub_att_diff` `avg_td_frac_diff` `avg_total_str_frac_diff` `avg_win_time_diff` `bmi_diff` `current_win_frac_diff` `elo_diff` `fights_last_365_diff` `first_round_wins_diff` `h2h_win_diff` `height_diff` `home_crowd_diff` `ko_loss_rate_diff` `ko_win_rate_diff` `lose_streak_diff` `med_body_frac_diff` `med_clinch_frac_diff` `med_ctrl_diff` `med_distance_frac_diff` `med_ground_frac_diff` `med_head_frac_diff` `med_kd_diff` `med_leg_frac_diff` `med_rev_diff` `med_sig_str_frac_diff` `med_sub_att_diff` `med_td_frac_diff` `med_total_str_frac_diff` `prev_win_diff` `reach_diff` `sub_loss_rate_diff` `sub_win_rate_diff` `weight_diff` `win_streak_diff`
+
+**Everything else (18):**
+
+`win_by` `last_round` `last_round_time` `referee` `location` `winner` `total_round_number` `total_minutes` `date_d` `weight_class` `gender` `title_fight` `fighter_name_x` `fighter_name_y` `fight_id` `h2h_fight_count` `rules_era` `r_win`
+
+### Model feature schema — ensemble.joblib `feature_names` (265 features)
+
+**Per-corner pairs `r_*`/`b_*` (26 pairs = 52 columns):**
+
+`age` `avg_loss_time` `avg_win_time` `bmi` `current_losses` `current_win_frac` `current_wins` `days_since_last` `elo` `fights_last_365` `first_round_wins` `h2h_wins` `height_cm` `home_crowd` `ko_loss_rate` `ko_win_rate` `lose_streak` `market_prob` `prev_3_win` `prev_win` `reach_cm` `stance` `sub_loss_rate` `sub_win_rate` `weight_kg` `win_streak`
+
+**Career averages `avg_r_*`/`avg_b_*` (43 stats = 86 columns):**
+
+`abs_ctrl` `abs_kd` `abs_sig_str_lnd` `abs_sub_att` `abs_td_lnd` `abs_total_str_lnd` `adj_ctrl` `adj_kd` `adj_sig_str_lnd` `adj_sub_att` `adj_td_lnd` `adj_total_str_lnd` `body_att` `body_frac` `body_lnd` `clinch_att` `clinch_frac` `clinch_lnd` `ctrl` `distance_att` `distance_frac` `distance_lnd` `ground_att` `ground_frac` `ground_lnd` `head_att` `head_frac` `head_lnd` `kd` `leg_att` `leg_frac` `leg_lnd` `rev` `sig_str_att` `sig_str_frac` `sig_str_lnd` `sub_att` `td_att` `td_frac` `td_lnd` `total_str_att` `total_str_frac` `total_str_lnd`
+
+**Career medians `med_r_*`/`med_b_*` (31 stats = 62 columns):**
+
+`body_att` `body_frac` `body_lnd` `clinch_att` `clinch_frac` `clinch_lnd` `ctrl` `distance_att` `distance_frac` `distance_lnd` `ground_att` `ground_frac` `ground_lnd` `head_att` `head_frac` `head_lnd` `kd` `leg_att` `leg_frac` `leg_lnd` `rev` `sig_str_att` `sig_str_frac` `sig_str_lnd` `sub_att` `td_att` `td_frac` `td_lnd` `total_str_att` `total_str_frac` `total_str_lnd`
+
+**Matchup diffs, red minus blue (58):**
+
+`age_diff` `avg_abs_ctrl_diff` `avg_abs_kd_diff` `avg_abs_sig_str_lnd_diff` `avg_abs_sub_att_diff` `avg_abs_td_lnd_diff` `avg_abs_total_str_lnd_diff` `avg_adj_ctrl_diff` `avg_adj_kd_diff` `avg_adj_sig_str_lnd_diff` `avg_adj_sub_att_diff` `avg_adj_td_lnd_diff` `avg_adj_total_str_lnd_diff` `avg_body_frac_diff` `avg_clinch_frac_diff` `avg_ctrl_diff` `avg_distance_frac_diff` `avg_ground_frac_diff` `avg_head_frac_diff` `avg_kd_diff` `avg_leg_frac_diff` `avg_loss_time_diff` `avg_rev_diff` `avg_sig_str_frac_diff` `avg_sub_att_diff` `avg_td_frac_diff` `avg_total_str_frac_diff` `avg_win_time_diff` `bmi_diff` `current_win_frac_diff` `elo_diff` `fights_last_365_diff` `first_round_wins_diff` `h2h_win_diff` `height_diff` `home_crowd_diff` `ko_loss_rate_diff` `ko_win_rate_diff` `lose_streak_diff` `med_body_frac_diff` `med_clinch_frac_diff` `med_ctrl_diff` `med_distance_frac_diff` `med_ground_frac_diff` `med_head_frac_diff` `med_kd_diff` `med_leg_frac_diff` `med_rev_diff` `med_sig_str_frac_diff` `med_sub_att_diff` `med_td_frac_diff` `med_total_str_frac_diff` `prev_win_diff` `reach_diff` `sub_loss_rate_diff` `sub_win_rate_diff` `weight_diff` `win_streak_diff`
+
+**Everything else (7):**
+
+`gender` `weight_class` `title_fight` `total_round_number` `total_minutes` `h2h_fight_count` `rules_era`
+
+### odds files
+
+`odds_train.csv` and `collected_odds.csv` share one schema: `r_fighter` `b_fighter` `date_d` `odds_r` `odds_b` (decimal closing odds, vig included).
+
+### Regenerating this section
+
+```python
+# repo root, after a retrain — raw column dumps to re-group by the same rules
+import pandas as pd, joblib
+print(pd.read_csv("raw_fight_data.csv", nrows=1, sep=";").columns.tolist())
+print(pd.read_parquet("fighter_history.parquet").columns.tolist())
+print(joblib.load("ensemble.joblib")["feature_names"])
+```
