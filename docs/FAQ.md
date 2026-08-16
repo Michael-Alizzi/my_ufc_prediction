@@ -129,9 +129,15 @@ verifying numerically. Selectivity here filters for bigger *edge*, not
 likelier winners, and big edges live at longer odds: C's median bet is at
 2.15 (47% implied) vs A's 1.93, and the 1,248 bets A places but C drops are
 short-odds favourites (median 1.52) winning 59.4% — C throws away precisely
-the high-hit, low-payoff bets. Both rules beat their bets' implied win
-probability (A 55.9% vs 53.0%, C 54.6% vs 49.9%), which is where the ROI
-comes from. (The dashboard's replay-summary column header originally read
+the high-hit, low-payoff bets. The benchmark that actually matters travels with the bets: a price *is* a
+predicted win rate (win exactly `1/odds` of the time and you break even —
+at 1.93, winning 51.8% exactly cancels gains against losses), so the
+question is never "did I win a lot?" but "did I win more than the odds
+said I would?". A won 55.9% of bets the market priced at 53.0% (+2.9pp
+above fair); C won 54.6% of bets priced at just 49.9% (+4.7pp). C beats
+its own benchmark by more — that's why it earns more per bet despite the
+lower absolute hit rate. Comparing raw hit rates across rules is comparing
+scores on two different exams. (The dashboard's replay-summary column header originally read
 just "Hit" — it says "Hit rate" now.)
 
 ### Where does "implied probability" come from?
