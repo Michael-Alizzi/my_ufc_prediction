@@ -430,7 +430,21 @@ win (%)** is the average odds-implied probability of that rule's own
 bets to date (`100/odds`, from the same `shadow` strings
 `scripts/score_card.py` grades) — higher means shorter-priced, safer
 picks; lower means it's finding value in bigger disagreements with the
-market. Marker size always reflects that event's real $ swing regardless
+market.
+
+On the **Experiments** tab specifically, "Net return" plots a **flat $1
+per bet** (Aug 2026), not the actual $ staked: rules concentrate
+differently — C typically puts its whole bankroll on one bet some weeks,
+A spreads across several — so comparing rules on real dollars exaggerates
+whichever one happens to concentrate more that card. Flat staking is the
+same convention `scripts/betting_rule_compare.py` and History's backtest
+replay already use for exactly this reason. This is presentational only:
+the pre-registered promotion decision (EXPERIMENTS.md entries 9–10) is
+still made on the real-$ bankroll-replay figures in the Rule comparison
+table below the chart and in `ledger.md`'s own `Staked`/`Returned`/`Net`
+columns, unchanged — the chart's flat view never feeds that decision.
+**Performance**'s rule-A chart keeps real dollars throughout, since
+that's what's actually staked. Marker size always reflects that event's real $ swing regardless
 of which metric is on screen, and hovering a point shows all four
 numbers together no matter which one is plotted.
 

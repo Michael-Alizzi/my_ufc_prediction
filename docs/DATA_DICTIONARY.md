@@ -82,8 +82,13 @@ bankroll's Kelly split (rule A) plus C/E shadow columns. `card.json` — the
 exact card + odds used (two-slot: `odds1/2` Sportsbet staking prices,
 `feat_odds1/2` de-vigged AU-median feature input), committed beside it so
 any future model can replay the same card mechanically (replay metric; see
-EXPERIMENTS.md). `ledger.md` — per-event graded returns for rules A/C/E
-(`scripts/score_card.py`; the entry-9 10-event promotion record).
+EXPERIMENTS.md). `ledger.md` — per-event graded returns for rules A/C/E/F
+(`scripts/score_card.py`; the entry-9/10 10-event promotion record),
+including a flat-$1-per-bet net column (Aug 2026) alongside the real $
+staked/returned/net — the promotion criterion itself is decided on the
+real-$ bankroll-replay column per the pre-registered text; the flat
+column exists only so the dashboard's chart can offer a stake-size-neutral
+comparison view without that decision ever depending on it.
 `collected_odds.csv` — phase-2 own-odds feed, one row per fight
 (`r_fighter`, `b_fighter`, `date_d`, `odds_r`, `odds_b`), merged into
 `odds_train.csv` by `scripts/fetch_training_odds.py` at retrain time.
@@ -106,6 +111,7 @@ files, defined once. `p` = model win probability, `odds` = decimal odds,
 | **Staked** | Dollars actually risked (void bets excluded — stake returned). |
 | **Returned** | Dollars paid back on wins: `Σ stake·odds` over winning bets. |
 | **Net / P/L** | `returned − staked`. Per-$1 rows: a win shows `odds − 1` (profit, stake netted out), a loss shows −$1.00. |
+| **Flat $1 net** (ledger) | Same event's bets replayed at a flat $1 stake each (Σ `odds−1` for wins, −1 per loss, voids excluded) instead of the actual $ staked. Stake-size-neutral: a rule that concentrates its whole bankroll into one bet won't out-swing a rule that spreads across several purely because of sizing. Used only by the dashboard's chart as an alternate comparison view (Experiments tab); the pre-registered promotion decision (EXPERIMENTS.md entries 9–10) is still made on real-$ bankroll-replay net, unchanged. |
 | **ROI** | `net / staked`. *Flat* ROI stakes $1 per bet; *Kelly* ROI weights each bet by its kelly fraction (uncompounded). |
 | **Hit rate** | `bets won / bets placed` (voids excluded). Not comparable across rules without odds context — short-odds rules hit more by construction. |
 | **Bet rate** | `bets placed / fights with odds` — how often the rule finds value at all (the skipped remainder is the "$0 (no value)" discipline). |

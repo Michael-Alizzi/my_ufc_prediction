@@ -34,14 +34,25 @@ LEDGER = "ledger.md"
 COLLECTED = "collected_odds.csv"
 LEDGER_HEADER = (
     "# Weekly betting ledger (rule A staked; C/E shadow per entry 9, F per entry 10)\n\n"
-    "| Date | Event | Rule | Staked | Returned | Net | Bets won/placed/void |\n"
-    "|---|---|---|---|---|---|---|\n"
+    "| Date | Event | Rule | Staked | Returned | Net | Bets won/placed/void | Flat $1 net |\n"
+    "|---|---|---|---|---|---|---|---|\n"
 )
 
 
 def grade(rule_bets, winners, voids):
-    """rule_bets: [(fighter1, fighter2, bet_on, odds, stake), ...]"""
+    """rule_bets: [(fighter1, fighter2, bet_on, odds, stake), ...]
+
+    Returns real staked/returned/won/void (actual $ risked) AND flat_net --
+    profit at a flat $1 per bet, ignoring stake size. The two diverge
+    because rules concentrate differently: a rule that puts its whole
+    bankroll on one bet (e.g. C most weeks) swings by a lot more real
+    dollars than a rule spreading across several -- comparing rules on
+    real $ overstates whichever one happens to concentrate more.  Flat
+    net is the same convention scripts/betting_rule_compare.py and the
+    dashboard's History replay already use for exactly this reason, kept
+    consistent here so the live comparison isn't skewed by stake sizing."""
     staked = returned = won = void = 0
+    flat_net = 0.0
     for f1, f2, bet_on, odds, stake in rule_bets:
         pair = {f1.lower(), f2.lower()}
         if any(pair == {a.lower(), b.lower()} for a, b in voids):
@@ -55,7 +66,10 @@ def grade(rule_bets, winners, voids):
         if winner.lower() == bet_on.lower():
             won += 1
             returned += stake * odds
-    return staked, returned, won, void
+            flat_net += odds - 1
+        else:
+            flat_net -= 1
+    return staked, returned, won, void, flat_net
 
 
 def main():
@@ -94,12 +108,12 @@ def main():
         open(LEDGER, "w").write(LEDGER_HEADER)
     with open(LEDGER, "a") as fh:
         for rule, bets in rules.items():
-            staked, ret, won, void = grade(bets, winners, voids)
+            staked, ret, won, void, flat_net = grade(bets, winners, voids)
             fh.write(f"| {args.event_date} | {args.event_title} | {rule} "
                      f"| ${staked} | ${ret:.2f} | {ret - staked:+.2f} "
-                     f"| {won}/{len(bets) - void}/{void} |\n")
+                     f"| {won}/{len(bets) - void}/{void} | {flat_net:+.2f} |\n")
             print(f"rule {rule}: staked ${staked}, returned ${ret:.2f} "
-                  f"({won}/{len(bets) - void} won, {void} void)")
+                  f"({won}/{len(bets) - void} won, {void} void, flat net {flat_net:+.2f})")
 
     # Phase-2 training feed: every fight's odds (feature slot preferred),
     # keyed the way fighter_history/odds_train are.

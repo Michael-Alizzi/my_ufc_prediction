@@ -32,7 +32,7 @@ DOCS = [("faq", "FAQ", "docs/FAQ.md"),
 
 ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|([^|]+)\|\s*([ACEF])\s*"
                  r"\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)\s*\|\s*([+-][\d.]+)\s*"
-                 r"\|\s*(\d+)/(\d+)/(\d+)\s*\|")
+                 r"\|\s*(\d+)/(\d+)/(\d+)\s*\|(?:\s*([+-][\d.]+)\s*\|)?")
 
 
 def parse_ledger(path):
@@ -49,9 +49,14 @@ def parse_ledger(path):
         if key not in index:
             index[key] = {"date": date, "event": event, "rules": {}}
             events.append(index[key])
+        net = float(m.group(6))
+        # flat_net (profit at a flat $1/bet, stake-size-independent) is a
+        # newer column; fall back to real net for rows written before it
+        # existed so an old-format ledger still parses.
+        flat_net = float(m.group(10)) if m.group(10) else net
         index[key]["rules"][rule] = {
             "staked": float(m.group(4)), "returned": float(m.group(5)),
-            "net": float(m.group(6)), "won": int(m.group(7)),
+            "net": net, "flat_net": flat_net, "won": int(m.group(7)),
             "placed": int(m.group(8)), "void": int(m.group(9))}
     return sorted(events, key=lambda e: e["date"])
 
@@ -615,7 +620,7 @@ const METRIC_DEFS = {
   market:  {label: "Avg market win (%)", axisFmt: v => Math.round(v) + "%",
             endFmt: v => v.toFixed(0) + "%"},
 };
-function buildSeries(rules) {
+function buildSeries(rules, netField) {
   const s = {}; for (const m of Object.keys(METRIC_DEFS)) s[m] = {};
   for (const r of rules) {
     let netAcc = 0, won = 0, placed = 0, offeredAcc = 0, implSum = 0, bets = 0;
@@ -624,7 +629,7 @@ function buildSeries(rules) {
       const row = e.rules[r];
       const st = EVENT_STATS[e.date + "|" + e.event];
       const ruleSt = st && st.rules ? st.rules[r] : null;
-      netAcc += row ? row.net : 0;
+      netAcc += row ? row[netField] : 0;
       won += row ? row.won : 0;
       placed += row ? row.placed : 0;
       offeredAcc += st ? st.offered : 0;
@@ -638,7 +643,7 @@ function buildSeries(rules) {
   return s;
 }
 
-function drawMetricChart(svg, rules, metricKey, series) {
+function drawMetricChart(svg, rules, metricKey, series, netField) {
   const def = METRIC_DEFS[metricKey];
   const W = 940, H = 300, L = 46, R = 76, T = 16, B = 40, ticks = 4;
   const cum = {}; rules.forEach(r => cum[r] = series[metricKey][r]);
@@ -647,7 +652,7 @@ function drawMetricChart(svg, rules, metricKey, series) {
   const pad = (yMax - yMin) * 0.08 || 1;
   const ySc = v => T + (yMax + pad - v) / (yMax + pad - yMin + pad) * (H - T - B);
   const xSc = i => L + i / Math.max(1, n) * (W - L - R);
-  const maxAbsNet = Math.max(1, ...ev.flatMap(e => rules.map(r => Math.abs(e.rules[r] ? e.rules[r].net : 0))));
+  const maxAbsNet = Math.max(1, ...ev.flatMap(e => rules.map(r => Math.abs(e.rules[r] ? e.rules[r][netField] : 0))));
   const rScale = v => 3.5 + (Math.abs(v) / maxAbsNet) * 6.5;  // marker radius 3.5-10px
 
   let g = "";
@@ -664,7 +669,7 @@ function drawMetricChart(svg, rules, metricKey, series) {
     g += `<polyline class="s${r}" points="${pts}" fill="none" stroke-width="2" stroke-linejoin="round"/>`;
     cum[r].forEach((v, i) => {
       if (i === 0) return;
-      const row = ev[i - 1].rules[r], rad = row ? rScale(row.net) : 3.5;
+      const row = ev[i - 1].rules[r], rad = row ? rScale(row[netField]) : 3.5;
       g += `<circle class="f${r} pt" data-r="${r}" data-i="${i - 1}" cx="${xSc(i)}" cy="${ySc(v)}" r="${rad.toFixed(1)}" stroke="var(--surface)" stroke-width="2"/>`;
     });
   }
@@ -678,13 +683,15 @@ function drawMetricChart(svg, rules, metricKey, series) {
 }
 
 const METRIC_SUB = {
+  flat: () => `Cumulative net profit per rule at a flat $1 per bet, not the actual $ staked — stake size differs by rule (some concentrate into one bet, some spread out), so comparing on real dollars would exaggerate whichever rule happens to concentrate more. Marker size is that event's real $ swing (see the tooltip for actual staked/returned).`,
   net: (n1) => `Cumulative net profit per rule; marker size is that event's net swing. ${n1 > 1 ? "Every rule replays the same $50 bankroll each event." : ""}`,
   hit: () => "Running hit rate to date (cumulative wins &divide; cumulative bets placed) per rule.",
   betrate: () => "Running bet rate to date (cumulative bets placed &divide; cumulative fights offered) per rule — how often each rule finds value.",
   market: () => "Running average odds-implied win probability of each rule's own bets to date — higher means shorter-priced, safer picks.",
 };
 let chartSeq = 0;
-function initReturnChart(container, rules, title) {
+function initReturnChart(container, rules, title, netField) {
+  netField = netField || "net";
   if (!n) {
     container.insertAdjacentHTML("beforeend",
       `<h2>${title}</h2><div class="empty" style="margin-top:8px">
@@ -693,11 +700,13 @@ function initReturnChart(container, rules, title) {
     return;
   }
   const uid = "rc" + (chartSeq++);
-  const series = buildSeries(rules);
+  const series = buildSeries(rules, netField);
   const legend = rules.length > 1
     ? `<div class="legend">${rules.map(r => `<span class="l${r}">${r} &middot; ${r === "A" ? "staked" : "shadow"}</span>`).join("")}</div>`
     : "";
-  const options = Object.entries(METRIC_DEFS).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join("");
+  const netLabel = netField === "flat_net" ? "Net return ($1 flat/bet)" : "Net return ($)";
+  const options = Object.entries(METRIC_DEFS)
+    .map(([k, d]) => `<option value="${k}">${k === "net" ? netLabel : d.label}</option>`).join("");
   container.insertAdjacentHTML("beforeend", `
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
       <h2 style="margin:0">${title}</h2>
@@ -709,8 +718,9 @@ function initReturnChart(container, rules, title) {
   const subEl = document.getElementById(uid + "-sub");
   const svgEl = document.getElementById(uid + "-svg");
   function redraw() {
-    subEl.innerHTML = METRIC_SUB[sel.value](n);
-    drawMetricChart(svgEl, rules, sel.value, series);
+    const key = sel.value === "net" && netField === "flat_net" ? "flat" : sel.value;
+    subEl.innerHTML = METRIC_SUB[key](n);
+    drawMetricChart(svgEl, rules, sel.value, series, netField);
   }
   sel.addEventListener("change", redraw);
   redraw();
@@ -726,7 +736,7 @@ function initReturnChart(container, rules, title) {
     const betRate = (st && st.offered) ? Math.round(100 * row.placed / st.offered) + "% (" + row.placed + "/" + st.offered + ")" : "—";
     const mktAvg = (ruleSt && ruleSt.bets) ? (ruleSt.implied_sum / ruleSt.bets).toFixed(1) + "%" : "—";
     tipShow(`<div class="t">${esc(ev[i].event)}</div>
-      <div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(row.net)}">${sign$(row.net)}</span></div>
+      <div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(row[netField])}">${sign$(row[netField])}${netField === "flat_net" ? " (flat)" : ""}</span></div>
       <div class="row"><span>staked → returned</span><span>${fmt$(row.staked)} → ${fmt$(row.returned)}</span></div>
       <div class="row"><span>hit rate</span><span>${hit}${row.void ? ", " + row.void + " void" : ""}</span></div>
       <div class="row"><span>bet rate</span><span>${betRate}</span></div>
@@ -739,7 +749,7 @@ function initReturnChart(container, rules, title) {
 const expChartCard = document.createElement("div");
 expChartCard.className = "card";
 document.getElementById("charts").appendChild(expChartCard);
-initReturnChart(expChartCard, RULES, "Return &amp; performance over time");
+initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "flat_net");
 
 // -- rule table ------------------------------------------------------------
 const rt = document.getElementById("rule-table");
