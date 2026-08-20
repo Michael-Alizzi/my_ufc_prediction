@@ -532,6 +532,24 @@ bet. Divergence only appears once a rule has &ge;2 bets in a period, and
 only when its Kelly allocation and its win/loss pattern don't line up the
 same way flat weighting would.
 
+**Is it a problem that switching to flat-$1 changed which rule looks
+ahead?** No &mdash; that's the change doing exactly what it was asked to do,
+not a bug. There is no neutral way to rank "which rule is winning" across
+strategies that bet different amounts on different picks; every weighting
+convention embeds a choice. Flat-$1 was introduced specifically to strip
+out stake-concentration inflation (C shoving its whole bankroll onto one
+bet looking bigger than it should). Once that's stripped, C's one win no
+longer outweighs A's four bets &mdash; that's the intended effect, not a side
+effect. Two things keep it from mattering operationally: (1) it's one
+event &mdash; A's +0.59 vs. C's +0.40 is a noise-sized gap that could flip on
+the next card; (2) it doesn't touch the actual decision &mdash; the
+pre-registered promotion criterion (entry 9) was locked to real-$ bankroll
+replay before this chart existed, precisely so a presentation choice like
+this can't quietly move the goalposts. Real-$ answers "how would my
+bankroll actually have grown"; flat-$1 answers "bet-for-bet, ignoring how
+much confidence each rule backed each pick with, who called it better."
+Neither is "the truth" and they can legitimately disagree on small samples.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
