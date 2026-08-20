@@ -63,16 +63,18 @@ def parse_ledger(path):
 
 def summarise(events):
     total = {r: {"staked": 0.0, "returned": 0.0, "won": 0, "placed": 0,
-                 "void": 0, "ahead": 0} for r in "ACEF"}
+                 "void": 0, "ahead": 0, "flat_net": 0.0} for r in "ACEF"}
     for e in events:
         for r, row in e["rules"].items():
             t = total[r]
             for k in ("staked", "returned", "won", "placed", "void"):
                 t[k] += row[k]
+            t["flat_net"] += row["flat_net"]
             if r != "A" and "A" in e["rules"] and row["net"] > e["rules"]["A"]["net"]:
                 t["ahead"] += 1
     for r, t in total.items():
         t["net"] = round(t["returned"] - t["staked"], 2)
+        t["flat_net"] = round(t["flat_net"], 2)
         t["roi"] = round(100 * t["net"] / t["staked"], 1) if t["staked"] else None
         t["hit"] = round(100 * t["won"] / t["placed"], 1) if t["placed"] else None
     return total
@@ -489,7 +491,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
 
     <div class="card">
       <h2>Rule comparison &middot; live record</h2>
-      <p class="sub">Rule A is staked with real money; C (vig floor) and E (shrunk staking) are shadow-logged on identical cards.</p>
+      <p class="sub">Rule A is staked with real money; C (vig floor), E (shrunk staking) and F (fitted blend) are shadow-logged on identical cards. Both net columns are shown side by side on purpose &mdash; "$50 staked" is the real bankroll-replay number the promotion decision (below) is made on; "$1 flat/bet" strips out stake-concentration so picks are comparable bet-for-bet. ROI and "cards ahead" both use the $50 column.</p>
       <div class="chart-scroll"><table id="rule-table"></table></div>
     </div>
 
@@ -754,7 +756,7 @@ initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "flat
 // -- rule table ------------------------------------------------------------
 const rt = document.getElementById("rule-table");
 rt.innerHTML = `<tr><th>Rule</th><th class="num">Events</th><th class="num">Staked</th>
-  <th class="num">Returned</th><th class="num">Net</th><th class="num">ROI</th>
+  <th class="num">Returned</th><th class="num">Net ($50 staked)</th><th class="num">Net ($1 flat/bet)</th><th class="num">ROI</th>
   <th class="num">Hit rate</th><th class="num">Cards ahead of A</th></tr>` +
   RULES.map(r => {
     const t = tot[r];
@@ -763,6 +765,7 @@ rt.innerHTML = `<tr><th>Rule</th><th class="num">Events</th><th class="num">Stak
       <td class="num">${n ? fmt$(t.staked) : "—"}</td>
       <td class="num">${n ? fmt$(t.returned) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${n ? sign$(t.net) : "—"}</td>
+      <td class="num ${n ? cls(t.flat_net) : ""}">${n ? sign$(t.flat_net) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${t.roi === null ? "—" : (t.roi >= 0 ? "+" : "") + t.roi + "%"}</td>
       <td class="num">${t.hit === null ? "—" : t.hit + "% (" + t.won + "/" + t.placed + ")"}</td>
       <td class="num">${r === "A" ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
