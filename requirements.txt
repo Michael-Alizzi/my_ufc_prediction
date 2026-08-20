@@ -8,6 +8,7 @@ seaborn
 
 # Statistics
 statsmodels
+scipy  # scripts/promotion_test.py: Wilcoxon signed-rank promotion test
 
 # Machine Learning
 scikit-learn
