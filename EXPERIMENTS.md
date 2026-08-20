@@ -1294,6 +1294,30 @@ All backtest ROIs remain upper bounds (closing-odds conditioning — see
 the design constraints above). The queued experiment list is now empty:
 entries 5-9 all decided.
 
+**Revision, 2026-08-20 (before event 2 of 10 logged — only UFC 330 scored
+at the time of this edit):** "ahead on at least 6 of the 10 cards" is not
+actually a statistical bar. Under a coin-flip null (zero real edge over
+A), P(a shadow rule is ahead on ≥6 of 10 cards by chance alone) = 37.7%
+— more than a third of the time a rule with no real edge would clear it.
+A plain sign test fixes that but discards magnitude: it needs 9/10 wins
+(p=0.011) to reach significance at n=10, or arguably 8/10 (p=0.055,
+borderline), throwing away information about *how much* each card was
+won or lost by. **The card-count clause is replaced with a one-sided
+Wilcoxon signed-rank test** on the 10 paired per-event real-$ net
+differences (`shadow_net − A_net`), which uses both sign and magnitude
+and has more power at the same sample size. Updated criterion: after 10
+logged events, promote a shadow rule iff it beats A on cumulative real-$
+bankroll-replay return AND the paired Wilcoxon test rejects "no
+systematic difference" at α=0.10 one-sided (0.05 is likely unreachable
+at n=10 — see the sign-test figures above; honest caveat that n=10 gives
+limited power against a modest true edge regardless of which test is
+used). Operationalised in `scripts/promotion_test.py`, which reads
+`ledger.md` and reports the verdict for C/E/F. This revision changes how
+the pre-registered decision is *evaluated*, not the underlying data or
+the "10 events, real-$ bankroll replay" shape of the commitment — made
+explicitly at Michael's request, before the outcome of any additional
+event could bias the choice of test.
+
 ### 10. Rule F — fitted model-trust blend        2026-08-16, decided (no retrain)
 Michael's question: instead of the arbitrary 25% kelly cap, can we measure
 how correct the model's probability is and stake from that? The measured
