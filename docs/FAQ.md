@@ -473,6 +473,39 @@ criterion needs 10 logged events before deciding anything, specifically
 because one event's bet count is this volatile, and even then it's judged
 on real-$ bankroll replay (the Rule comparison table), not the flat chart.
 
+**Full per-bet math.** UFC 330's 4 staked results: Makhachev won, Alvarez
+lost, Donte Johnson won, Magny won.
+
+Rule A (4 bets, $50 total):
+
+| Bet | Stake | Odds | Result | Real return | Flat contribution |
+|---|---|---|---|---|---|
+| Makhachev | $6 | 1.286 | win | 6&times;1.286=$7.72 | +0.286 |
+| Alvarez | $16 | 1.39 | loss | $0 | &minus;1 |
+| Donte Johnson | $22 | 1.40 | win | 22&times;1.40=$30.80 | +0.400 |
+| Magny | $6 | 1.909 | win | 6&times;1.909=$11.45 | +0.909 |
+| **Total** | $50 | | 3/4 won | **$49.97** &rarr; net &minus;$0.03 | 0.286&minus;1+0.400+0.909 = **+0.59** |
+
+Rule C/E (1 bet each, both picked Donte Johnson $50 @1.40, won): real
+50&times;1.40=$70.00 (net +$20.00); flat just that one bet, 1.40&minus;1 =
+**+0.40**.
+
+Rule F (3 bets, $50 total &mdash; Alvarez $17@1.39, Donte Johnson $29@1.40,
+Magny $4@1.91):
+
+| Bet | Stake | Odds | Result | Real return | Flat contribution |
+|---|---|---|---|---|---|
+| Alvarez | $17 | 1.39 | loss | $0 | &minus;1 |
+| Donte Johnson | $29 | 1.40 | win | 29&times;1.40=$40.60 | +0.400 |
+| Magny | $4 | 1.909 | win | 4&times;1.909=$7.64 | +0.909 |
+| **Total** | $50 | | 2/3 won | **$48.24** &rarr; net &minus;$1.76 | &minus;1+0.400+0.909 = **+0.31** |
+
+The flat column is "sum of (odds&minus;1) per win, &minus;1 per loss" &mdash;
+it ignores stake size, so C/E's one big real-dollar win ($20) carries the
+same weight as any other single winning bet (+0.40), while A's four smaller
+bets accumulate to +0.59 even after eating a full &minus;1 on the Alvarez
+loss.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
