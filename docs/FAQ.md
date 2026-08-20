@@ -568,6 +568,23 @@ only the Rule comparison table's real-$ numbers count toward the actual
 call, and don't make that call at all before 10 events: at N=1 neither
 number is trustworthy regardless of which one you pick.
 
+### Should I keep betting the same fixed $50 each event, or scale it?
+
+Keep it fixed at $50 for now. Two reasons. First, the promotion protocol
+(entry 9) compares rules across the 10-event trial on **equal footing per
+event** &mdash; if the stake instead compounded off a growing/shrinking
+bankroll, later events would carry more or less weight in the cumulative-
+return metric, undermining the same equal-weighting property that made
+"ahead on 6 of 10 cards" a meaningful check in the first place. Second, the
+model's edge over the market is still unproven and under active test
+(2026 odds backtest: 61.2%/0.642 model vs. 66.3%/0.6089 closing favourites)
+&mdash; compounding stakes amplifies variance on top of an edge that isn't
+validated yet, which is the wrong time to size up. $50/event is explicitly
+framed as a bounded maximum loss, not a fraction of how the bankroll
+happens to be doing. Revisit this once the 10-event trial resolves and a
+rule has a demonstrated real-$ edge; scaling to a genuinely growing
+bankroll is a reasonable question then, not mid-trial.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
