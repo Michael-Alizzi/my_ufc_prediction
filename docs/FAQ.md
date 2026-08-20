@@ -550,6 +550,24 @@ bankroll actually have grown"; flat-$1 answers "bet-for-bet, ignoring how
 much confidence each rule backed each pick with, who called it better."
 Neither is "the truth" and they can legitimately disagree on small samples.
 
+### What should I actually make the promotion decision off of?
+
+The pre-registered criterion (entry 9), not whichever chart currently looks
+most convincing: after 10 logged events, promote a shadow rule (C/E/F) over
+A only if it beats A on **cumulative real-$ bankroll-replay return** *and*
+was ahead on **at least 6 of the 10 cards**. That criterion was written down
+and committed before any live result existed &mdash; precisely so that once
+metrics start disagreeing (as real-$ and flat-$1 already do, at event 1),
+there's no temptation to reach for whichever one currently flatters the
+rule you're hoping wins. Using flat-$1 as the decision basis today, after
+seeing it happens to favor A, would be exactly the after-the-fact
+metric-shopping pre-registration exists to prevent. Keep the flat-$1 chart
+as a **diagnostic** &mdash; it's genuinely useful for understanding *why* a
+rule is ahead (confidence-weighting vs. pure pick quality) &mdash; but let
+only the Rule comparison table's real-$ numbers count toward the actual
+call, and don't make that call at all before 10 events: at N=1 neither
+number is trustworthy regardless of which one you pick.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
