@@ -506,6 +506,32 @@ same weight as any other single winning bet (+0.40), while A's four smaller
 bets accumulate to +0.59 even after eating a full &minus;1 on the Alvarez
 loss.
 
+**Why $1-flat and $50-real can even land on different signs.** Both totals
+are the same sum of the same per-bet outcomes, just weighted differently.
+Define each bet's outcome per $1 staked as `outcome_i = odds_i&minus;1` on a
+win, `&minus;1` on a loss. Then:
+
+    real_net = &Sigma; s_i &middot; outcome_i,   where &Sigma; s_i = $50 (Kelly-proportional stakes)
+    flat_net = &Sigma; 1 &middot; outcome_i = &Sigma; outcome_i          ($1 on every bet)
+
+The two formulas sum the *identical* win/loss outcomes; only the weight
+`s_i` (Kelly stake) vs. `1` (flat) differs. For rule A's 4 bets ($6, $16,
+$22, $6 &mdash; summing to $50):
+
+    real_net = 6(0.286) + 16(&minus;1) + 22(0.400) + 6(0.909) = 1.716&minus;16+8.800+5.454 = &minus;0.03
+    flat_net = 1(0.286) + 1(&minus;1) + 1(0.400) + 1(0.909) = 0.286&minus;1+0.400+0.909 = +0.59
+
+The Alvarez loss got 32% of the real bankroll ($16/$50, Kelly-sized up
+because the model disagreed hardest with the market there) but only 25%
+weight ($1/$4) under flat &mdash; real dollars over-weighted the one loss
+relative to flat, flipping the sign. Rules C/E, with only 1 bet each,
+can't diverge this way: `real_net = 50&times;0.400 = $20` and
+`flat_net = 1&times;0.400 = $0.40` are the same 40% return scaled by a
+different total, since there's nothing to weight differently with a single
+bet. Divergence only appears once a rule has &ge;2 bets in a period, and
+only when its Kelly allocation and its win/loss pattern don't line up the
+same way flat weighting would.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
