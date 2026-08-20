@@ -448,6 +448,31 @@ that's what's actually staked. Marker size always reflects that event's real $ s
 of which metric is on screen, and hovering a point shows all four
 numbers together no matter which one is plotted.
 
+### With flat $1/bet tracking, C is no longer ahead of A on the Experiments chart — did its edge disappear?
+
+No — this is small-sample noise from having only one live event logged, not
+a reversal of the backtest finding. UFC 330 (`ledger.md`'s only row so far):
+
+| Rule | Bets | Real-$ net | Flat-$1 net |
+|---|---|---|---|
+| A | 4 | −$0.03 | +0.59 |
+| C | 1 | +$20.00 | +0.40 |
+| E | 1 | +$20.00 | +0.40 |
+| F | 3 | −$1.76 | +0.31 |
+
+C found value in only 1 of 11 fights that card and staked its whole $50
+bankroll on it, which won at 1.40 odds — a big real-dollar swing from one
+bet. A spread its $50 across 4 bets. Real dollars reward C's concentration;
+flat $1/bet strips that out, and on a single bet each, C's +0.40 just
+happens to land below A's four-bet +0.59.
+
+The backtest that originally put C ahead (EXPERIMENTS.md entry 9, 5,786
+pooled-OOF fights) is unaffected — C's flat ROI there is +9.4% vs A's
++6.1%, still the larger, less noisy sample. The pre-registered promotion
+criterion needs 10 logged events before deciding anything, specifically
+because one event's bet count is this volatile, and even then it's judged
+on real-$ bankroll replay (the Rule comparison table), not the flat chart.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
