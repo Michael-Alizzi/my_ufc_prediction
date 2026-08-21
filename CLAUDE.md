@@ -113,6 +113,13 @@ prediction and retraining are deliberately SEPARATED. Two cloud Routines, no PC 
   HuggingFace host (never committed; unlicensed), extracts the odds tables with
   `pg_restore --data-only -f -` (no Postgres server needed), and merges the collected feed.
   Needs huggingface.co reachable + `postgresql-client`.
+- **Monthly (1st, research day — added Aug 2026)**: `ufc-monthly-research` Routine surveys recent
+  classification-ML / sports-betting literature and UFC news, logs a dated entry to
+  `docs/RESEARCH_LOG.md` (with verdicts per idea; rejected retreads from EXPERIMENTS.md need new
+  evidence to be re-raised), and makes a judgement call: at most ONE retrain-worthy change,
+  executed under the full experiment protocol (pre-registration, baseline snapshot,
+  `odds_train.csv` first, Optuna resume, PR — never straight to master), or an explicit
+  "no change warranted" — the expected outcome most months.
 Betting maths lives in `predict.py:kelly_edge` and is shared by the weekly job and the app's
 optional odds inputs.
 

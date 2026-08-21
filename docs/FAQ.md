@@ -401,11 +401,24 @@ retraining needed.
   republish the dashboard → phone notification with the result and the running
   promotion tally.
 
-Both share the git-safety pattern (`git show`, or checkout immediately followed
-by `git restore --staged`) and never touch the modeling notebook or commit
-odds/mma-ai data.
+- **`ufc-monthly-research`, 1st of the month (`0 3 1 * *` UTC = 1 PM AEST,
+  added 21 Aug 2026):** deep research sweep — recent classification/tabular ML
+  methods, sports-prediction and betting-market literature, UFC news that
+  changes the data-generating process (rules, judging, divisions), and
+  candidate new stats/data sources → dated entry in `docs/RESEARCH_LOG.md`
+  with a verdict per idea → judgement call: at most one retrain-worthy change
+  (executed under the full experiment protocol and delivered as a PR Michael
+  merges — never straight to master), or an explicit "no change warranted",
+  the expected outcome most months. Ideas already tried and rejected in
+  `EXPERIMENTS.md` can't be re-proposed without new evidence.
 
-**Retraining** is manual: `scripts/weekly_pipeline.sh` on a GPU machine —
+All Routines share the git-safety pattern (`git show`, or checkout immediately
+followed by `git restore --staged`); the two weekly ones never touch the
+modeling notebook or commit odds/mma-ai data, and the monthly one may retrain
+only under the experiment protocol above.
+
+**Retraining** outside the monthly Routine's gated path is manual:
+`scripts/weekly_pipeline.sh` on a GPU machine —
 fetches training odds (mma-ai HuggingFace dump via `pg_restore`, never
 committed), scrapes fresh data from the sibling `UFC-Predictions` repo,
 retrains with Optuna's resume mechanism (survives the cloud's ~8hr container
