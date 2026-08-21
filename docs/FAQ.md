@@ -370,20 +370,53 @@ not against a coin flip.
 
 ## Operations
 
-### What runs when?
+### What runs when? / How does the whole pipeline fit together?
 
-Two cloud Routines, both AEST, no PC involved:
+**Modeling pipeline** (`ufc_prediction_claude.ipynb`) is manual, never triggered
+by a Routine — it needs historical odds data that isn't safe to fetch from the
+cloud, so retraining is deliberately not automatic. Order: load committed raw
+CSVs → clean/merge → feature engineering (prior-fights-only, mirrored to kill
+red-corner bias) → rolling-window walk-forward CV + Optuna tuning → chronological
+holdout (validation slice tunes the blend, test slice scored once) → ensemble
+(top-3 XGBoost + LightGBM + CatBoost, logistic-stacked on pooled OOF) → fixed
+0.5 threshold → export `ensemble.joblib` + `fighter_history.parquet`. `predict.py`
+replays the same feature math against those two artifacts to serve a single
+fight — that's what both weekly Routines and the Streamlit app call, no
+retraining needed.
 
-- **Thursday 1 PM (card day):** scrape fresh fight data (when ufcstats allows) →
-  fetch the upcoming card's Sportsbet + AU-median odds → predict, stake by rule A
-  with C/E shadow logs → push `predictions_output.md` + `card.json` to the
-  `weekly-predictions-log` branch → phone notification with the slip.
-- **Friday 6 PM (scoring day):** find the most recent completed-but-unscored card,
-  fetch results, grade A/C/E via `scripts/score_card.py` (voids handled), append
-  `ledger.md` + `collected_odds.csv` on the log branch → phone notification with
-  the result and the running promotion tally.
+**Two cloud Routines, both AEST, no PC involved:**
 
-Retraining is **not** scheduled — see above.
+- **`ufc-weekly-card-day`, Thursday 1 PM (`0 3 * * 4` UTC):** cheap ufcstats
+  probe (usually blocked, skips gracefully) → WebSearch the next card → build/
+  refresh `card.json` odds via `scripts/fetch_card_odds.py` (Sportsbet staking
+  price + de-vigged AU-median feature price) → `send_weekly_predictions.py`
+  (rule A's real $50 stakes + C/E/F shadow logs) → commit
+  `predictions_output.md` + `card.json` to `weekly-predictions-log` → rebuild +
+  republish the dashboard → phone notification with the slip.
+- **`ufc-friday-scoring`, Friday (`0 8 * * 5` UTC ≈ 6 PM AEST):** find the most
+  recent completed-but-unscored card → WebSearch results (voids for changed
+  fights) → `scripts/score_card.py` grades A/C/E/F → append `ledger.md` +
+  `collected_odds.csv` on the log branch → rebuild `odds_train.csv` for the
+  History tab's backtest (mma-ai dump, gitignored, never committed) → rebuild +
+  republish the dashboard → phone notification with the result and the running
+  promotion tally.
+
+Both share the git-safety pattern (`git show`, or checkout immediately followed
+by `git restore --staged`) and never touch the modeling notebook or commit
+odds/mma-ai data.
+
+**Retraining** is manual: `scripts/weekly_pipeline.sh` on a GPU machine —
+fetches training odds (mma-ai HuggingFace dump via `pg_restore`, never
+committed), scrapes fresh data from the sibling `UFC-Predictions` repo,
+retrains with Optuna's resume mechanism (survives the cloud's ~8hr container
+reclaim), commits the model artifacts. One variable per run, gated by
+`EXPERIMENTS.md`'s McNemar/market-comparison protocol.
+
+**Stale leftover** (found 2026-08-21 via `list_triggers`, not cleaned up yet):
+a third trigger, "UFC weekly retrain + predictions (fires Fri 9AM AEST)", is a
+leftover from before the Aug 2026 redesign split retraining out of the weekly
+job — last updated Aug 4, `next_run_at` already in the past. Appears dead
+rather than actively firing; flagged to Michael to confirm before deleting.
 
 ### An event just finished — why doesn't the dashboard show it yet?
 
