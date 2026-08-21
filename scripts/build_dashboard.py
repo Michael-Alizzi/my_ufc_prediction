@@ -819,9 +819,16 @@ if (!NEXT || NEXT.decided) {
         <td>${f.bet_on ? esc(f.bet_on) : '<span style="color:var(--muted)">no value</span>'}</td>
         <td class="num">${f.bet_on ? f.bet_odds.toFixed(2) : "—"}</td>
         <td class="num alloc-out">$0</td><td class="num ret-out">—</td></tr>`).join("")}
-    </table></div>`;
+      <tr style="font-weight:700"><td colspan="3">Total if every placed bet wins</td>
+        <td class="num alloc-total-out">$0</td><td class="num ret-total-out">—</td></tr>
+    </table></div>
+    <p class="sub" style="margin:8px 0 0">That total is a ceiling, not an expectation &mdash; each fight is an
+      independent bet, so realistically some win and some lose. It's what you'd collect only in the (unlikely)
+      case every placed bet comes in.</p>`;
   const bInput = document.getElementById("bankroll-input");
   const allocRows = [...document.querySelectorAll("#alloc-table tr[data-i]")];
+  const allocTotalOut = document.querySelector(".alloc-total-out");
+  const retTotalOut = document.querySelector(".ret-total-out");
   function recompute() {
     const total = parseFloat(bInput.value) || 0;
     let stakes = {};
@@ -835,11 +842,16 @@ if (!NEXT || NEXT.decided) {
       const top = valueFights.reduce((a, b) => b.kelly > a.kelly ? b : a);
       stakes[top.i] += total - sum;  // rounding remainder to the biggest edge
     }
+    let stakedSum = 0, returnSum = 0;
     allocRows.forEach(row => {
       const i = +row.dataset.i, f = NEXT.fights[i], amt = stakes[i] || 0;
       row.querySelector(".alloc-out").textContent = amt ? fmt$(amt) : "$0";
       row.querySelector(".ret-out").textContent = amt ? fmt$(amt * f.bet_odds) : "—";
+      stakedSum += amt;
+      if (amt) returnSum += amt * f.bet_odds;
     });
+    allocTotalOut.textContent = fmt$(stakedSum);
+    retTotalOut.textContent = returnSum ? fmt$(returnSum) : "—";
   }
   bInput.addEventListener("input", recompute);
   recompute();
