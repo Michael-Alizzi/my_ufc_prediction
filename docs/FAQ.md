@@ -412,11 +412,10 @@ retrains with Optuna's resume mechanism (survives the cloud's ~8hr container
 reclaim), commits the model artifacts. One variable per run, gated by
 `EXPERIMENTS.md`'s McNemar/market-comparison protocol.
 
-**Stale leftover** (found 2026-08-21 via `list_triggers`, not cleaned up yet):
-a third trigger, "UFC weekly retrain + predictions (fires Fri 9AM AEST)", is a
-leftover from before the Aug 2026 redesign split retraining out of the weekly
-job — last updated Aug 4, `next_run_at` already in the past. Appears dead
-rather than actively firing; flagged to Michael to confirm before deleting.
+A third trigger, "UFC weekly retrain + predictions (fires Fri 9AM AEST)", was
+a leftover from before the Aug 2026 redesign split retraining out of the
+weekly job (found stale via `list_triggers` on 2026-08-21, `next_run_at`
+already in the past) — confirmed dead and deleted the same day.
 
 ### An event just finished — why doesn't the dashboard show it yet?
 
