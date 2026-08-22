@@ -664,6 +664,24 @@ published version since the Routines republish in place. Lost the link? The
 gallery at <https://claude.ai/code/artifacts> lists everything you own —
 the Octagon Ledger is the 🥊 one.
 
+### Do any betting apps have an API that lets me place bets programmatically?
+
+Retail bookmakers (Sportsbet, TAB, Ladbrokes, Neds, Bet365): **no** — no
+public bet-placement API for individuals, and their terms prohibit
+automation; scripted accounts get restricted or closed. The one real
+exception is **Betfair**, an exchange rather than a bookmaker: its Exchange
+API (API-NG) openly supports programmatic bet placement/cancellation, with
+a free delayed app key for development and a live key on request — Betfair
+AU even publishes automation tutorials. Caveats before wiring this project
+to it: (1) the pipeline's edges are computed against Sportsbet fixed odds,
+and Betfair takes ~5&ndash;8% commission on net winnings, so edges must be
+re-derived net of commission; (2) MMA prelim markets on Betfair AU are
+thin, so small value bets may not get matched at the modelled price;
+(3) AU accounts can't bet in-play via the API (pre-fight only — which is
+all this project does); (4) most importantly, automation is pointless
+until the 10-event trial demonstrates a real edge — automating placement
+before then just automates losing faster. Revisit if a rule is promoted.
+
 ### Where does the odds API key live, and where do I get one?
 
 `ODDS_API_KEY` is set in the **cloud environment settings**: claude.ai → Code →
