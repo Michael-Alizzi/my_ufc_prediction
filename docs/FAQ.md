@@ -630,6 +630,18 @@ happens to be doing. Revisit this once the 10-event trial resolves and a
 rule has a demonstrated real-$ edge; scaling to a genuinely growing
 bankroll is a reasonable question then, not mid-trial.
 
+### How much am I betting this week / what's the current slip?
+
+Always $50 per event (fixed through the 10-event trial — see the stake-sizing
+entry above), split across whatever the model finds value in. The current
+week's exact slip lives in two places, both refreshed by Thursday's card-day
+Routine: the dashboard's **Performance tab → upcoming card** (with the
+bankroll allocator and the total-if-all-win row), and
+`predictions_output.md` on the `weekly-predictions-log` branch (the "Your
+bet" column). Worked example — Hernandez vs. Rodrigues, Aug 22 2026: $11
+Padilla @2.01, $18 de Ridder @1.25, $21 Hernandez @1.56; max loss $50,
+~$77 back (+$27) if all three win.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
