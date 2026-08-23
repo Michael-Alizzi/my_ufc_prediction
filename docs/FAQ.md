@@ -513,19 +513,20 @@ as its own rule.
 
 ### Are Kelly and flat both staking $1?
 
-No. Flat is literally $1 on every bet. Kelly-staked is a *variable* stake
-&mdash; the bet's kelly fraction of a notional fixed $100 (non-compounding):
-a thin-edge k=0.02 bet stakes $2, a capped k=0.25 bet stakes $25. Two
-consequences. (1) The **ROIs are still fairly comparable**, because ROI
-divides profit by dollars staked and the notional bankroll cancels &mdash;
-$1, $100 or $1,000 gives the same percentage; the ROI gap isolates purely
-whether confidence-weighting helped. (2) The **cumulative-$ chart lines
-are not on the same staked base**: kelly's line ends higher in dollars
-partly because it stakes more dollars overall. Use the chart for each
-convention's trajectory (drawdowns, when the edge was earned) and the
-Replay summary's ROI columns for "which earns more per dollar risked."
-Same structure on the live side: "real" is the $50-per-event bankroll
-split (variable per-bet stakes), "flat" is $1/bet.
+No. Flat is literally $1 on every bet. Kelly-staked is a *variable*
+stake &mdash; the bet's kelly fraction of the same $1 bankroll-unit
+(non-compounding; convention changed from a $100 notional to $1 on
+23 Aug 2026 so both views share one base): a thin-edge k=0.02 bet stakes
+2&cent;, a capped k=0.25 bet stakes 25&cent;. Two consequences. (1) The
+**ROIs are directly comparable** &mdash; ROI divides profit by dollars
+staked, so the notional cancels; the ROI gap isolates purely whether
+confidence-weighting helped. (2) The **cumulative-$ lines still aren't on
+the same staked base** &mdash; kelly stakes ~9&times; fewer dollars than
+flat over the same bets, so its dollar curve runs lower even at higher
+ROI. The Replay summary table now shows both P/L columns and both ROIs
+side by side (hover the Kelly P/L for total dollars staked). Same
+structure on the live side: "real" is the $50-per-event bankroll split,
+"flat" is $1/bet.
 
 ### So kelly betting "$100 per event" through 2025 only made $36?
 
@@ -540,11 +541,16 @@ mediocre for rule A even correctly read &mdash; consistent with entry 9's
 finding that A's edge collapses in recent data (recent-half flat ROI
 +0.9% vs +11.3% earlier). The +14% kelly-ROI headline is a whole-history
 average leaning on older, easier years, which is exactly why C and E
-(recent-half +7&ndash;8%) earned their live shadow trial.
+(recent-half +7&ndash;8%) earned their live shadow trial. (Since 23 Aug
+2026 the chart's kelly notional is $1 rather than $100, so this same 2025
+view now reads +$0.37 on ~$20 staked &mdash; identical ROI, smaller
+unit.)
 
 ### Why did the kelly-staked view average ~$11 a bet?
 
-Nobody chose it &mdash; it's emergent from `k = (p&middot;o&minus;1)/(o&minus;1)`
+(Figures below are at the pre-23-Aug-2026 $100 notional; at today's $1
+notional divide by 100 &mdash; the fractions and the logic are
+unchanged.) Nobody chose it &mdash; it's emergent from `k = (p&middot;o&minus;1)/(o&minus;1)`
 applied to whatever edges the model found (2025: median stake ~$10, 55
 bets under $5, 32 at $15&ndash;25, 26 pinned at the $25 cap). The average
 sits that high because of the formula's denominator: **short-priced
@@ -562,10 +568,11 @@ the damage (Alvarez/Hernandez live). The 0.25 cap is the guardrail.
 
 ### Decode the kelly-staked chart's subtitle for me
 
-Phrase by phrase. *"Each bet staking its kelly fraction of a fixed $100"*:
-walk up to every bet with a fresh $100; the kelly formula names a
-percentage of it to risk (2% &rarr; $2, 22% &rarr; $22) &mdash; "fixed"
-means the same fresh $100 every bet, never adjusted by results.
+Phrase by phrase. *"Each bet staking its kelly fraction of a fixed $1"*
+(a $100 notional until 23 Aug 2026; rescaled so flat and kelly share one
+base): walk up to every bet with a fresh $1; the kelly formula names a
+percentage of it to risk (2% &rarr; 2&cent;, 22% &rarr; 22&cent;) &mdash;
+"fixed" means the same fresh $1 every bet, never adjusted by results.
 *"Non-compounding"*: winnings don't roll into bigger stakes and losses
 don't shrink the next bet &mdash; textbook kelly compounds, but that's
 switched off here (same reason the live trial uses fixed $50 tranches:

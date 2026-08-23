@@ -956,7 +956,8 @@ if (!HIST) {
       kst += k; kpr += w ? k * (odds - 1) : -k; won += w;
       imp += 1 / odds;
     }
-    return {n, flat, hit: n ? 100 * won / n : 0, avgImp: n ? 100 * imp / n : 0,
+    return {n, flat, kellyPL: kpr, kellyStaked: kst,
+            hit: n ? 100 * won / n : 0, avgImp: n ? 100 * imp / n : 0,
             flatROI: n ? 100 * flat / n : 0, kellyROI: kst ? 100 * kpr / kst : 0};
   }
 
@@ -975,7 +976,7 @@ if (!HIST) {
   const W = 940, H = 320, L = 52, R = 86, T = 16, B = 34;
   const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const histMetricSub = {
-    net: () => "Cumulative profit with each bet staking its kelly fraction of a fixed $100 (non-compounding) — the backtest's analog of real staking, weighting confident bets more. Same pooled out-of-fold fights matched to closing odds; upper bounds apply.",
+    net: () => "Cumulative profit with each bet staking its kelly fraction of a fixed $1 (non-compounding) — same $1 bankroll-unit as the flat view, but kelly risks only the kelly-size share of it (capped 25%), weighting confident bets more. Same pooled out-of-fold fights matched to closing odds; upper bounds apply.",
     flatnet: () => "Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement.",
     hit: () => "Running hit rate to date (cumulative wins &divide; cumulative bets) per rule, by month.",
     betrate: () => "Running bet rate to date (cumulative bets &divide; cumulative fights with odds that month) per rule — how often each rule finds value.",
@@ -1016,9 +1017,9 @@ if (!HIST) {
         const key = row[0].slice(0, 7);
         if (!mi.has(key)) continue;
         const [odds, k, w] = row.slice(-3), idx = mi.get(key);
-        // net: kelly fraction of a fixed $100 per bet (non-compounding);
-        // flatnet: $1 per bet regardless of confidence
-        netPer[idx] += 100 * k * (w ? odds - 1 : -1);
+        // net: kelly fraction of a fixed $1 per bet (non-compounding, same
+        // convention as the per-bet table); flatnet: the whole $1 every bet
+        netPer[idx] += k * (w ? odds - 1 : -1);
         flatPer[idx] += w ? odds - 1 : -1;
         wonPer[idx] += w ? 1 : 0;
         betsPer[idx] += 1;
@@ -1125,10 +1126,10 @@ if (!HIST) {
   </div>`);
   function renderSummary(R) {
     document.getElementById("hist-summary").innerHTML =
-      `<tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Avg market win %</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th></tr>` +
+      `<tr><th>Rule</th><th class="num">Bets</th><th class="num">Bet rate</th><th class="num">Hit rate</th><th class="num">Avg market win %</th><th class="num">Flat P/L ($1/bet)</th><th class="num">Flat ROI</th><th class="num">Kelly P/L (kelly of $1)</th><th class="num">Kelly ROI</th></tr>` +
       RULES.map(r => {
         const m = metrics(r, R), fights = fightsIn(R);
-        if (!m.n) return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
+        if (!m.n) return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`;
         return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}</td>
           <td class="num">${m.n.toLocaleString()}</td>
           <td class="num">${fights ? (100 * m.n / fights).toFixed(0) + "%" : "—"}</td>
@@ -1136,6 +1137,7 @@ if (!HIST) {
           <td class="num" title="the hit rate the market predicted for these bets">${m.avgImp.toFixed(1)}%</td>
           <td class="num ${cls(m.flat)}">${sign$(m.flat)}</td>
           <td class="num ${cls(m.flat)}">${(m.flatROI >= 0 ? "+" : "") + m.flatROI.toFixed(1)}%</td>
+          <td class="num ${cls(m.kellyPL)}" title="total kelly-staked: ${fmt$(m.kellyStaked)}">${sign$(m.kellyPL)}</td>
           <td class="num ${cls(m.kellyROI)}">${(m.kellyROI >= 0 ? "+" : "") + m.kellyROI.toFixed(1)}%</td></tr>`;
       }).join("");
   }
