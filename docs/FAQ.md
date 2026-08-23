@@ -330,6 +330,18 @@ once). A margin that thin from stapling backtest-best components is
 winner's-curse bait, so no fifth shadow rule was added; revisit if the
 shadow logs ever show C and E disagreeing materially on live cards.
 
+### What's "H2 kelly" in these tables?
+
+H2 = the second, more recent half of the backtest history (bets sorted by
+date, split at the median; H1 is the older half), and "H2 kelly" is the
+kelly-staked ROI on just those recent bets. It exists because a
+whole-history average can hide a dying edge as markets sharpen &mdash;
+and it's decisive here: rule A's whole-history flat ROI is +6.1% but its
+H2 flat is +0.9% (the edge nearly evaporated recently), while C and E
+hold +7&ndash;8% in H2. That gap, more than the headline numbers, is why
+C/E earned the live trial. Entry 9's promotability bar required beating A
+in both halves under both staking schemes; none did, hence the trial.
+
 ### How does a shadow rule get promoted to the real rule?
 
 Pre-registered in entry 9, before any card was scored: **after 10 logged events, a
