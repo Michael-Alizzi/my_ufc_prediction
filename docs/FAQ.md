@@ -560,6 +560,31 @@ the biggest stakes land where the model most confidently disagrees with
 the market on favourites, and misplaced confidence there concentrates
 the damage (Alvarez/Hernandez live). The 0.25 cap is the guardrail.
 
+### Decode the kelly-staked chart's subtitle for me
+
+Phrase by phrase. *"Each bet staking its kelly fraction of a fixed $100"*:
+walk up to every bet with a fresh $100; the kelly formula names a
+percentage of it to risk (2% &rarr; $2, 22% &rarr; $22) &mdash; "fixed"
+means the same fresh $100 every bet, never adjusted by results.
+*"Non-compounding"*: winnings don't roll into bigger stakes and losses
+don't shrink the next bet &mdash; textbook kelly compounds, but that's
+switched off here (same reason the live trial uses fixed $50 tranches:
+keeps every bet on equal footing, so the curve isn't path-dependent on
+early luck). *"The backtest's analog of real staking"*: a hedge &mdash;
+live rule A splits one $50 pot per card, but the backtest is a flat list
+of bets with no card structure, so kelly-of-$100-per-bet is the closest
+per-bet equivalent; both weight confident bets more. *"Pooled
+out-of-fold fights"*: every replayed prediction came from a model that
+never trained on that fight (walk-forward CV) &mdash; no memorized
+answers. *"Matched to closing odds"*: each fight joined to its real
+historical closing line; unmatched fights drop out, leaving the 5,786.
+*"Upper bounds apply"*: every number is a ceiling &mdash; the replay
+assumes you got the closing price (you'd really bet earlier at different
+prices), no bet limits, no account restrictions, and that your money
+never moves the line. Real results would be somewhat worse, which is why
+the backtest only gates which rules get trialled while the live record
+decides promotion.
+
 ### With flat $1/bet tracking, C is no longer ahead of A on the Experiments chart — did its edge disappear?
 
 No — this is small-sample noise from having only one live event logged, not
