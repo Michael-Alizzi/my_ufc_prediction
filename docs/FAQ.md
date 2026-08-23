@@ -515,21 +515,32 @@ bets to date (`100/odds`, from the same `shadow` strings
 picks; lower means it's finding value in bigger disagreements with the
 market.
 
-On the **Experiments** tab specifically, "Net return" plots a **flat $1
-per bet** (Aug 2026), not the actual $ staked: rules concentrate
-differently — C typically puts its whole bankroll on one bet some weeks,
-A spreads across several — so comparing rules on real dollars exaggerates
-whichever one happens to concentrate more that card. Flat staking is the
-same convention `scripts/betting_rule_compare.py` and History's backtest
-replay already use for exactly this reason. This is presentational only:
-the pre-registered promotion decision (EXPERIMENTS.md entries 9–10) is
-still made on the real-$ bankroll-replay figures in the Rule comparison
-table below the chart and in `ledger.md`'s own `Staked`/`Returned`/`Net`
-columns, unchanged — the chart's flat view never feeds that decision.
-**Performance**'s rule-A chart keeps real dollars throughout, since
-that's what's actually staked. Marker size always reflects that event's real $ swing regardless
-of which metric is on screen, and hovering a point shows all four
-numbers together no matter which one is plotted.
+The **Experiments** chart briefly carried a flat-$1 net option (Aug
+2026, to strip out stake concentration) but it's since been removed at
+Michael's request — that chart now plots real-$50 net only, matching the
+Rule comparison table and the promotion decision; flat-$1 tracking still
+lives in `ledger.md`'s last column and the History tab. **Performance**'s
+rule-A chart keeps real dollars throughout, since that's what's actually
+staked. Marker size always reflects that event's real $ swing regardless
+of which metric is on screen, and hovering (or clicking to pin) a point
+shows all the numbers together no matter which one is plotted.
+
+### In the tooltip, why does a rule's hit rate differ from its avg market win — did it disagree with the market?
+
+They're **outcome vs price** for the same bets, not two opinions about
+who wins. Hit rate = fraction of that rule's bets that won; avg market
+win = the average odds-implied probability (`100/odds`) of those same
+bets — what the prices "promised." Hernandez card example for E: hit 67%
+(2 of 3 won) vs market 64.6% (Padilla @2.01 &rarr; 49.8%, de Ridder
+@1.25 &rarr; 80.0%, Hernandez @1.56 &rarr; 64.1%, mean 64.6%). The ~2pp
+gap means E's picks won slightly more often than the odds predicted —
+that gap IS the per-bet profit signal (it matches the +$0.26 flat net),
+and it can coexist with a real-$ loss when the sizing puts the biggest
+stake on the loser, as it did here. As for disagreement: every bet is
+definitionally a small disagreement with the price (no perceived
+mispricing &rarr; no bet); on this card no rule faded a market
+favourite, and all four bet the same three fights, so their hit/market
+numbers were identical — only stake splits differed.
 
 ### Why is the flat ROI so much higher than the staked ROI (or vice versa)?
 
