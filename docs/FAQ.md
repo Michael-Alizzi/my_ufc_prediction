@@ -527,6 +527,21 @@ Replay summary's ROI columns for "which earns more per dollar risked."
 Same structure on the live side: "real" is the $50-per-event bankroll
 split (variable per-bet stakes), "flat" is $1/bet.
 
+### So kelly betting "$100 per event" through 2025 only made $36?
+
+No $100 was ever staked per event &mdash; that's the notional the kelly
+*fraction* applies to, per bet. The actual 2025 numbers behind the chart's
++$36.71 end label: 181 bets Jan&ndash;Oct (the odds data ends in October),
+$2,033 total staked at an average $11.23/bet (max $25, the 0.25 kelly
+cap), net +$36.71 = **+1.8% ROI for 2025**. Read it as "risking ~$2,000
+across the year in ~$11 nibbles returned $37," not "$100 a card returned
+$37." The honest part the low number does reveal: 2025 was genuinely
+mediocre for rule A even correctly read &mdash; consistent with entry 9's
+finding that A's edge collapses in recent data (recent-half flat ROI
++0.9% vs +11.3% earlier). The +14% kelly-ROI headline is a whole-history
+average leaning on older, easier years, which is exactly why C and E
+(recent-half +7&ndash;8%) earned their live shadow trial.
+
 ### With flat $1/bet tracking, C is no longer ahead of A on the Experiments chart — did its edge disappear?
 
 No — this is small-sample noise from having only one live event logged, not
