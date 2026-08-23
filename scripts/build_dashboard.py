@@ -603,13 +603,9 @@ function tile(k, v, s, vClass) {
     `<div class="tile"><div class="k">${k}</div><div class="v ${vClass || ""}">${v}</div><div class="s">${s}</div></div>`);
 }
 if (n) {
-  tile("Rule A net", sign$(A.net), fmt$(A.staked) + " staked → " + fmt$(A.returned) + " back", cls(A.net));
-  tile("Rule A hit rate", A.hit + "%", A.won + " of " + A.placed + " bets won" + (A.void ? ", " + A.void + " void" : ""));
   const lead = RULES.map(r => [r, tot[r].net]).sort((a, b) => b[1] - a[1])[0];
   tile("Trial progress", n + " / 10", "leader so far: rule " + lead[0] + " (" + sign$(lead[1]) + ")");
 } else {
-  tile("Rule A net", "—", "no events scored yet");
-  tile("Rule A hit rate", "—", "no bets graded yet");
   tile("Trial progress", "0 / 10", "first grading pending");
 }
 
