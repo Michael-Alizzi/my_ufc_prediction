@@ -756,6 +756,29 @@ Small d = whisper under static = the better rule loses the head-to-head
 case, not the goal &mdash; and the concern with our trial is exactly that
 the realistic d here (~0.2) sits in the low-certainty regime.
 
+### Isn't "77% power at n=10" saying we're 77% sure there's an $8 edge?
+
+No &mdash; that flips the direction of the conditional, the single most
+common misreading of power. The table says: **IF** the true edge is $8,
+**THEN** the test would detect it 77% of the time
+(power&nbsp;=&nbsp;P(detection&nbsp;|&nbsp;edge)). It does not say "given
+the data, there's a 77% chance the edge is $8"
+(P(edge&nbsp;|&nbsp;detection)). Power is a property of the detector,
+computed before any data exists &mdash; like a smoke alarm that catches
+77% of real fires and false-alarms 10% of the time: those two numbers
+describe the alarm, not whether your house is burning. When it beeps, the
+probability of an actual fire is a third number that also depends on how
+often fires happen (the prior). Converting power into "how sure are we
+now?" needs Bayes. Example with a 50/50 prior that C truly has a
+d&asymp;0.7 edge: if the test fires,
+P(edge&nbsp;|&nbsp;fired) = (0.5&times;0.77) / (0.5&times;0.77 +
+0.5&times;0.10) &asymp; 89%; if it stays silent,
+P(edge&nbsp;|&nbsp;silent) &asymp; 20%. Neither equals 77% &mdash;
+power's role is upstream, setting *how much* a firing or silent test
+should move your belief. That's also why low power is so insidious: at
+n=10 and d=0.2 (power 23%), a silent test barely updates anything &mdash;
+the trial can't hear, and not-hearing isn't evidence of absence.
+
 ### Should I keep betting the same fixed $50 each event, or scale it?
 
 Keep it fixed at $50 for now. Two reasons. First, the promotion protocol
