@@ -597,10 +597,14 @@ Neither is "the truth" and they can legitimately disagree on small samples.
 
 ### What should I actually make the promotion decision off of?
 
-The pre-registered criterion (entry 9), not whichever chart currently looks
-most convincing: after 10 logged events, promote a shadow rule (C/E/F) over
-A only if it beats A on **cumulative real-$ bankroll-replay return** *and*
-was ahead on **at least 6 of the 10 cards**. That criterion was written down
+The pre-registered criterion (entry 9, revised Aug 20), not whichever chart
+currently looks most convincing: after 10 logged events, promote a shadow
+rule (C/E/F) over A only if it beats A on **cumulative real-$
+bankroll-replay return** *and* a one-sided **Wilcoxon signed-rank test** on
+the paired per-event differences rejects "no systematic edge" at
+&alpha;=0.10 (`scripts/promotion_test.py`; this replaced the original
+"ahead on 6 of 10 cards" clause, which a zero-edge rule passed 37.7% of
+the time by luck). The criterion was written down
 and committed before any live result existed &mdash; precisely so that once
 metrics start disagreeing (as real-$ and flat-$1 already do, at event 1),
 there's no temptation to reach for whichever one currently flatters the
@@ -612,6 +616,36 @@ rule is ahead (confidence-weighting vs. pure pick quality) &mdash; but let
 only the Rule comparison table's real-$ numbers count toward the actual
 call, and don't make that call at all before 10 events: at N=1 neither
 number is trustworthy regardless of which one you pick.
+
+### If 10 events is statistically weak, how many would make it strong?
+
+Depends entirely on how big the true edge is. The controlling quantity is
+the effect size d = (true per-event $ edge over A) &divide; (event-to-event
+SD of that difference, roughly $10&ndash;15 at $50 stakes). Simulated power
+of our one-sided &alpha;=0.10 Wilcoxon:
+
+| True edge (on $50/event) | d | Events for 80% power | Power at n=10 |
+|---|---|---|---|
+| ~$8/event (huge) | 0.7 | 10 | 77% |
+| ~$6/event | 0.5 | 19 | 56% |
+| ~$5/event | 0.4 | 30 | 45% |
+| ~$3.50/event | 0.3 | 53 | 34% |
+| ~$2.50/event (&asymp; backtest-sized C&ndash;A gap) | 0.2 | 119 | 23% |
+
+So 10 events is only well-powered against a huge edge; the C-vs-A gap the
+backtest actually measured (~$1.50&ndash;$2.50/event) would need **100+
+events &mdash; about two years of weekly cards** &mdash; to confirm
+prospectively. That's by design, not a flaw: the statistical weight lives
+in the 5,786-fight backtest, where such gaps are measurable, and the
+10-event forward trial is a **reality check** against winner's curse
+(best-of-five-rules selection), implementation drift, and market change
+&mdash; big enough to catch "this rule is a disaster live" and to require
+the live record to point the same way as the backtest, never big enough to
+certify a small edge on its own. If the trial itself should carry the
+evidence, the options are: extend to ~30 events (&asymp;7 months, detects
+~$5/event edges) or ~50 (a year, ~$3.50/event) &mdash; or keep 10 as the
+gate and read promotion as "backtest evidence + live sanity check," which
+is what entry 9 pre-registered.
 
 ### Should I keep betting the same fixed $50 each event, or scale it?
 
