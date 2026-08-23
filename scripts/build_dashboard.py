@@ -779,13 +779,12 @@ initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "net"
 
 // -- rule table ------------------------------------------------------------
 const rt = document.getElementById("rule-table");
-rt.innerHTML = `<tr><th>Rule</th><th class="num">Events</th><th class="num">Staked</th>
+rt.innerHTML = `<tr><th>Rule</th><th class="num">Staked</th>
   <th class="num">Returned</th><th class="num">Net</th><th class="num">ROI</th>
   <th class="num">Hit rate</th><th class="num">Cards ahead of A</th></tr>` +
   RULES.map(r => {
     const t = tot[r];
     return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}${r === "A" ? " (staked)" : " (shadow)"}</td>
-      <td class="num">${n}</td>
       <td class="num">${n ? fmt$(t.staked) : "—"}</td>
       <td class="num">${n ? fmt$(t.returned) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${n ? sign$(t.net) : "—"}</td>
