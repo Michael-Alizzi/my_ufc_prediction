@@ -712,6 +712,36 @@ power?". The table's shape is the argument in miniature: a 10-event trial
 reliably detects only top-row-sized effects, which is exactly the
 sanity-check role entry 9 assigns it.
 
+### What is d actually supposed to represent?
+
+**How visible the edge is in a single event.** The division is the point:
+a dollar amount alone can't determine detectability &mdash; a $5 edge
+under $1 of week-to-week wobble would show C beating A by $4&ndash;6
+every single card (obvious immediately), while the same $5 under $50 of
+wobble is invisible for years. Dividing by the SD strips out the dollars
+and leaves the signal-to-noise ratio, the only thing the statistics
+depend on. Three readings of the same number:
+
+1. **Fraction of one week's luck**: d = 0.4 means the true advantage is
+   40% of a typical event-to-event swing &mdash; any single card is ~2.5
+   parts luck to 1 part edge, which is why only averages can reveal it.
+2. **How often the better rule wins the week**: for bell-shaped
+   differences, a random single card shows the better rule ahead with
+   probability &Phi;(d) &mdash; d = 0.2 &rarr; ~58%, d = 0.4 &rarr; ~66%,
+   d = 0.7 &rarr; ~76%. A genuinely better rule at d = 0.2 loses the
+   head-to-head 42 weeks in 100; that's what "weak signal" means
+   physically.
+3. **How fast averaging rescues you**: n events shrink the noise by
+   &radic;n while the signal stays put, so effective visibility is
+   d&middot;&radic;n; the test needs roughly d&middot;&radic;n &gtrsim;
+   2.1, which rearranges into the table's n &asymp; 4.5/d&sup2; column.
+
+Caution: d uses the SD of the *true* event-to-event distribution, not
+the SD computed from the observed diffs &mdash; at 2 events that
+estimate is itself mostly noise. The &asymp;$12 in the table is a
+plausibility estimate of the underlying spread, which is why the rows
+are scenarios rather than measurements.
+
 ### Should I keep betting the same fixed $50 each event, or scale it?
 
 Keep it fixed at $50 for now. Two reasons. First, the promotion protocol
