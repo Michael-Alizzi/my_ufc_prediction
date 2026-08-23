@@ -6,3 +6,7 @@
 | 2026-08-15 | UFC 330: Makhachev vs. Machado Garry | C | $50 | $70.00 | +20.00 | 1/1/0 | +0.40 |
 | 2026-08-15 | UFC 330: Makhachev vs. Machado Garry | E | $50 | $70.00 | +20.00 | 1/1/0 | +0.40 |
 | 2026-08-15 | UFC 330: Makhachev vs. Machado Garry | F | $50 | $48.24 | -1.76 | 2/3/0 | +0.31 |
+| 2026-08-22 | UFC Fight Night: Hernandez vs. Rodrigues | A | $50 | $44.61 | -5.39 | 2/3/0 | +0.26 |
+| 2026-08-22 | UFC Fight Night: Hernandez vs. Rodrigues | C | $51 | $44.61 | -6.39 | 2/3/0 | +0.26 |
+| 2026-08-22 | UFC Fight Night: Hernandez vs. Rodrigues | E | $50 | $37.65 | -12.35 | 2/3/0 | +0.26 |
+| 2026-08-22 | UFC Fight Night: Hernandez vs. Rodrigues | F | $50 | $42.11 | -7.89 | 2/3/0 | +0.26 |
