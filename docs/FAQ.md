@@ -528,6 +528,23 @@ side by side (hover the Kelly P/L for total dollars staked). Same
 structure on the live side: "real" is the $50-per-event bankroll split,
 "flat" is $1/bet.
 
+### Did the $100&rarr;$1 notional change actually make sense?
+
+Yes, as a pure presentational rescale: the per-bet table already used
+kelly-of-$1, so the chart's $100 was an internal inconsistency (and the
+direct cause of the "$100 per event?!" misreading), and both views now
+share one bankroll-unit &mdash; flat risks the whole $1, kelly the kelly
+share of it. Nothing analytical moved: curve shape, every ROI, and every
+conclusion are identical (a notional is an arbitrary multiplier). The
+trade-off: kelly's dollar values are now small (2025 reads +$0.37) and
+its line generally sits *below* flat's &mdash; not worse performance,
+just ~9&times; fewer dollars staked; dollars-on-one-axis always privileges
+one staking base, so cross-convention judgment belongs to the summary
+table's ROI columns and the chart is for trajectory. If the sub-dollar
+axis grates, the next option is normalizing kelly stakes to average $1
+&mdash; fudgier to explain, so only if the cents actually bother in
+practice.
+
 ### So kelly betting "$100 per event" through 2025 only made $36?
 
 No $100 was ever staked per event &mdash; that's the notional the kelly
