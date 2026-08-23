@@ -545,6 +545,24 @@ axis grates, the next option is normalizing kelly stakes to average $1
 &mdash; fudgier to explain, so only if the cents actually bother in
 practice.
 
+### How do I compare flat vs kelly apples-to-apples?
+
+**Use the ROI columns in the Replay summary table** &mdash; ROI divides
+each convention's profit by the dollars it actually risked, so the
+stake-size difference cancels entirely (2025: flat +6.9% vs kelly +1.8%;
+that IS the fair comparison). The dollar curves can never be made fair
+by inspection, because deploying different amounts of capital is the
+strategy itself, not a distortion. If comparable *curves* are ever
+wanted, the one honest construction is rescaling kelly's stakes so its
+average stake is $1 (stake = k &divide; mean k, proportions preserved)
+&mdash; both conventions then deploy the same total capital and the two
+lines answer "given the same money, does confidence-weighting allocate
+it better?" Not implemented (deliberately): it would be a third staking
+convention whose numbers match neither the summary table nor the per-bet
+table, recreating the cross-surface inconsistency the $1 rescale just
+fixed. If adopted later, it should *replace* the kelly-of-$1 chart view
+and relabel the summary column with it, not sit alongside.
+
 ### So kelly betting "$100 per event" through 2025 only made $36?
 
 No $100 was ever staked per event &mdash; that's the notional the kelly
