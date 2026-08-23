@@ -570,14 +570,29 @@ window.addEventListener("hashchange", tabFromHash);
 tabFromHash();
 
 // -- tooltip ---------------------------------------------------------------
+// Hover shows it transiently; clicking a data point PINS it (stays up so the
+// numbers can be read without holding the pointer still). While pinned,
+// hover/leave are ignored; any click that isn't on another data point unpins.
 const tip = document.getElementById("tooltip");
-function tipShow(html, x, y) {
-  tip.innerHTML = html; tip.style.display = "block";
+let tipPinned = false;
+function tipShow(html, x, y, pin) {
+  if (tipPinned && !pin) return;
+  tipPinned = !!pin;
+  tip.innerHTML = html + (pin
+    ? `<div class="row" style="color:var(--muted);margin-top:4px">click anywhere to dismiss</div>` : "");
+  tip.style.display = "block";
   const w = tip.offsetWidth, vw = window.innerWidth;
   tip.style.left = Math.min(x + 14, vw - w - 8) + "px";
   tip.style.top = (y + 14) + "px";
 }
-function tipHide() { tip.style.display = "none"; }
+function tipHide(force) {
+  if (tipPinned && !force) return;
+  tip.style.display = "none";
+}
+document.addEventListener("click", () => {
+  // runs at bubble end; chart click handlers that pin call stopPropagation()
+  if (tipPinned) { tipPinned = false; tipHide(true); }
+});
 
 // -- summary tiles ---------------------------------------------------------
 const ev = DATA.events, tot = DATA.totals;
@@ -730,25 +745,34 @@ function initReturnChart(container, rules, title, defaultMetric) {
   sel.addEventListener("change", redraw);
   redraw();
 
-  container.addEventListener("pointermove", e => {
-    const t = e.target.closest(".pt");
-    if (!t) return tipHide();
+  function ptHtml(t) {
     const i = +t.dataset.i, r = t.dataset.r, row = ev[i].rules[r];
-    if (!row) return tipHide();
+    if (!row) return null;
     const st = EVENT_STATS[ev[i].date + "|" + ev[i].event];
     const ruleSt = st && st.rules ? st.rules[r] : null;
     const hit = row.placed ? Math.round(100 * row.won / row.placed) + "% (" + row.won + "/" + row.placed + ")" : "—";
     const betRate = (st && st.offered) ? Math.round(100 * row.placed / st.offered) + "% (" + row.placed + "/" + st.offered + ")" : "—";
     const mktAvg = (ruleSt && ruleSt.bets) ? (ruleSt.implied_sum / ruleSt.bets).toFixed(1) + "%" : "—";
-    tipShow(`<div class="t">${esc(ev[i].event)}</div>
+    return `<div class="t">${esc(ev[i].event)}</div>
       <div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(row.net)}">${sign$(row.net)} real / ${sign$(row.flat_net)} flat</span></div>
       <div class="row"><span>staked → returned</span><span>${fmt$(row.staked)} → ${fmt$(row.returned)}</span></div>
       <div class="row"><span>hit rate</span><span>${hit}${row.void ? ", " + row.void + " void" : ""}</span></div>
       <div class="row"><span>bet rate</span><span>${betRate}</span></div>
-      <div class="row"><span>avg market win</span><span>${mktAvg}</span></div>`,
-      e.clientX, e.clientY);
+      <div class="row"><span>avg market win</span><span>${mktAvg}</span></div>`;
+  }
+  container.addEventListener("pointermove", e => {
+    const t = e.target.closest(".pt");
+    if (!t) return tipHide();
+    const html = ptHtml(t);
+    html ? tipShow(html, e.clientX, e.clientY) : tipHide();
   });
-  container.addEventListener("pointerleave", tipHide);
+  container.addEventListener("click", e => {
+    const t = e.target.closest(".pt");
+    if (!t) return;
+    const html = ptHtml(t);
+    if (html) { tipShow(html, e.clientX, e.clientY, true); e.stopPropagation(); }
+  });
+  container.addEventListener("pointerleave", () => tipHide());
 }
 
 const expChartCard = document.createElement("div");
@@ -1057,20 +1081,29 @@ if (!HIST) {
     drawHist();
   }));
 
-  hsvg.addEventListener("pointermove", e => {
+  function histTipAt(e) {
     const xhair = hsvg.querySelector("#xhair");
-    if (!xhair) return;
+    if (!xhair) return null;
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(hsvg.getScreenCTM().inverse());
-    if (pt.x < L || pt.x > W - R) { xhair.setAttribute("visibility", "hidden"); return tipHide(); }
+    if (pt.x < L || pt.x > W - R) { xhair.setAttribute("visibility", "hidden"); return null; }
     const i = Math.round((pt.x - L) / (W - L - R) * (hMonths.length - 1));
     xhair.setAttribute("x1", hxS(i)); xhair.setAttribute("x2", hxS(i));
     xhair.setAttribute("visibility", "visible");
-    tipShow(`<div class="t">${hMonths[i]}</div>` + hActive.map(r => {
+    return `<div class="t">${hMonths[i]}</div>` + hActive.map(r => {
       const s = hSeries[r];
       return `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(s.net[i])}">${sign$(s.net[i])}</span></div>
         <div class="row"><span>&nbsp;&nbsp;hit / bet rate</span><span>${s.hit[i].toFixed(0)}% / ${s.betrate[i].toFixed(0)}%</span></div>
         <div class="row"><span>&nbsp;&nbsp;avg market win</span><span>${s.market[i].toFixed(1)}%</span></div>`;
-    }).join(""), e.clientX, e.clientY);
+    }).join("");
+  }
+  hsvg.addEventListener("pointermove", e => {
+    const html = histTipAt(e);
+    html ? tipShow(html, e.clientX, e.clientY) : tipHide();
+  });
+  hsvg.addEventListener("click", e => {
+    tipPinned = false;  // re-aim the crosshair even if already pinned
+    const html = histTipAt(e);
+    if (html) { tipShow(html, e.clientX, e.clientY, true); e.stopPropagation(); }
   });
   hsvg.addEventListener("pointerleave", () => { hsvg.querySelector("#xhair")?.setAttribute("visibility", "hidden"); tipHide(); });
 
