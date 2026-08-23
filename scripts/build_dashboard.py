@@ -495,11 +495,11 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
       <h2>Backtest reference &middot; why the shadows are being trialled</h2>
       <p class="sub">5,786 historical fights at closing odds (C/E: entry 9; F: entry 10, whole-history replay at the frozen &lambda;). H2 = the more recent half. All ROIs are upper bounds.</p>
       <div class="chart-scroll"><table>
-        <tr><th>Rule</th><th class="num">Bets</th><th class="num">Hit rate</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th><th class="num">H2 flat</th></tr>
-        <tr><td><span class="rule-dot fA"></span>A &mdash; kelly value (staked)</td><td class="num">4,536</td><td class="num">55.9%</td><td class="num">+6.1%</td><td class="num">+14.0%</td><td class="num">+0.9%</td></tr>
-        <tr><td><span class="rule-dot fC"></span>C &mdash; vig floor (shadow)</td><td class="num">3,288</td><td class="num">54.6%</td><td class="num">+9.4%</td><td class="num">+16.0%</td><td class="num">+8.0%</td></tr>
-        <tr><td><span class="rule-dot fE"></span>E &mdash; shrunk staking (shadow)</td><td class="num">3,340</td><td class="num">54.6%</td><td class="num">+9.2%</td><td class="num">+27.9%</td><td class="num">+7.4%</td></tr>
-        <tr><td><span class="rule-dot fF"></span>F &mdash; fitted blend (shadow)</td><td class="num">4,110</td><td class="num">55.7%</td><td class="num">+7.3%</td><td class="num">+18.3%</td><td class="num">+2.9%</td></tr>
+        <tr><th>Rule</th><th class="num">Bets</th><th class="num">Hit rate</th><th class="num">Flat ROI</th><th class="num">Kelly ROI</th><th class="num">H2 flat</th><th class="num">H2 kelly</th></tr>
+        <tr><td><span class="rule-dot fA"></span>A &mdash; kelly value (staked)</td><td class="num">4,536</td><td class="num">55.9%</td><td class="num">+6.1%</td><td class="num">+14.0%</td><td class="num">+0.9%</td><td class="num">+4.8%</td></tr>
+        <tr><td><span class="rule-dot fC"></span>C &mdash; vig floor (shadow)</td><td class="num">3,288</td><td class="num">54.6%</td><td class="num">+9.4%</td><td class="num">+16.0%</td><td class="num">+8.0%</td><td class="num">+12.9%</td></tr>
+        <tr><td><span class="rule-dot fE"></span>E &mdash; shrunk staking (shadow)</td><td class="num">3,340</td><td class="num">54.6%</td><td class="num">+9.2%</td><td class="num">+27.9%</td><td class="num">+7.4%</td><td class="num">+23.8%</td></tr>
+        <tr><td><span class="rule-dot fF"></span>F &mdash; fitted blend (shadow)</td><td class="num">4,110</td><td class="num">55.7%</td><td class="num">+7.3%</td><td class="num">+18.3%</td><td class="num">+2.9%</td><td class="num">+7.5%</td></tr>
       </table></div>
     </div>
   </section>
