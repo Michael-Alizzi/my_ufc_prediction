@@ -630,6 +630,44 @@ happens to be doing. Revisit this once the 10-event trial resolves and a
 rule has a demonstrated real-$ edge; scaling to a genuinely growing
 bankroll is a reasonable question then, not mid-trial.
 
+### Would a $500 rolling bankroll over the 10 events beat $50 per event?
+
+Total exposure is the same ($500 either way); the difference is that a
+rolling bankroll makes each event's stake depend on how the previous ones
+went. There IS a real benefit in that design &mdash; it's how Kelly betting
+is meant to work: stakes shrink automatically in a drawdown (three losing
+cards at fixed $50 cost $150 regardless; a rolling bankroll would have been
+cutting stakes as it fell) and compound after wins, which is growth-optimal
+**under a known positive edge**. But it only pays once the edge is proven:
+compounding amplifies whatever is really there, noise included, and
+mid-trial it also breaks the equal-per-event weighting the promotion
+comparison depends on (see the previous entry). One practical wrinkle too:
+the current splitter risks the whole per-event budget across value bets,
+so handing it $500 would risk up to $500 every card &mdash; true
+bankroll-fraction Kelly is a different staking rule that would itself need
+implementing and trialling. Verdict: fixed $50 tranches through the trial;
+"rolling bankroll + true Kelly sizing" is the natural upgrade if a rule
+earns promotion.
+
+### Why do we always seem to bet on the headline fight?
+
+The model doesn't know a fight is the headline &mdash; there's no
+card-position input, and the Kelly value test is applied identically to
+every fight. The pattern comes from two things. (1) **Survivorship through
+the data filter**: a bet requires both fighters to have history in our data
+and known category values, and prelims are where debutants and short-notice
+imports live &mdash; on the Aug 22 Hernandez card, 4 of the 8 no-bet fights
+were unpredictable exactly because of missing history or unseen
+stance/weight-class values, all prelims. Main-card fighters are
+established, so they always survive into the biddable pool: the headliner
+isn't being picked, the prelims are being filtered out. (2) **Richer
+history &rarr; stronger opinions**: long records give the model more signal
+to disagree with the market on, so established fighters clear the value
+threshold more often. It's also not "the headliner gets the money": at
+UFC 330 the main event got the smallest bet ($6 Makhachev) while a prelim
+got the biggest ($22 Donte Johnson) &mdash; and two cards is a small sample
+for reading a pattern at all.
+
 ### How much am I betting this week / what's the current slip?
 
 Always $50 per event (fixed through the 10-event trial — see the stake-sizing
