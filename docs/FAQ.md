@@ -647,6 +647,43 @@ evidence, the options are: extend to ~30 events (&asymp;7 months, detects
 gate and read promotion as "backtest evidence + live sanity check," which
 is what entry 9 pre-registered.
 
+### Explain the power test behind that table
+
+Two mistakes are possible when the trial concludes. A **false positive**:
+promoting a rule that's actually no better than A &mdash; the test's
+&alpha;=0.10 controls this directly (a genuinely-no-better rule passes at
+most 10% of the time). A **false negative**: the rule really is better,
+but 10 noisy events don't show it clearly, so we wrongly keep A. **Power
+is the probability of avoiding the second mistake**: if the edge is real,
+how often does the test actually catch it? Power 80% means that across
+100 hypothetical trials where the rule truly is better, the test fires in
+~80 and misses in ~20.
+
+Power depends only on the edge-to-noise ratio, the effect size
+`d = (true average per-event edge) / (event-to-event SD of the
+difference)`. A single event's C&minus;A difference swings &plusmn;$10&ndash;15
+(one upset moves it hugely), so the test is listening for a steady
+$2&ndash;3/event hum under that noise &mdash; d &asymp; 0.2, nearly
+inaudible in 10 samples &mdash; while an $8/event hum (d &asymp; 0.7) is
+loud enough. Averaging n events shrinks the noise by &radic;n, not n:
+hearing a hum half as loud needs four times the events, which is why the
+required-n column explodes as the assumed edge shrinks.
+
+The table was computed by simulation matched to the real procedure: for
+each (n, d), draw n fake per-event differences with true mean edge d (in
+noise-SD units), run the same one-sided Wilcoxon at &alpha;=0.10 that
+`scripts/promotion_test.py` runs, and record whether it fires; the firing
+fraction over 4,000 repeats is the power. ("Power 0.45 at n=10, d=0.4"
+literally means the test caught a true ~$5/event edge in 1,802 of 4,000
+simulated trials and missed it in the rest.) The textbook formula
+n &asymp; (z<sub>&alpha;</sub>+z<sub>power</sub>)&sup2;/d&sup2; (with a
+~5% Wilcoxon-vs-t adjustment) gives the same numbers. One honest caveat:
+the table's rows are assumptions &mdash; the true d is exactly what's
+being tested &mdash; so power analysis can't say what *will* happen, only
+what the design *could* detect. Its use is knowing the trial's limits
+before results exist: a tripwire for large effects, not an instrument
+that can certify a $2/event edge.
+
 ### Should I keep betting the same fixed $50 each event, or scale it?
 
 Keep it fixed at $50 for now. Two reasons. First, the promotion protocol
