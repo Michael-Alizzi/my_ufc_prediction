@@ -975,15 +975,19 @@ if (!HIST) {
   const W = 940, H = 320, L = 52, R = 86, T = 16, B = 34;
   const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const histMetricSub = {
-    net: () => "Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement.",
+    net: () => "Cumulative profit with each bet staking its kelly fraction of a fixed $100 (non-compounding) — the backtest's analog of real staking, weighting confident bets more. Same pooled out-of-fold fights matched to closing odds; upper bounds apply.",
+    flatnet: () => "Cumulative profit, $1 flat per bet, each rule applied to the same pooled out-of-fold fights (the model never trained on the fight it predicts) matched to closing odds. Upper bounds: closing-odds conditioning, no line movement.",
     hit: () => "Running hit rate to date (cumulative wins &divide; cumulative bets) per rule, by month.",
     betrate: () => "Running bet rate to date (cumulative bets &divide; cumulative fights with odds that month) per rule — how often each rule finds value.",
     market: () => "Running average odds-implied win probability of each rule's own bets to date — higher means shorter-priced, safer picks.",
   };
+  // History has no $50-bankroll-per-event replay (backtest is per-bet), so
+  // its "staked" net is kelly-weighted — label the two net options accordingly.
+  const histMetricLabel = k => k === "net" ? "Net return (kelly-staked)" : METRIC_DEFS[k].label;
   hbody.insertAdjacentHTML("beforeend", `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
-      <h2 style="margin:0">If we'd bet $1 on every value bet</h2>
-      <select id="hist-metric" style="font:12.5px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 8px">${Object.entries(METRIC_DEFS).map(([k, d]) => `<option value="${k}">${d.label}</option>`).join("")}</select>
+      <h2 style="margin:0">The whole-history replay</h2>
+      <select id="hist-metric" style="font:12.5px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 8px">${Object.keys(METRIC_DEFS).map(k => `<option value="${k}"${k === "flatnet" ? " selected" : ""}>${histMetricLabel(k)}</option>`).join("")}</select>
     </div>
     <p class="sub" id="hist-sub"></p>
     <div class="legend" id="hist-controls">
@@ -1005,28 +1009,34 @@ if (!HIST) {
     const mi = new Map(months.map((m, i) => [m, i]));
     const out = {};
     for (const r of hActive) {
-      const netPer = new Array(months.length).fill(0), wonPer = new Array(months.length).fill(0);
+      const netPer = new Array(months.length).fill(0), flatPer = new Array(months.length).fill(0);
+      const wonPer = new Array(months.length).fill(0);
       const betsPer = new Array(months.length).fill(0), implPer = new Array(months.length).fill(0);
       for (const row of HIST.bets[r]) {
         const key = row[0].slice(0, 7);
         if (!mi.has(key)) continue;
-        const [odds, , w] = row.slice(-3), idx = mi.get(key);
-        netPer[idx] += w ? odds - 1 : -1;
+        const [odds, k, w] = row.slice(-3), idx = mi.get(key);
+        // net: kelly fraction of a fixed $100 per bet (non-compounding);
+        // flatnet: $1 per bet regardless of confidence
+        netPer[idx] += 100 * k * (w ? odds - 1 : -1);
+        flatPer[idx] += w ? odds - 1 : -1;
         wonPer[idx] += w ? 1 : 0;
         betsPer[idx] += 1;
         implPer[idx] += 100 / odds;
       }
-      let netAcc = 0, wonAcc = 0, betsAcc = 0, implAcc = 0, offAcc = 0;
-      const net = [], hit = [], betrate = [], market = [];
+      let netAcc = 0, flatAcc = 0, wonAcc = 0, betsAcc = 0, implAcc = 0, offAcc = 0;
+      const net = [], flatnet = [], hit = [], betrate = [], market = [];
       months.forEach((m, i) => {
-        netAcc += netPer[i]; wonAcc += wonPer[i]; betsAcc += betsPer[i]; implAcc += implPer[i];
+        netAcc += netPer[i]; flatAcc += flatPer[i]; wonAcc += wonPer[i];
+        betsAcc += betsPer[i]; implAcc += implPer[i];
         offAcc += (HIST.fights_by_month || {})[m] || 0;
         net.push(+netAcc.toFixed(2));
+        flatnet.push(+flatAcc.toFixed(2));
         hit.push(betsAcc ? 100 * wonAcc / betsAcc : 0);
         betrate.push(offAcc ? 100 * betsAcc / offAcc : 0);
         market.push(betsAcc ? implAcc / betsAcc : 0);
       });
-      out[r] = {net, hit, betrate, market};
+      out[r] = {net, flatnet, hit, betrate, market};
     }
     return out;
   }
@@ -1045,7 +1055,7 @@ if (!HIST) {
     hSeries = computeHistSeries(hMonths);
     hCum = {}; for (const r of hActive) hCum[r] = hSeries[r][metric];
     const vals = hActive.flatMap(r => hCum[r]);
-    const hMax = Math.max(metric === "net" ? 1 : 10, ...vals), hMin = Math.min(0, ...vals);
+    const hMax = Math.max(metric === "net" || metric === "flatnet" ? 1 : 10, ...vals), hMin = Math.min(0, ...vals);
     hyS = v => T + (hMax - v) / (hMax - hMin || 1) * (H - T - B);
     hxS = i => L + i / Math.max(1, hMonths.length - 1) * (W - L - R);
     let hg = "";
@@ -1091,7 +1101,7 @@ if (!HIST) {
     xhair.setAttribute("visibility", "visible");
     return `<div class="t">${hMonths[i]}</div>` + hActive.map(r => {
       const s = hSeries[r];
-      return `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(s.net[i])}">${sign$(s.net[i])}</span></div>
+      return `<div class="row"><span>${RULE_NAME[r]}</span><span class="${cls(s.net[i])}">${sign$(s.net[i])} kelly / ${sign$(s.flatnet[i])} flat</span></div>
         <div class="row"><span>&nbsp;&nbsp;hit / bet rate</span><span>${s.hit[i].toFixed(0)}% / ${s.betrate[i].toFixed(0)}%</span></div>
         <div class="row"><span>&nbsp;&nbsp;avg market win</span><span>${s.market[i].toFixed(1)}%</span></div>`;
     }).join("");
