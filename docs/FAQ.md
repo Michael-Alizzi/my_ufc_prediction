@@ -979,6 +979,23 @@ happens to be doing. Revisit this once the 10-event trial resolves and a
 rule has a demonstrated real-$ edge; scaling to a genuinely growing
 bankroll is a reasonable question then, not mid-trial.
 
+### After a losing week, do I top the float back up to $50?
+
+Yes &mdash; that's literally what "fixed $50 per event" means: each card
+gets $50 of fresh risk regardless of last week's result; the money isn't
+a self-contained pot that must survive on its own winnings. Topping up
+~$5 after a &minus;$5 card is the system working as designed, and it is
+**not** loss-chasing &mdash; chasing is *raising* stakes to win losses
+back (martingale territory); holding the stake constant is the neutral,
+disciplined option, while betting only what's left would be the
+compounding-down path-dependence the trial deliberately excludes. Think
+in the ledger's terms: not "the pot is down to $44.58" but "risking $50 a
+week, cumulative net &minus;$5.42 so far." The real safety mechanism is
+the known ceiling: 10 events &times; $50 = $500 worst case, agreed
+upfront. If $50/week ever stops being *comfortable* (not merely
+annoying), the right move is lowering the bankroll for all future events
+&mdash; never skipping top-ups after losses specifically.
+
 ### Would a $500 rolling bankroll over the 10 events beat $50 per event?
 
 Total exposure is the same ($500 either way); the difference is that a
