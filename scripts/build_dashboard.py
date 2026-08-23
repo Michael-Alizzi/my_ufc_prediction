@@ -712,7 +712,7 @@ const METRIC_SUB = {
   market: () => "Running average odds-implied win probability of each rule's own bets to date — higher means shorter-priced, safer picks.",
 };
 let chartSeq = 0;
-function initReturnChart(container, rules, title, defaultMetric) {
+function initReturnChart(container, rules, title, defaultMetric, omit) {
   defaultMetric = defaultMetric || "net";
   if (!n) {
     container.insertAdjacentHTML("beforeend",
@@ -727,6 +727,7 @@ function initReturnChart(container, rules, title, defaultMetric) {
     ? `<div class="legend">${rules.map(r => `<span class="l${r}">${r} &middot; ${r === "A" ? "staked" : "shadow"}</span>`).join("")}</div>`
     : "";
   const options = Object.entries(METRIC_DEFS)
+    .filter(([k]) => !(omit || []).includes(k))
     .map(([k, d]) => `<option value="${k}"${k === defaultMetric ? " selected" : ""}>${d.label}</option>`).join("");
   container.insertAdjacentHTML("beforeend", `
     <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
@@ -778,7 +779,9 @@ function initReturnChart(container, rules, title, defaultMetric) {
 const expChartCard = document.createElement("div");
 expChartCard.className = "card";
 document.getElementById("charts").appendChild(expChartCard);
-initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "flatnet");
+// flat-$1 dropped from this chart at Michael's request (23 Aug) -- the
+// flat comparison lives in the Rule comparison table's own column now
+initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "net", ["flatnet"]);
 
 // -- rule table ------------------------------------------------------------
 const rt = document.getElementById("rule-table");
