@@ -493,6 +493,24 @@ that's what's actually staked. Marker size always reflects that event's real $ s
 of which metric is on screen, and hovering a point shows all four
 numbers together no matter which one is plotted.
 
+### Why is the flat ROI so much higher than the staked ROI (or vice versa)?
+
+The two ROIs differ through exactly one thing: whether the big-stake bets
+did better or worse than the average bet. Flat weights every bet equally;
+staked ROI is a weighted average where the confident (big-kelly) bets
+count more, so the gap between them measures where the confidence went.
+Live example (after 2 events): rule A is +12% flat but &minus;5.4% real,
+because kelly put the largest stakes on exactly the bets that lost ($16
+Alvarez, $21 Hernandez) while the winners carried small stakes. Over the
+5,786-fight backtest it inverts &mdash; every rule's kelly ROI beats its
+flat ROI (A +14.0% vs +6.1%) &mdash; meaning bigger model edges really did
+earn better-than-average returns there, which is the only thing that
+makes kelly sizing worth using. At n=2 the live inversion is noise;
+if flat were still beating staked after many events, that would be a real
+finding (probabilities rank winners fine but mis-rank their own
+confidence) and flat staking or a tighter kelly cap would deserve a look
+as its own rule.
+
 ### With flat $1/bet tracking, C is no longer ahead of A on the Experiments chart — did its edge disappear?
 
 No — this is small-sample noise from having only one live event logged, not
