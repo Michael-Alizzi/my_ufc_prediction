@@ -742,6 +742,20 @@ estimate is itself mostly noise. The &asymp;$12 in the table is a
 plausibility estimate of the underlying spread, which is why the rows
 are scenarios rather than measurements.
 
+### So do we want d to be small, for more certainty?
+
+The other way around: we want d **big**. The intuition flip usually comes
+from the denominator &mdash; small *noise* is indeed good, but small noise
+makes the ratio d *larger*, not smaller. Both routes to a big d are good
+news: a bigger true edge (more dollars, easier to detect) or more
+consistent week-to-week results (the same edge shows through faster).
+Big d = loud signal over quiet noise = the better rule visibly wins most
+weeks = few events needed (the table's top row: d = 0.7 needs only 10).
+Small d = whisper under static = the better rule loses the head-to-head
+42 weeks in 100 = 119 events for confidence. Small d is the problem
+case, not the goal &mdash; and the concern with our trial is exactly that
+the realistic d here (~0.2) sits in the low-certainty regime.
+
 ### Should I keep betting the same fixed $50 each event, or scale it?
 
 Keep it fixed at $50 for now. Two reasons. First, the promotion protocol
