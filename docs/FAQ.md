@@ -542,6 +542,24 @@ finding that A's edge collapses in recent data (recent-half flat ROI
 average leaning on older, easier years, which is exactly why C and E
 (recent-half +7&ndash;8%) earned their live shadow trial.
 
+### Why did the kelly-staked view average ~$11 a bet?
+
+Nobody chose it &mdash; it's emergent from `k = (p&middot;o&minus;1)/(o&minus;1)`
+applied to whatever edges the model found (2025: median stake ~$10, 55
+bets under $5, 32 at $15&ndash;25, 26 pinned at the $25 cap). The average
+sits that high because of the formula's denominator: **short-priced
+favourites generate big kelly fractions from modest edges**. Model 82% at
+odds 1.30 &rarr; EV edge 0.066, k = 0.066/0.30 = 0.22 &rarr; $22; model
+40% at odds 2.80 &rarr; EV edge 0.12 (nearly double), k = 0.12/1.80 =
+0.067 &rarr; $7. Same-ballpark edges, 3&times; different stakes &mdash;
+deliberate, not a bug: kelly stakes more where variance is lower (a 1.30
+favourite usually wins, so more can be risked per unit of edge without
+ruin risk); 2025 favourites (&le;1.5) averaged k=0.139 vs underdogs
+(&gt;2.5) at 0.038. It's also exactly the behaviour rule E challenges:
+the biggest stakes land where the model most confidently disagrees with
+the market on favourites, and misplaced confidence there concentrates
+the damage (Alvarez/Hernandez live). The 0.25 cap is the guardrail.
+
 ### With flat $1/bet tracking, C is no longer ahead of A on the Experiments chart — did its edge disappear?
 
 No — this is small-sample noise from having only one live event logged, not
