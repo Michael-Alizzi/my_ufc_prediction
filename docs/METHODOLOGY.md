@@ -336,6 +336,23 @@ hypothetical splits on every card, logged and graded but never staked
 (EXPERIMENTS.md entries 9–10; promotion is decided by the pre-registered
 10-event forward record, not by backtests).
 
+**The live promotion trial** (previously the explainer card atop the
+dashboard's Experiments tab; moved here 23 Aug 2026). C and E looked
+better than A in the backtest but weren't promotable from it alone
+(winner's-curse risk from picking the best of five arms on one dataset),
+so the tiebreak runs prospectively: every rule replays the same $50
+bankroll on every card, graded from the logged pre-event predictions. F
+(entry 10, added Aug 16) blends the model's probability with the market's
+at a fitted, frozen trust weight (λ = 0.746) — the measured version of
+E's fixed 50/50 humility; its 10-event clock starts from its first logged
+card. Pre-registered criterion (entry 9, revised Aug 20): after 10 scored
+events, a shadow rule replaces A only if it leads on cumulative real-$
+return *and* a one-sided Wilcoxon signed-rank test on the paired
+per-event net differences rejects "no systematic edge" at α = 0.10
+(`scripts/promotion_test.py`; this replaced the original "ahead on ≥6 of
+10 cards" clause, which a zero-edge rule passed 37.7% of the time by
+chance).
+
 Throughout, $o_r, o_b$ are the two corners' decimal odds, $p$ is the model
 probability for red, and the market's vig-free belief is
 $$m = \frac{1/o_r}{1/o_r + 1/o_b},\qquad

@@ -480,11 +480,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
   </section>
 
   <section id="tab-trial" role="tabpanel" hidden>
-    <div class="card" style="margin-top:0">
-      <h2>The experiment</h2>
-      <p class="sub">Rule A (kelly-proportional value betting) is staked with real money every card. Two challengers that looked better in the recent backtest — C, which ignores edges smaller than the bookmaker's margin, and E, which shrinks the model's probability halfway toward the market's before betting — run as shadows on identical cards. Neither was promotable from the backtest alone (winner's-curse risk), so the tiebreak runs prospectively, below. A third shadow, F (entry 10, added Aug 16), blends the model's probability with the market's at a fitted, frozen trust weight (&lambda;=0.746) before betting — the measured version of E's fixed 50/50 humility; its 10-event clock starts from its first logged card.</p>
-      <p class="sub" style="margin-bottom:0">Pre-registered (EXPERIMENTS.md entry 9, revised Aug 20): after 10 scored events, a shadow rule replaces A only if it leads on cumulative real-$ return <em>and</em> a one-sided Wilcoxon signed-rank test on the 10 paired per-event net differences rejects "no systematic edge" at &alpha;=0.10 &mdash; "ahead on &ge;6 of 10 cards" had a 37.7% chance of passing with zero real edge, so it's been replaced with an actual significance test (<code>scripts/promotion_test.py</code>). Filled squares are scored events.</p>
-    </div>
+    <!-- rule/trial explainer lives in Methodology 13.1 (moved 23 Aug 2026) -->
 
     <div class="tiles" id="tiles"></div>
     <div id="charts"></div>
