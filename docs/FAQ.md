@@ -511,6 +511,22 @@ finding (probabilities rank winners fine but mis-rank their own
 confidence) and flat staking or a tighter kelly cap would deserve a look
 as its own rule.
 
+### Are Kelly and flat both staking $1?
+
+No. Flat is literally $1 on every bet. Kelly-staked is a *variable* stake
+&mdash; the bet's kelly fraction of a notional fixed $100 (non-compounding):
+a thin-edge k=0.02 bet stakes $2, a capped k=0.25 bet stakes $25. Two
+consequences. (1) The **ROIs are still fairly comparable**, because ROI
+divides profit by dollars staked and the notional bankroll cancels &mdash;
+$1, $100 or $1,000 gives the same percentage; the ROI gap isolates purely
+whether confidence-weighting helped. (2) The **cumulative-$ chart lines
+are not on the same staked base**: kelly's line ends higher in dollars
+partly because it stakes more dollars overall. Use the chart for each
+convention's trajectory (drawdowns, when the edge was earned) and the
+Replay summary's ROI columns for "which earns more per dollar risked."
+Same structure on the live side: "real" is the $50-per-event bankroll
+split (variable per-bet stakes), "flat" is $1/bet.
+
 ### With flat $1/bet tracking, C is no longer ahead of A on the Experiments chart — did its edge disappear?
 
 No — this is small-sample noise from having only one live event logged, not
