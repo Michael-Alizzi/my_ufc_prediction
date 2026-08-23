@@ -304,6 +304,32 @@ while C and E returned **$70.00** (+$20) and F **$48.24** (−$1.76), dinged
 by its diluted Alvarez position. Humility beat diversification on this
 card; one card proves nothing, which is why the trial runs ten.
 
+### What if we combined the best-hit-rate rule with the most-profitable rule?
+
+Tested on the 5,786-fight pool (23 Aug 2026). The literal combination —
+D's selection (best hit rate, 72.8%) with E's shrunk sizing — and the
+delta version — C's selection (best hit&minus;market delta) with E's
+sizing:
+
+| Arm | Bets | Hit | Mkt avg | Delta | Flat ROI | Kelly ROI | H2 kelly |
+|---|---|---|---|---|---|---|---|
+| D (best hit) | 1,414 | 72.8% | 68.4% | +4.4pp | +6.4% | +10.4% | +4.4% |
+| E (most profit) | 3,340 | 54.6% | 50.1% | +4.6pp | +9.2% | +27.9% | +23.8% |
+| G = D sel + E sizing | 1,408 | 72.9% | 68.5% | +4.5pp | +6.6% | +20.5% | +13.1% |
+| CE = C sel + E sizing | 3,282 | 54.6% | 49.9% | +4.8pp | +9.5% | +28.0% | +24.5% |
+
+Findings: (1) grafting E's sizing onto D doubles D's kelly ROI, but G
+still loses to plain E — **D's high hit rate isn't better betting**; its
+bets average 68.4% market-implied, so the delta (+4.4pp) matches C/E's,
+and restricting to market-agreeing favourites discards ~60% of the
+profitable pool. Hit rate is cosmetic; delta is the profit source. (2)
+The delta version (CE) tops every column — but only by +0.1 to +0.7pp
+over plain E, because C and E already select nearly identical bets: **E
+effectively is this combination** (its shrink filters and sizes at
+once). A margin that thin from stapling backtest-best components is
+winner's-curse bait, so no fifth shadow rule was added; revisit if the
+shadow logs ever show C and E disagreeing materially on live cards.
+
 ### How does a shadow rule get promoted to the real rule?
 
 Pre-registered in entry 9, before any card was scored: **after 10 logged events, a
