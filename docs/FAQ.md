@@ -684,6 +684,34 @@ what the design *could* detect. Its use is knowing the trial's limits
 before results exist: a tripwire for large effects, not an instrument
 that can certify a $2/event edge.
 
+**Column-by-column** (using the middle row, ~$5/event | 0.4 | 30 | 45%,
+as the running example):
+
+- **True edge (on $50/event)** &mdash; the *hypothetical* long-run
+  advantage over A that the row assumes, in dollars per event: "suppose C
+  really is $5/event better on average" (a 10-point ROI advantage on $50
+  stakes). Never directly observable &mdash; each row is a what-if.
+- **d (effect size)** &mdash; column 1 divided by the event-to-event
+  spread of the difference (&asymp;$12 here): 5/12 &asymp; 0.4. Converts
+  dollars into signal-to-noise units, which is all detectability depends
+  on &mdash; a $5 edge under $12 noise and a $50 edge under $120 noise are
+  the same problem for the test.
+- **Events for 80% power** &mdash; scored events needed so the
+  &alpha;=0.10 Wilcoxon catches that row's edge at least 80% of the time
+  if it's real (80% = the conventional "adequately powered" benchmark,
+  an accepted 1-in-5 miss rate). $5 row: 30 events &asymp; 7 months.
+  Grows much faster than the edge shrinks (halve the edge &rarr;
+  quadruple the events; the &radic;n effect).
+- **Power at n=10** &mdash; the same detection probability evaluated at
+  the trial length we actually pre-registered. $5 row: 45% &mdash;
+  slightly worse than a coin flip at proving a genuinely-$5-better rule.
+
+The two right columns are one fact from opposite directions: fix power at
+80% and ask "how many events?", or fix events at 10 and ask "how much
+power?". The table's shape is the argument in miniature: a 10-event trial
+reliably detects only top-row-sized effects, which is exactly the
+sanity-check role entry 9 assigns it.
+
 ### Should I keep betting the same fixed $50 each event, or scale it?
 
 Keep it fixed at $50 for now. Two reasons. First, the promotion protocol
