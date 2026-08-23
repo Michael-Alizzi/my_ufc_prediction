@@ -604,13 +604,11 @@ function tile(k, v, s, vClass) {
 }
 if (n) {
   tile("Rule A net", sign$(A.net), fmt$(A.staked) + " staked → " + fmt$(A.returned) + " back", cls(A.net));
-  tile("Rule A ROI", (A.roi >= 0 ? "+" : "") + A.roi + "%", "on money actually staked", cls(A.roi));
   tile("Rule A hit rate", A.hit + "%", A.won + " of " + A.placed + " bets won" + (A.void ? ", " + A.void + " void" : ""));
   const lead = RULES.map(r => [r, tot[r].net]).sort((a, b) => b[1] - a[1])[0];
   tile("Trial progress", n + " / 10", "leader so far: rule " + lead[0] + " (" + sign$(lead[1]) + ")");
 } else {
   tile("Rule A net", "—", "no events scored yet");
-  tile("Rule A ROI", "—", "no events scored yet");
   tile("Rule A hit rate", "—", "no bets graded yet");
   tile("Trial progress", "0 / 10", "first grading pending");
 }
@@ -810,10 +808,15 @@ if (n) {
   perfTiles.insertAdjacentHTML("beforeend",
     `<div class="tile"><div class="k">Profit / loss so far</div>
      <div class="v ${cls(A.net)}">${sign$(A.net)}</div>
-     <div class="s">${fmt$(A.staked)} staked &rarr; ${fmt$(A.returned)} back across ${n} event${n === 1 ? "" : "s"}</div></div>`);
+     <div class="s">${fmt$(A.staked)} staked &rarr; ${fmt$(A.returned)} back across ${n} event${n === 1 ? "" : "s"}</div></div>
+    <div class="tile"><div class="k">Rule A ROI</div>
+     <div class="v ${cls(A.roi)}">${(A.roi >= 0 ? "+" : "") + A.roi}%</div>
+     <div class="s">on money actually staked</div></div>`);
 } else {
   perfTiles.insertAdjacentHTML("beforeend",
     `<div class="tile"><div class="k">Profit / loss so far</div>
+     <div class="v">&mdash;</div><div class="s">no events scored yet</div></div>
+    <div class="tile"><div class="k">Rule A ROI</div>
      <div class="v">&mdash;</div><div class="s">no events scored yet</div></div>`);
 }
 initReturnChart(document.getElementById("perf-chart"), ["A"], "Rule A over time");
