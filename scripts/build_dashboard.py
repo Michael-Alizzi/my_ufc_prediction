@@ -491,7 +491,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
 
     <div class="card">
       <h2>Rule comparison &middot; live record</h2>
-      <p class="sub">Rule A is staked with real money; C (vig floor), E (shrunk staking) and F (fitted blend) are shadow-logged on identical cards. Both net columns are shown side by side on purpose &mdash; "$50 staked" is the real bankroll-replay number the promotion decision (below) is made on; "$1 flat/bet" strips out stake-concentration so picks are comparable bet-for-bet. ROI and "cards ahead" both use the $50 column.</p>
+      <p class="sub">Rule A is staked with real money; C (vig floor), E (shrunk staking) and F (fitted blend) are shadow-logged on identical cards. Net is the real $50-bankroll-replay number the promotion decision (below) is made on.</p>
       <div class="chart-scroll"><table id="rule-table"></table></div>
     </div>
 
@@ -786,7 +786,7 @@ initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "net"
 // -- rule table ------------------------------------------------------------
 const rt = document.getElementById("rule-table");
 rt.innerHTML = `<tr><th>Rule</th><th class="num">Events</th><th class="num">Staked</th>
-  <th class="num">Returned</th><th class="num">Net ($50 staked)</th><th class="num">Net ($1 flat/bet)</th><th class="num">ROI</th>
+  <th class="num">Returned</th><th class="num">Net</th><th class="num">ROI</th>
   <th class="num">Hit rate</th><th class="num">Cards ahead of A</th></tr>` +
   RULES.map(r => {
     const t = tot[r];
@@ -795,7 +795,6 @@ rt.innerHTML = `<tr><th>Rule</th><th class="num">Events</th><th class="num">Stak
       <td class="num">${n ? fmt$(t.staked) : "—"}</td>
       <td class="num">${n ? fmt$(t.returned) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${n ? sign$(t.net) : "—"}</td>
-      <td class="num ${n ? cls(t.flat_net) : ""}">${n ? sign$(t.flat_net) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${t.roi === null ? "—" : (t.roi >= 0 ? "+" : "") + t.roi + "%"}</td>
       <td class="num">${t.hit === null ? "—" : t.hit + "% (" + t.won + "/" + t.placed + ")"}</td>
       <td class="num">${r === "A" ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
