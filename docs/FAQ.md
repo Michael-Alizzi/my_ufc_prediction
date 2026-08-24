@@ -1118,3 +1118,26 @@ ufcstats blocks datacenter IPs, so "re-scrape anytime" is false in most
 environments — and committed data pins every experiment to the exact rows it
 trained on. A data refresh is a new scrape committed together with the retrain it
 feeds. (Gitignored before Aug 2026; this was the fix.)
+
+### Are the `ufc-friday-scoring` / `ufc-weekly-card-day` Routines turned off?
+
+No. Both are `enabled: true` in the Routines API, with live schedules and
+recent successful fires:
+
+| Routine | Cron (UTC) | Local time | Last fired | Next run |
+|---|---|---|---|---|
+| `ufc-weekly-card-day` | `0 3 * * 4` | Thu 1 PM AEST | Thu 20 Aug | Thu 27 Aug |
+| `ufc-friday-scoring` | `0 8 * * 5` | Fri 6 PM AEST | Fri 21 Aug | Fri 28 Aug |
+
+Neither carries an `ended_reason` (permanently disabled) or a
+`suspension_reason` (temporary hold, e.g. a paused subscription) — the two
+fields that would explain a genuinely dead Routine. Greyed-out styling in
+the Routines list is not the off state; the enable toggle is.
+
+One thing that *does* make these two look different from a normal Routine:
+they are **self-bound** — they fire into the existing UFC session
+(`persistent_session_id`) rather than spawning a fresh session each time, so
+they report no per-run `last_run` record in the list (only `last_fired_at`).
+That's by design: each week's job continues the same conversation. If they
+ever do stop, the tell is `last_fired_at` going stale relative to
+`next_run_at`, not the row's shading.
