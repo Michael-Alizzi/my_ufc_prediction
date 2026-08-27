@@ -490,6 +490,23 @@ card-day swap both for speed and because scoring must land before Saturday's
 job replaces `card.json` with the next card.) Ask any time after an event to
 score it earlier by hand; Monday's run then finds nothing left to do.
 
+### Do fights ever happen on Saturday AEST — does the 9 AM Saturday run always beat them?
+
+Yes they do, routinely — and it's why the run is at 9 AM rather than
+later. Asia-hosted cards (Shanghai, Macau, Tokyo) run Saturday *local*
+evening = Saturday evening AEST, prelims from ~4&ndash;5 PM — the 9 AM
+run precedes them by ~8 hours. US cards are Sunday AEST midday,
+Europe/Middle East Sunday early morning, Australian cards Sunday midday
+— all safely after. The data (771 events): 639 Saturday-listed; since
+2023 only two exceptions, one Friday (Aug 2025) and one Sunday (Jun
+2026). The tight case is a Friday-US card — Friday night US = Saturday
+~10 AM&ndash;2 PM AEST, so 9 AM lands right at the wire (roughly one
+such card every two years). A true weekday card (25 Wednesdays all-time,
+3 since 2020, all COVID-era) would be missed by any Saturday schedule
+and needs a manual "run the card job early" — essentially extinct.
+Moving the run to ~7 AM would widen the Friday-card margin if ever
+wanted.
+
 ### What's the difference between the Performance and Experiments tabs?
 
 **Performance** is the money view: a profit/loss-so-far tile (rule A,
