@@ -1,12 +1,12 @@
 ## UFC Predictions: UFC Fight Night: Nurmagomedov vs. Song (Aug 29)
-_Generated 2026-08-27 03:08_
+_Generated 2026-08-27 23:06_
 
 | Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking $50 total) | Shadow rules (C vig-floor / E shrunk / F fitted-blend, not staked) |
 |---|---|---|---|---|---|---|
-| Umar Nurmagomedov | Song Yadong | Bantamweight | **Umar Nurmagomedov** | 85.0% | $3 on Umar Nurmagomedov (@1.18, returns ~$4) | - |
-| Denise Gomes | Yan Xiaonan | Strawweight | **Denise Gomes** | 53.4% | $22 on Denise Gomes (@2.28, returns ~$50) | C: $24 on Denise Gomes (@2.28) / E: $31 on Denise Gomes (@2.28) / F: $25 on Denise Gomes (@2.28) |
+| Umar Nurmagomedov | Song Yadong | Bantamweight | **Umar Nurmagomedov** | 85.0% | $0 (no value) | - |
+| Denise Gomes | Yan Xiaonan | Strawweight | **Denise Gomes** | 53.4% | $24 on Denise Gomes (@2.28, returns ~$55) | C: $24 on Denise Gomes (@2.28) / E: $31 on Denise Gomes (@2.28) / F: $25 on Denise Gomes (@2.28) |
 | Kai Asakura | Aoriqileng | Bantamweight | **Kai Asakura** | 82.4% | $0 (no value) | - |
-| Sumudaerji | Alex Perez | Flyweight | **Sumudaerji** | 75.3% | $25 on Sumudaerji (@1.44, returns ~$36) | C: $26 on Sumudaerji (@1.44) / E: $19 on Sumudaerji (@1.44) / F: $25 on Sumudaerji (@1.44) |
+| Sumudaerji | Alex Perez | Flyweight | **Sumudaerji** | 75.3% | $26 on Sumudaerji (@1.44, returns ~$37) | C: $26 on Sumudaerji (@1.44) / E: $19 on Sumudaerji (@1.44) / F: $25 on Sumudaerji (@1.44) |
 | Ce Liu | Levi Rodrigues | Welterweight | **no data** | - | - | - |
 | Namsrai Batbayar | Andre Lima | Flyweight | **no data** | - | - | - |
 | Kevin Borjas | Rei Tsuruya | Flyweight | **Rei Tsuruya** | 85.5% | $0 (no value) | - |

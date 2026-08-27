@@ -5,11 +5,11 @@
   "weight_class": "Bantamweight",
   "title_fight": false,
   "rounds": 5,
-  "odds1": 1.18,
-  "odds2": 4.9,
+  "odds1": 1.15,
+  "odds2": 5.5,
   "odds_source": "sportsbet",
-  "feat_odds1": 1.236,
-  "feat_odds2": 5.237
+  "feat_odds1": 1.229,
+  "feat_odds2": 5.359
  },
  {
   "fighter1": "Denise Gomes",
@@ -20,8 +20,8 @@
   "odds1": 2.28,
   "odds2": 1.63,
   "odds_source": "sportsbet",
-  "feat_odds1": 2.364,
-  "feat_odds2": 1.733
+  "feat_odds1": 2.322,
+  "feat_odds2": 1.757
  },
  {
   "fighter1": "Kai Asakura",
@@ -32,8 +32,8 @@
   "odds1": 1.2,
   "odds2": 4.6,
   "odds_source": "sportsbet",
-  "feat_odds1": 1.276,
-  "feat_odds2": 4.618
+  "feat_odds1": 1.271,
+  "feat_odds2": 4.693
  },
  {
   "fighter1": "Sumudaerji",
@@ -44,8 +44,8 @@
   "odds1": 1.44,
   "odds2": 2.81,
   "odds_source": "sportsbet",
-  "feat_odds1": 1.517,
-  "feat_odds2": 2.932
+  "feat_odds1": 1.514,
+  "feat_odds2": 2.944
  },
  {
   "fighter1": "Ce Liu",
@@ -68,8 +68,8 @@
   "odds1": 3.25,
   "odds2": 1.35,
   "odds_source": "sportsbet",
-  "feat_odds1": 3.21,
-  "feat_odds2": 1.452
+  "feat_odds1": 3.279,
+  "feat_odds2": 1.439
  },
  {
   "fighter1": "Kevin Borjas",
@@ -80,8 +80,8 @@
   "odds1": 6.0,
   "odds2": 1.13,
   "odds_source": "sportsbet",
-  "feat_odds1": 6.517,
-  "feat_odds2": 1.181
+  "feat_odds1": 6.58,
+  "feat_odds2": 1.179
  },
  {
   "fighter1": "Xiao Long",
@@ -89,8 +89,8 @@
   "weight_class": "Bantamweight",
   "title_fight": false,
   "rounds": 3,
-  "odds1": 1.58,
-  "odds2": 2.39,
+  "odds1": 1.53,
+  "odds2": 2.51,
   "odds_source": "sportsbet",
   "feat_odds1": 1.633,
   "feat_odds2": 2.581
@@ -101,8 +101,8 @@
   "weight_class": "Featherweight",
   "title_fight": false,
   "rounds": 3,
-  "odds1": 2.29,
-  "odds2": 1.63,
+  "odds1": 2.32,
+  "odds2": 1.61,
   "odds_source": "sportsbet",
   "feat_odds1": 2.341,
   "feat_odds2": 1.745
@@ -114,10 +114,10 @@
   "title_fight": false,
   "rounds": 3,
   "odds1": 1.34,
-  "odds2": 3.29,
+  "odds2": 3.27,
   "odds_source": "sportsbet",
-  "feat_odds1": 1.408,
-  "feat_odds2": 3.449
+  "feat_odds1": 1.411,
+  "feat_odds2": 3.433
  },
  {
   "fighter1": "Xiong Jing Nan",
@@ -125,11 +125,11 @@
   "weight_class": "Strawweight",
   "title_fight": false,
   "rounds": 3,
-  "odds1": 2.78,
-  "odds2": 1.45,
+  "odds1": 3.13,
+  "odds2": 1.37,
   "odds_source": "sportsbet",
-  "feat_odds1": 3.107,
-  "feat_odds2": 1.475
+  "feat_odds1": 3.115,
+  "feat_odds2": 1.473
  },
  {
   "fighter1": "Ding Meng",
@@ -137,10 +137,10 @@
   "weight_class": "Welterweight",
   "title_fight": false,
   "rounds": 3,
-  "odds1": 1.73,
-  "odds2": 2.13,
+  "odds1": 1.68,
+  "odds2": 2.19,
   "odds_source": "sportsbet",
-  "feat_odds1": 1.768,
-  "feat_odds2": 2.302
+  "feat_odds1": 1.788,
+  "feat_odds2": 2.268
  }
 ]
