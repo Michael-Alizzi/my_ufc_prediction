@@ -1064,13 +1064,25 @@ for reading a pattern at all.
 
 Always $50 per event (fixed through the 10-event trial — see the stake-sizing
 entry above), split across whatever the model finds value in. The current
-week's exact slip lives in two places, both refreshed by Thursday's card-day
-Routine: the dashboard's **Performance tab → upcoming card** (with the
-bankroll allocator and the total-if-all-win row), and
+week's exact slip lives in two places, both refreshed by Friday morning's
+card-day Routine: the dashboard's **Performance tab → upcoming card** (with
+the bankroll allocator and the total-if-all-win row), and
 `predictions_output.md` on the `weekly-predictions-log` branch (the "Your
 bet" column). Worked example — Hernandez vs. Rodrigues, Aug 22 2026: $11
 Padilla @2.01, $18 de Ridder @1.25, $21 Hernandez @1.56; max loss $50,
 ~$77 back (+$27) if all three win.
+
+### When should I actually place the stakes each week?
+
+After the **Friday 9 AM AEST run's notification** — that's the slip built
+on the freshest odds, and stakes shift when prices move (Padilla went
+$9→$11 and Mederos dropped out entirely between two runs of the same
+card once). The window is then Friday morning to the card's first prelim
+— Saturday ~4–5 PM AEST for Asia cards, Sunday morning AEST for US ones.
+If two slips ever exist for one card (an early manual run plus Friday's),
+bet the Friday one; the ledger is always scored against the latest logged
+slip, so betting the same one keeps your real money aligned with the
+recorded trial.
 
 ### Where do I see how the bets are going?
 
