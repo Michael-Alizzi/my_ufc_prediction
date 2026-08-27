@@ -499,14 +499,17 @@ Saturday *local* evening = Saturday evening AEST, prelims from
 ~4&ndash;5 PM; US cards are Sunday AEST midday, Europe/Middle East
 Sunday early morning, Australian cards Sunday midday. The data (771
 events): 639 Saturday-listed; since 2023 only two exceptions, one
-Friday (Aug 2025) and one Sunday (Jun 2026). The card-day run was
-briefly Saturday 9 AM (clearing Asia prelims by ~8 hours but landing
-right at the wire for a Friday-US card, Saturday ~10 AM AEST), then
-settled at **Friday 9 AM AEST** (28 Aug 2026) — a full day's margin on
-every modern card shape, including the roughly-biennial Friday-US one.
-A true weekday card (25 Wednesdays all-time, 3 since 2020, all
-COVID-era) would still be missed and needs a manual "run the card job
-early" — essentially extinct.
+Friday (Aug 22 2025) and one Sunday (Jun 2026). That Friday one turned
+out to be a **Shanghai card fighting Friday local time — Friday evening
+AEST** (~5&ndash;11 PM), which a Saturday-morning run would have missed
+outright; a Friday-*US* card (the other rare shape) fights Saturday
+~9 AM&ndash;3 PM AEST. The card-day run was briefly Saturday 9 AM
+(clears Asia Saturday cards, misses a Friday-Asia card, wire-tight on
+Friday-US) before settling at **Friday 9 AM AEST** (28 Aug 2026), which
+beats both rare Friday shapes and every normal one with hours-to-a-day
+of margin. A true weekday card (25 Wednesdays all-time, 3 since 2020,
+all COVID-era) would still be missed and needs a manual "run the card
+job early" — essentially extinct.
 
 ### What's the difference between the Performance and Experiments tabs?
 
