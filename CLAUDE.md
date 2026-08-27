@@ -95,14 +95,14 @@ been hand-edited via direct JSON manipulation rather than the Jupyter UI, see go
 
 **Weekly automation** (redesigned Aug 2026 after the odds-aware model was accepted — entry 5):
 prediction and retraining are deliberately SEPARATED. Two cloud Routines, no PC required:
-- **Thursday (card day)**: scrape fresh fight data → commit CSVs → fetch the upcoming card's odds
+- **Saturday 9 AM AEST (card day; Thursday until 27 Aug 2026 — moved so odds are fetched closer to fight day)**: scrape fresh fight data → commit CSVs → fetch the upcoming card's odds
   (`scripts/fetch_card_odds.py`: Sportsbet staking slot + de-vigged AU-median feature slot; needs
   `ODDS_API_KEY`) → predict with rule A stakes ($50 bankroll default) + C/E shadow logs
   (`send_weekly_predictions.py --bankroll`) → push `predictions_output.md` + `card.json` to the
   `weekly-predictions-log` branch. That push is the delivery mechanism; there is deliberately no
   email path (SMTP is unreachable from the cloud environment, and a Gmail app password was leaked
   into git history doing it the old way — revoke-and-avoid, don't reintroduce).
-- **Sunday (scoring day)**: the session fetches results from the web, then
+- **Monday 6 PM AEST (scoring day; Friday until 27 Aug 2026 — moved to land the day after Sunday-AEST fights, and always BEFORE the next card replaces card.json)**: the session fetches results from the web, then
   `scripts/score_card.py` grades rules A/C/E from `card.json` (recomputing stakes with the same
   code that produced them), appends `ledger.md` (the entry-9 10-event promotion record) and
   `collected_odds.csv` (phase-2 own-odds training feed) on the log branch.
@@ -183,7 +183,7 @@ automatically.
 
 - **Every question Michael asks gets appended to `docs/FAQ.md`** in the same
   session — the FAQ is the project's running Q&A record. Republish the
-  dashboard artifact with it when practical (the Friday Routine republishes
+  dashboard artifact with it when practical (the Monday Routine republishes
   it weekly regardless).
 - **Docs and dashboard commits merge straight to master, no PR** (standing
   permission, Aug 2026): changes touching only `docs/*`, `CLAUDE.md`, or

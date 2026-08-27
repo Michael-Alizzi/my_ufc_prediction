@@ -8,7 +8,7 @@ detail), and the three docs/*.md, emitting a single self-contained HTML
 page: Performance (P/L so far, upcoming-card allocator, past-events
 detail), Experiments (rule explainer + trajectory + comparison), History
 (full backtest replay), and one tab per doc. No network access at view
-time — the Friday scoring Routine regenerates the file and republishes it
+time — the Monday scoring Routine regenerates the file and republishes it
 as an Artifact after each card is graded.
 
 Usage (from repo root, with ledger.md checked out of the log branch):
@@ -534,7 +534,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     <article class="doc">__FAQ__</article>
   </section>
 </main>
-<footer>Rebuilt by the Friday scoring Routine from <code>ledger.md</code> on the weekly-predictions-log branch.</footer>
+<footer>Rebuilt by the Monday scoring Routine from <code>ledger.md</code> on the weekly-predictions-log branch.</footer>
 <div id="tooltip"></div>
 
 <script>
@@ -708,7 +708,7 @@ function initReturnChart(container, rules, title, defaultMetric, omit) {
     container.insertAdjacentHTML("beforeend",
       `<h2>${title}</h2><div class="empty" style="margin-top:8px">
        <strong>No events scored yet.</strong><br>
-       Fills in after the Friday Routine grades the first card.</div>`);
+       Fills in after the Monday Routine grades the first card.</div>`);
     return;
   }
   const uid = "rc" + (chartSeq++);
@@ -819,9 +819,9 @@ if (!NEXT || NEXT.decided) {
     ? `<h2>Upcoming card</h2><p class="sub" style="margin-bottom:0"><strong>${esc(NEXT.event)}</strong>
         has already happened — see it under Past events below, or the Experiments
         tab for the graded rule comparison. The next upcoming card replaces this
-        once Thursday's card-day job runs.</p>`
+        once Saturday's card-day job runs.</p>`
     : `<h2>Upcoming card</h2><p class="sub" style="margin-bottom:0">No upcoming card logged yet —
-        check back after 1&nbsp;PM AEST Thursday.</p>`;
+        check back after 9&nbsp;AM AEST Saturday.</p>`;
 } else {
   const valueFights = NEXT.fights.map((f, i) => ({...f, i})).filter(f => f.kelly > 0);
   upcomingEl.innerHTML = `
