@@ -424,8 +424,10 @@ retraining needed.
 
 **Two cloud Routines, both AEST, no PC involved:**
 
-- **`ufc-weekly-card-day`, Saturday 9 AM (`0 23 * * 5` UTC; Thursday 1 PM
-  until 27 Aug 2026 — moved so odds are fetched closer to fight day):**
+- **`ufc-weekly-card-day`, Friday 9 AM (`0 23 * * 4` UTC; Thursday 1 PM
+  until 27 Aug 2026 — moved so odds are fetched closer to fight day while
+  comfortably preceding every card's start, briefly Saturday 9 AM before
+  Michael settled on Friday morning):**
   cheap ufcstats
   probe (usually blocked, skips gracefully) → WebSearch the next card → build/
   refresh `card.json` odds via `scripts/fetch_card_odds.py` (Sportsbet staking
@@ -435,7 +437,7 @@ retraining needed.
   republish the dashboard → phone notification with the slip.
 - **`ufc-monday-scoring`, Monday 6 PM (`0 8 * * 1` UTC; Friday until 27 Aug
   2026 — moved to land the day after Sunday-AEST fights, and always BEFORE
-  Saturday's job replaces `card.json` with the next card):** find the most
+  Friday's card-day job replaces `card.json` with the next card):** find the most
   recent completed-but-unscored card → WebSearch results (voids for changed
   fights) → `scripts/score_card.py` grades A/C/E/F → append `ledger.md` +
   `collected_odds.csv` on the log branch → rebuild `odds_train.csv` for the
@@ -486,26 +488,25 @@ Michael's request); the Monday run then finds nothing left to score.
 Cards run Saturday night US time — Sunday afternoon AEST — and the scoring
 Routine runs Monday 6 PM AEST, so each card is graded ~1 day after it ends.
 (Until 27 Aug 2026 scoring ran Fridays, a ~6-day lag; it was moved with the
-card-day swap both for speed and because scoring must land before Saturday's
-job replaces `card.json` with the next card.) Ask any time after an event to
+card-day swap both for speed and because scoring must land before the
+card-day job replaces `card.json` with the next card.) Ask any time after an event to
 score it earlier by hand; Monday's run then finds nothing left to do.
 
-### Do fights ever happen on Saturday AEST — does the 9 AM Saturday run always beat them?
+### Do fights ever happen on Saturday AEST — does the card-day run always beat them?
 
-Yes they do, routinely — and it's why the run is at 9 AM rather than
-later. Asia-hosted cards (Shanghai, Macau, Tokyo) run Saturday *local*
-evening = Saturday evening AEST, prelims from ~4&ndash;5 PM — the 9 AM
-run precedes them by ~8 hours. US cards are Sunday AEST midday,
-Europe/Middle East Sunday early morning, Australian cards Sunday midday
-— all safely after. The data (771 events): 639 Saturday-listed; since
-2023 only two exceptions, one Friday (Aug 2025) and one Sunday (Jun
-2026). The tight case is a Friday-US card — Friday night US = Saturday
-~10 AM&ndash;2 PM AEST, so 9 AM lands right at the wire (roughly one
-such card every two years). A true weekday card (25 Wednesdays all-time,
-3 since 2020, all COVID-era) would be missed by any Saturday schedule
-and needs a manual "run the card job early" — essentially extinct.
-Moving the run to ~7 AM would widen the Friday-card margin if ever
-wanted.
+Yes they do, routinely. Asia-hosted cards (Shanghai, Macau, Tokyo) run
+Saturday *local* evening = Saturday evening AEST, prelims from
+~4&ndash;5 PM; US cards are Sunday AEST midday, Europe/Middle East
+Sunday early morning, Australian cards Sunday midday. The data (771
+events): 639 Saturday-listed; since 2023 only two exceptions, one
+Friday (Aug 2025) and one Sunday (Jun 2026). The card-day run was
+briefly Saturday 9 AM (clearing Asia prelims by ~8 hours but landing
+right at the wire for a Friday-US card, Saturday ~10 AM AEST), then
+settled at **Friday 9 AM AEST** (28 Aug 2026) — a full day's margin on
+every modern card shape, including the roughly-biennial Friday-US one.
+A true weekday card (25 Wednesdays all-time, 3 since 2020, all
+COVID-era) would still be missed and needs a manual "run the card job
+early" — essentially extinct.
 
 ### What's the difference between the Performance and Experiments tabs?
 
@@ -1150,7 +1151,7 @@ card day moved Thursday→Saturday, scoring Friday→Monday and renamed
 
 | Routine | Cron (UTC) | Local time |
 |---|---|---|
-| `ufc-weekly-card-day` | `0 23 * * 5` | Sat 9 AM AEST |
+| `ufc-weekly-card-day` | `0 23 * * 4` | Fri 9 AM AEST |
 | `ufc-monday-scoring` | `0 8 * * 1` | Mon 6 PM AEST |
 
 Neither carries an `ended_reason` (permanently disabled) or a

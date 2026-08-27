@@ -819,9 +819,9 @@ if (!NEXT || NEXT.decided) {
     ? `<h2>Upcoming card</h2><p class="sub" style="margin-bottom:0"><strong>${esc(NEXT.event)}</strong>
         has already happened — see it under Past events below, or the Experiments
         tab for the graded rule comparison. The next upcoming card replaces this
-        once Saturday's card-day job runs.</p>`
+        once Friday's card-day job runs.</p>`
     : `<h2>Upcoming card</h2><p class="sub" style="margin-bottom:0">No upcoming card logged yet —
-        check back after 9&nbsp;AM AEST Saturday.</p>`;
+        check back after 9&nbsp;AM AEST Friday.</p>`;
 } else {
   const valueFights = NEXT.fights.map((f, i) => ({...f, i})).filter(f => f.kelly > 0);
   upcomingEl.innerHTML = `
