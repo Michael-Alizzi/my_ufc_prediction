@@ -118,6 +118,24 @@ a 70/30 lock, the *underdog's* price overpays their true chance — that side is
 value bet even though the model expects them to lose. The bet column answers "where
 is the price wrong?", not "who wins?".
 
+### Are we sometimes betting against the market? (e.g. Gomes, Shanghai Aug 2026)
+
+Yes — value bets come in two species. **Against the market's direction**:
+model and market disagree on the winner (Gomes: market's 2.28 implies
+~44%, model says 53.4% — the market picks Yan, the model narrowly picks
+Gomes; the bet pays off if her true chance is anything above ~44%).
+**With the market, more conviction**: both agree on the winner, the model
+is just more confident than the price (Sumudaerji on the same card:
+75.3% vs ~69% implied) — a disagreement of degree, not direction. The
+honest caveat on the first kind: "model near a coin flip vs a one-sided
+market" was historically the model's worst segment (−9.5% ROI for the old
+odds-blind model). Two mitigations now: the current model ingests the
+market price as a feature, so a residual disagreement is deliberate; and
+when rule E's shrink-toward-market *still* finds value after conceding
+half the opinion (it staked Gomes its maximum), the disagreement has
+survived the humility check. It remains the bet type most worth watching
+across the trial when it loses.
+
 ### Why do most fights get $0?
 
 Bookmaker prices are good — the 2026 backtest (entries 1–2) showed closing
