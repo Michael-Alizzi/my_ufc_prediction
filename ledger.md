@@ -10,3 +10,7 @@
 | 2026-08-22 | UFC Fight Night: Hernandez vs. Rodrigues | C | $51 | $44.61 | -6.39 | 2/3/0 | +0.26 |
 | 2026-08-22 | UFC Fight Night: Hernandez vs. Rodrigues | E | $50 | $37.65 | -12.35 | 2/3/0 | +0.26 |
 | 2026-08-22 | UFC Fight Night: Hernandez vs. Rodrigues | F | $50 | $42.11 | -7.89 | 2/3/0 | +0.26 |
+| 2026-08-29 | UFC Fight Night: Nurmagomedov vs. Song | A | $50 | $92.16 | +42.16 | 2/2/0 | +1.72 |
+| 2026-08-29 | UFC Fight Night: Nurmagomedov vs. Song | C | $50 | $92.16 | +42.16 | 2/2/0 | +1.72 |
+| 2026-08-29 | UFC Fight Night: Nurmagomedov vs. Song | E | $50 | $98.04 | +48.04 | 2/2/0 | +1.72 |
+| 2026-08-29 | UFC Fight Night: Nurmagomedov vs. Song | F | $50 | $93.00 | +43.00 | 2/2/0 | +1.72 |
