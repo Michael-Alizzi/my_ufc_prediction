@@ -1308,3 +1308,16 @@ pipeline (Sep 2026 onward) is same-book at both ends and cleaner. And
 these retro numbers deliberately stay OUT of the ledger: the official
 Avg CLV column only ever contains same-book snapshot values, so its
 average isn't a mix of two measurement bases.
+
+### Does the dashboard show who and how much the shadow rules bet at each event?
+
+It didn't until Sep 2026 — the Past events tables showed only Rule A's
+per-fight stake, with C/E/F visible solely as per-event aggregates (the
+ledger nets, Rule comparison table and charts). Now each Past events
+per-fight table has a "Shadow stakes (C / E / F)" column showing every
+shadow rule's fighter, stake and odds for that fight (e.g. "C: $24 on
+Denise Gomes (@2.28) / E: $31 ... / F: $25 ..."), rebuilt from the same
+shadow strings `score_card.py` grades from. Most weeks all four rules
+pick the same fighters and differ only in sizing; the interesting rows
+are where a rule sits a fight out (like C/E skipping three of Rule A's
+four UFC 330 bets).
