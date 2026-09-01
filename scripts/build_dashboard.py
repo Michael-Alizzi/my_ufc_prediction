@@ -782,6 +782,11 @@ document.getElementById("charts").appendChild(expChartCard);
 initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "net", ["flatnet"]);
 
 // -- rule table ------------------------------------------------------------
+// Indicative retro-CLV for the first three trial events (Sep 2026 one-off
+// analysis: Best Fight Odds US-book closing medians, NOT the same-book
+// Sportsbet basis the live snapshots use). Shown only while a rule has no
+// live Avg CLV yet; the ledger-driven value replaces it as snapshots accrue.
+const RETRO_CLV = { A: 2.5, C: 5.3, E: 5.3, F: 2.6 };
 const rt = document.getElementById("rule-table");
 rt.innerHTML = `<tr><th>Rule</th><th class="num">Staked</th>
   <th class="num">Returned</th><th class="num">Net</th><th class="num">ROI</th>
@@ -794,9 +799,16 @@ rt.innerHTML = `<tr><th>Rule</th><th class="num">Staked</th>
       <td class="num ${n ? cls(t.net) : ""}">${n ? sign$(t.net) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${t.roi === null ? "—" : (t.roi >= 0 ? "+" : "") + t.roi + "%"}</td>
       <td class="num">${t.hit === null ? "—" : t.hit + "% (" + t.won + "/" + t.placed + ")"}</td>
-      <td class="num ${t.clv === null ? "" : cls(t.clv)}" title="avg closing-line value: taken price vs the pre-fight closing snapshot; positive = beat the close">${t.clv === null ? "—" : (t.clv >= 0 ? "+" : "") + t.clv + "%"}</td>
+      <td class="num ${t.clv === null ? "" : cls(t.clv)}" title="avg closing-line value: taken price vs the pre-fight closing snapshot; positive = beat the close">${t.clv === null
+        ? (RETRO_CLV[r] !== undefined ? `<span style="color:var(--muted)">+${RETRO_CLV[r]}%*</span>` : "—")
+        : (t.clv >= 0 ? "+" : "") + t.clv + "%"}</td>
       <td class="num">${r === "A" ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
   }).join("");
+if (RULES.some(r => tot[r].clv === null && RETRO_CLV[r] !== undefined))
+  rt.insertAdjacentHTML("afterend",
+    `<p class="sub" style="margin-top:6px">* indicative retro estimate for the first three trial events
+     (Best Fight Odds US-book closing medians — not the same-book Sportsbet basis the live snapshots use);
+     replaced by ledger snapshot values as they accrue from Sep 2026.</p>`);
 
 // -- Performance tab: P/L so far, upcoming allocator, past events ----------
 const NEXT = __NEXT__;
