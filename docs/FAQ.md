@@ -1278,3 +1278,33 @@ Not on the menu: changing staking mid-trial, or reacting to any single
 fight's CLV — one line move is noise; only the average means anything.
 Current plan: let snapshots accrue, revisit the circuit breaker at ~15
 covered bets, queue the training-feed change for phase-2.
+
+### Can we work out CLV for events that already happened?
+
+Retroactively, yes — approximately. Our own snapshot can't run backwards
+(The Odds API drops events at commence time and paywalls history), but
+closing lines for past fights are public record on Best Fight Odds, so
+the three scored trial events were graded by hand against a median of 5
+US sportsbooks' closes (exchanges excluded — Polymarket/Kalshi trade
+in-play, so their "close" already knows the result):
+
+| Rule | Avg CLV (3 events) |
+|---|---|
+| A | +2.5% |
+| C | +5.3% |
+| E | +5.3% |
+| F | +2.6% |
+
+Pooled over all 9 bets: +2.5%, with 7 of 9 at or ahead of the close.
+Standouts: Padilla +11.3% and Donte Johnson +9.5% (big steam toward us),
+Magny −13.2% (market drifted hard against us — and he won anyway, while
++7.8%-CLV Alvarez lost: the clean illustration that CLV grades the price,
+not the coin flip). C/E lead because they skipped the Magny bet on
+UFC 330.
+
+Two caveats: our taken prices are Sportsbet (AU) and these closes are a
+US-book median, so cross-book noise of a point or two applies — the live
+pipeline (Sep 2026 onward) is same-book at both ends and cleaner. And
+these retro numbers deliberately stay OUT of the ledger: the official
+Avg CLV column only ever contains same-book snapshot values, so its
+average isn't a mix of two measurement bases.
