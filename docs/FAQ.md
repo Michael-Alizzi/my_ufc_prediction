@@ -1311,13 +1311,14 @@ average isn't a mix of two measurement bases.
 
 ### Does the dashboard show who and how much the shadow rules bet at each event?
 
-It didn't until Sep 2026 — the Past events tables showed only Rule A's
-per-fight stake, with C/E/F visible solely as per-event aggregates (the
-ledger nets, Rule comparison table and charts). Now each Past events
-per-fight table has a "Shadow stakes (C / E / F)" column showing every
-shadow rule's fighter, stake and odds for that fight (e.g. "C: $24 on
-Denise Gomes (@2.28) / E: $31 ... / F: $25 ..."), rebuilt from the same
-shadow strings `score_card.py` grades from. Most weeks all four rules
-pick the same fighters and differ only in sizing; the interesting rows
-are where a rule sits a fight out (like C/E skipping three of Rule A's
-four UFC 330 bets).
+Yes — since Sep 2026, under **Experiments → "Bets by event · every rule"**:
+one collapsible entry per scored event, each fight shown with its bet-on
+fighter, odds, and a stake column per rule (A staked, C/E/F shadows),
+rebuilt from the same shadow strings `score_card.py` grades from. The
+summary row shows every rule's net for the event side by side. It
+originally landed as an extra column in Performance → Past events, then
+moved to Experiments the same day since that tab owns the shadow trial —
+Past events stays Rule-A-only (the real money view). Most weeks all four
+rules pick the same fighters and differ only in sizing; the interesting
+rows are where a rule sits a fight out (like C/E skipping three of Rule
+A's four UFC 330 bets).
