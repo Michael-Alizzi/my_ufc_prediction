@@ -500,6 +500,12 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     </div>
 
     <div class="card">
+      <h2>Bets by event &middot; every rule</h2>
+      <p class="sub">Click an event for each fight's stake under all four rules — A (staked) beside the C/E/F shadows. Same fighter and odds per fight; the rules differ in whether and how much they bet.</p>
+      <div id="shadow-events"></div>
+    </div>
+
+    <div class="card">
       <h2>Backtest reference &middot; why the shadows are being trialled</h2>
       <p class="sub">5,786 historical fights at closing odds (C/E: entry 9; F: entry 10, whole-history replay at the frozen &lambda;). H2 = the more recent half. All ROIs are upper bounds.</p>
       <div class="chart-scroll"><table>
@@ -911,18 +917,53 @@ if (!n) {
     const rows = EVENT_DETAIL[e.date + "|" + e.event] || [];
     const body = rows.length
       ? `<div class="chart-scroll" style="margin-top:10px"><table>
-          <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Rule A stake</th><th>Shadow stakes (C / E / F)</th></tr>
+          <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Rule A stake</th></tr>
           ${rows.map(f => `<tr><td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
             <td>${esc(f.pick)} (${esc(f.confidence)})</td>
             <td class="num">${f.bet_on ? f.bet_odds.toFixed(2) : "—"}</td>
-            <td class="num">${f.stake ? fmt$(f.stake) : "$0"}</td>
-            <td style="color:var(--muted);font-size:12px">${f.shadow && f.shadow !== "-" ? esc(f.shadow) : "—"}</td></tr>`).join("")}
+            <td class="num">${f.stake ? fmt$(f.stake) : "$0"}</td></tr>`).join("")}
         </table></div>`
       : `<p class="sub" style="margin:10px 0 0">Per-fight detail unavailable for this event.</p>`;
     return `<details style="margin-top:10px;border:1px solid var(--border);border-radius:6px;padding:12px 16px">
       <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px">
         <span><strong>${esc(e.event)}</strong> <span style="color:var(--muted)">&middot; ${e.date}</span></span>
         <span>${a ? fmt$(a.staked) + " &rarr; " + fmt$(a.returned) + " &middot; " : ""}<span class="${a ? cls(a.net) : ""}">${a ? sign$(a.net) : "—"}</span></span>
+      </summary>
+      ${body}
+    </details>`;
+  }).join("");
+}
+
+// Experiments tab: per-event bets under every rule (A + C/E/F shadows),
+// stakes parsed from the same shadow strings score_card.py grades from.
+const shadowEventsEl = document.getElementById("shadow-events");
+if (!n) {
+  shadowEventsEl.innerHTML = `<div class="empty" style="margin-top:0">No events scored yet.</div>`;
+} else {
+  shadowEventsEl.innerHTML = ev.slice().reverse().map(e => {
+    const rows = (EVENT_DETAIL[e.date + "|" + e.event] || []).filter(f => f.stake || /[CEF]: \$/.test(f.shadow || ""));
+    const body = rows.length
+      ? `<div class="chart-scroll" style="margin-top:10px"><table>
+          <tr><th>Fight</th><th>Bet on</th><th class="num">Odds</th>
+            <th class="num">A</th><th class="num">C</th><th class="num">E</th><th class="num">F</th></tr>
+          ${rows.map(f => {
+            const sh = {};
+            for (const m of (f.shadow || "").matchAll(/([CEF]): \$(\d+)/g)) sh[m[1]] = +m[2];
+            const cell = v => v ? fmt$(v) : `<span style="color:var(--muted)">—</span>`;
+            return `<tr><td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
+              <td>${esc(f.bet_on || f.pick)}</td>
+              <td class="num">${f.bet_odds ? f.bet_odds.toFixed(2) : "—"}</td>
+              <td class="num">${cell(f.stake)}</td><td class="num">${cell(sh.C)}</td>
+              <td class="num">${cell(sh.E)}</td><td class="num">${cell(sh.F)}</td></tr>`;
+          }).join("")}
+        </table></div>`
+      : `<p class="sub" style="margin:10px 0 0">Per-fight detail unavailable for this event.</p>`;
+    const nets = "ACEF".split("").filter(r => e.rules[r])
+      .map(r => `${r} <span class="${cls(e.rules[r].net)}">${sign$(e.rules[r].net)}</span>`).join(" · ");
+    return `<details style="margin-top:10px;border:1px solid var(--border);border-radius:6px;padding:12px 16px">
+      <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px">
+        <span><strong>${esc(e.event)}</strong> <span style="color:var(--muted)">&middot; ${e.date}</span></span>
+        <span>${nets}</span>
       </summary>
       ${body}
     </details>`;
