@@ -1222,3 +1222,30 @@ they report no per-run `last_run` record in the list (only `last_fired_at`).
 That's by design: each week's job continues the same conversation. If they
 ever do stop, the tell is `last_fired_at` going stale relative to
 `next_run_at`, not the row's shading.
+
+### If our fighter's odds shorten after we bet, is that positive CLV? What about the opponent drifting?
+
+Yes on both — they're the same event seen from opposite corners. Taking
+Gomes at 2.28 and watching her close at 2.00 gives CLV = 2.28/2.00 − 1 =
+**+14%**: the market moved toward our position after we took the price,
+which is the standard leading indicator that the model is finding real
+value (it says the final, sharpest consensus agreed with us — a faster and
+less noisy signal than whether she then wins the coin flip).
+
+The opponent case is the mirror image. We never bet "against" a fighter
+directly — we bet **on** the other corner — and the ledger's Avg CLV is
+always computed on the side we took (our taken odds vs *that fighter's*
+closing odds; `score_card.py:avg_clv`). But a two-outcome market's prices
+move together: an opponent drifting 2.00 → 3.00 (implied 50% → 33%) forces
+our pick to shorten by roughly the same probability mass, e.g. 2.00 →
+~1.50, which grades as 2.00/1.50 − 1 = **+33%** CLV on our side. So
+"opponent drifts out" and "our fighter steams in" are one movement, and
+both show up as positive CLV on the bet we logged.
+
+Two caveats worth keeping in mind: (1) direction matters — our pick's odds
+going *down* is good for CLV (we locked a bigger payout than the close
+offers), which feels backwards until you remember we already hold the
+2.28 ticket; and (2) one fight's CLV proves nothing by itself — lines move
+on injury news and betting volume too. It's the *average* staying positive
+across many bets that indicates edge, which is exactly why it's logged
+per event and averaged in the dashboard's Rule comparison table.
