@@ -115,7 +115,8 @@ def _card_fights_rows(fights, preds):
                      "pick": p.get("prediction"), "confidence": p.get("confidence"),
                      "odds1": float(f["odds1"]), "odds2": float(f["odds2"]),
                      "bet_on": p.get("bet_on"), "bet_odds": p.get("bet_odds"),
-                     "kelly": p.get("kelly", 0), "stake": p.get("stake_amt", 0)})
+                     "kelly": p.get("kelly", 0), "stake": p.get("stake_amt", 0),
+                     "shadow": p.get("shadow") or ""})
     return rows
 
 
@@ -898,11 +899,12 @@ if (!n) {
     const rows = EVENT_DETAIL[e.date + "|" + e.event] || [];
     const body = rows.length
       ? `<div class="chart-scroll" style="margin-top:10px"><table>
-          <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Rule A stake</th></tr>
+          <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Rule A stake</th><th>Shadow stakes (C / E / F)</th></tr>
           ${rows.map(f => `<tr><td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
             <td>${esc(f.pick)} (${esc(f.confidence)})</td>
             <td class="num">${f.bet_on ? f.bet_odds.toFixed(2) : "—"}</td>
-            <td class="num">${f.stake ? fmt$(f.stake) : "$0"}</td></tr>`).join("")}
+            <td class="num">${f.stake ? fmt$(f.stake) : "$0"}</td>
+            <td style="color:var(--muted);font-size:12px">${f.shadow && f.shadow !== "-" ? esc(f.shadow) : "—"}</td></tr>`).join("")}
         </table></div>`
       : `<p class="sub" style="margin:10px 0 0">Per-fight detail unavailable for this event.</p>`;
     return `<details style="margin-top:10px;border:1px solid var(--border);border-radius:6px;padding:12px 16px">
