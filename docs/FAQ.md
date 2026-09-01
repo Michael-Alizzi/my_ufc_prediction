@@ -1249,3 +1249,32 @@ offers), which feels backwards until you remember we already hold the
 on injury news and betting volume too. It's the *average* staying positive
 across many bets that indicates edge, which is exactly why it's logged
 per event and averaged in the dashboard's Rule comparison table.
+
+### Could we do something with CLV beyond watching it as an indicator?
+
+Four real uses, in rough order of practicality:
+
+1. **Bet timing.** We bet Friday morning only because that's when the job
+   runs. Avg CLV directly measures whether Friday prices beat fight-day
+   prices on our bets — a few months of ledger data answers "should the
+   card-day job move earlier or later?" with evidence, no code needed.
+2. **A real-money circuit breaker.** CLV converges much faster than W/L,
+   so a clearly negative average after ~15–20 bets is strong evidence the
+   model pays worse-than-market prices — grounds to stop staking real
+   dollars and keep shadow-logging, before the bankroll ledger has enough
+   events to show it.
+3. **Post-trial tie-breaker between staking rules.** If the entry-9
+   Wilcoxon trial ends in a statistical tie (likely, per the power
+   analysis), prefer the rule whose bet selection got the best prices.
+   Mid-trial it stays hands-off — the promotion criterion is
+   pre-registered and frozen.
+4. **Sharper phase-2 training data.** `collected_odds.csv` stores Friday
+   prices; closing prices are strictly better probability estimates and
+   we now capture them anyway. Routing snapshot closes into the training
+   feed is a small PR-sized change; the raw data accrues regardless since
+   `closing_odds.json` is committed per event.
+
+Not on the menu: changing staking mid-trial, or reacting to any single
+fight's CLV — one line move is noise; only the average means anything.
+Current plan: let snapshots accrue, revisit the circuit breaker at ~15
+covered bets, queue the training-feed change for phase-2.
