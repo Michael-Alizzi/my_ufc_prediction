@@ -34,7 +34,8 @@ classes.
 
 **Verdicts:**
 
-1. **CLV (closing-line value) logging — adopt-candidate.** We bet at
+1. **CLV (closing-line value) logging — ADOPTED (Michael approved
+   2026-09-01; PR opened the same day).** We bet at
    Friday-morning prices; recording each bet's closing odds at scoring
    time would measure whether our prices beat the close — the standard
    early indicator of real edge, converging far faster than win/loss
@@ -70,5 +71,6 @@ classes.
    changing it.
 
 **Judgement call: NO retrain this month.** Nothing surveyed beats the
-one-variable bar for a market-gap improvement right now. Proposed
-instead: the CLV logging diagnostic (#1), pending Michael's go-ahead.
+one-variable bar for a market-gap improvement right now. The CLV logging
+diagnostic (#1) was proposed, approved by Michael the same day, and
+shipped as a PR.

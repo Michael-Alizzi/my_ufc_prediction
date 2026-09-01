@@ -32,7 +32,8 @@ DOCS = [("faq", "FAQ", "docs/FAQ.md"),
 
 ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|([^|]+)\|\s*([ACEF])\s*"
                  r"\|\s*\$([\d.]+)\s*\|\s*\$([\d.]+)\s*\|\s*([+-][\d.]+)\s*"
-                 r"\|\s*(\d+)/(\d+)/(\d+)\s*\|(?:\s*([+-][\d.]+)\s*\|)?")
+                 r"\|\s*(\d+)/(\d+)/(\d+)\s*\|(?:\s*([+-][\d.]+)\s*\|)?"
+                 r"(?:\s*(?:([+-][\d.]+)%|-)\s*\|)?")
 
 
 def parse_ledger(path):
@@ -57,7 +58,10 @@ def parse_ledger(path):
         index[key]["rules"][rule] = {
             "staked": float(m.group(4)), "returned": float(m.group(5)),
             "net": net, "flat_net": flat_net, "won": int(m.group(7)),
-            "placed": int(m.group(8)), "void": int(m.group(9))}
+            "placed": int(m.group(8)), "void": int(m.group(9)),
+            # avg closing-line value (%), logged from the pre-fight odds
+            # snapshot; None for events before the CLV change (Sep 2026)
+            "clv": float(m.group(11)) if m.group(11) else None}
     return sorted(events, key=lambda e: e["date"])
 
 
@@ -73,6 +77,9 @@ def summarise(events):
             if r != "A" and "A" in e["rules"] and row["net"] > e["rules"]["A"]["net"]:
                 t["ahead"] += 1
     for r, t in total.items():
+        clvs = [e["rules"][r]["clv"] for e in events
+                if r in e["rules"] and e["rules"][r]["clv"] is not None]
+        t["clv"] = round(sum(clvs) / len(clvs), 1) if clvs else None
         t["net"] = round(t["returned"] - t["staked"], 2)
         t["flat_net"] = round(t["flat_net"], 2)
         t["roi"] = round(100 * t["net"] / t["staked"], 1) if t["staked"] else None
@@ -777,7 +784,7 @@ initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "net"
 const rt = document.getElementById("rule-table");
 rt.innerHTML = `<tr><th>Rule</th><th class="num">Staked</th>
   <th class="num">Returned</th><th class="num">Net</th><th class="num">ROI</th>
-  <th class="num">Hit rate</th><th class="num">Cards ahead of A</th></tr>` +
+  <th class="num">Hit rate</th><th class="num">Avg CLV</th><th class="num">Cards ahead of A</th></tr>` +
   RULES.map(r => {
     const t = tot[r];
     return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}${r === "A" ? " (staked)" : " (shadow)"}</td>
@@ -786,6 +793,7 @@ rt.innerHTML = `<tr><th>Rule</th><th class="num">Staked</th>
       <td class="num ${n ? cls(t.net) : ""}">${n ? sign$(t.net) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${t.roi === null ? "—" : (t.roi >= 0 ? "+" : "") + t.roi + "%"}</td>
       <td class="num">${t.hit === null ? "—" : t.hit + "% (" + t.won + "/" + t.placed + ")"}</td>
+      <td class="num ${t.clv === null ? "" : cls(t.clv)}" title="avg closing-line value: taken price vs the pre-fight closing snapshot; positive = beat the close">${t.clv === null ? "—" : (t.clv >= 0 ? "+" : "") + t.clv + "%"}</td>
       <td class="num">${r === "A" ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
   }).join("");
 

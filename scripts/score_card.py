@@ -32,11 +32,32 @@ from send_weekly_predictions import make_predictions  # noqa: E402
 
 LEDGER = "ledger.md"
 COLLECTED = "collected_odds.csv"
+CLOSING = "closing_odds.json"
 LEDGER_HEADER = (
     "# Weekly betting ledger (rule A staked; C/E shadow per entry 9, F per entry 10)\n\n"
-    "| Date | Event | Rule | Staked | Returned | Net | Bets won/placed/void | Flat $1 net |\n"
-    "|---|---|---|---|---|---|---|---|\n"
+    "| Date | Event | Rule | Staked | Returned | Net | Bets won/placed/void | Flat $1 net | Avg CLV |\n"
+    "|---|---|---|---|---|---|---|---|---|\n"
 )
+
+
+def avg_clv(rule_bets, closing):
+    """Mean closing-line value of a rule's bets: taken/close - 1 per bet
+    (same-book Sportsbet basis both ends, so the vig ~cancels; positive =
+    beat the close). None when no closing snapshot covers any bet --
+    snapshots only exist from the CLV change (Sep 2026) onward, and a
+    fight already underway at snapshot time has no entry."""
+    if not closing:
+        return None
+    close_by_pair = {frozenset((c["fighter1"].lower(), c["fighter2"].lower())): c
+                     for c in closing}
+    clvs = []
+    for f1, f2, bet_on, odds, _ in rule_bets:
+        c = close_by_pair.get(frozenset((f1.lower(), f2.lower())))
+        if not c:
+            continue
+        close = c["close1"] if bet_on.lower() == c["fighter1"].lower() else c["close2"]
+        clvs.append(odds / close - 1)
+    return sum(clvs) / len(clvs) if clvs else None
 
 
 def grade(rule_bets, winners, voids):
@@ -104,16 +125,21 @@ def main():
                 odds = float(part.split("(@")[1].rstrip(")"))
                 rules[rule].append((p["fighter1"], p["fighter2"], name, odds, amt))
 
+    closing = (json.load(open(CLOSING)) if os.path.exists(CLOSING) else None)
+
     if not os.path.exists(LEDGER):
         open(LEDGER, "w").write(LEDGER_HEADER)
     with open(LEDGER, "a") as fh:
         for rule, bets in rules.items():
             staked, ret, won, void, flat_net = grade(bets, winners, voids)
+            clv = avg_clv(bets, closing)
+            clv_s = f"{clv:+.1%}" if clv is not None else "-"
             fh.write(f"| {args.event_date} | {args.event_title} | {rule} "
                      f"| ${staked} | ${ret:.2f} | {ret - staked:+.2f} "
-                     f"| {won}/{len(bets) - void}/{void} | {flat_net:+.2f} |\n")
+                     f"| {won}/{len(bets) - void}/{void} | {flat_net:+.2f} | {clv_s} |\n")
             print(f"rule {rule}: staked ${staked}, returned ${ret:.2f} "
-                  f"({won}/{len(bets) - void} won, {void} void, flat net {flat_net:+.2f})")
+                  f"({won}/{len(bets) - void} won, {void} void, "
+                  f"flat net {flat_net:+.2f}, avg CLV {clv_s})")
 
     # Phase-2 training feed: every fight's odds (feature slot preferred),
     # keyed the way fighter_history/odds_train are.
