@@ -1116,8 +1116,14 @@ it matters: CLV grades the *decision* (the price) rather than the
 *outcome* (the coin flip), so it separates skill from luck in far fewer
 bets than W/L — beating the close consistently is the standard early
 indicator of real edge, which matters given the 10-event trial's limited
-power. It's a diagnostic only: no staking rule uses it, and the
-promotion criterion is unchanged.
+power. Worked example: take Gomes at 2.28 on Friday; if she closes 2.10
+(late money agreed), CLV = 2.28/2.10 − 1 = +8.6% — evidence of skill
+even if she then loses; if she drifts to 2.50, CLV = −8.8% — the
+market's sharpest read moved against us, a warning even if she wins.
+Like buying a stock at $10 that closes the day at $11: any one trade can
+still lose, but consistently buying below where the market settles makes
+profit a matter of time. It's a diagnostic only: no staking rule uses
+it, and the promotion criterion is unchanged.
 
 ### Where do I see how the bets are going?
 
