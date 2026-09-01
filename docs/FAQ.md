@@ -1102,6 +1102,23 @@ bet the Friday one; the ledger is always scored against the latest logged
 slip, so betting the same one keeps your real money aligned with the
 recorded trial.
 
+### What's the Avg CLV column?
+
+Closing-line value: did the price we took beat the price the market
+closed at? Per bet, `taken_odds / closing_odds − 1` (positive = the line
+moved toward our pick after we bet — the market "agreed" late); the
+ledger logs each rule's per-event average. Mechanics: the Friday card-day
+job schedules a one-off snapshot ~90 min before the card's first fight
+(`scripts/snapshot_closing_odds.py` → `closing_odds.json` on the log
+branch), and Monday's scoring computes CLV from it — the snapshot must
+happen pre-fight because The Odds API drops events once they start. Why
+it matters: CLV grades the *decision* (the price) rather than the
+*outcome* (the coin flip), so it separates skill from luck in far fewer
+bets than W/L — beating the close consistently is the standard early
+indicator of real edge, which matters given the 10-event trial's limited
+power. It's a diagnostic only: no staking rule uses it, and the
+promotion criterion is unchanged.
+
 ### Where do I see how the bets are going?
 
 The **Octagon Ledger dashboard**:
