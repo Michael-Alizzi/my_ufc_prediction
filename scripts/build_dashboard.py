@@ -864,10 +864,10 @@ if (!NEXT || NEXT.decided) {
         style="width:90px;font:14px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 8px;margin-left:6px"></label>
     <div class="chart-scroll"><table id="alloc-table">
       <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Allocated</th><th class="num">Returns if wins</th></tr>
-      ${NEXT.fights.map((f, i) => `<tr data-i="${i}">
+      ${valueFights.map(f => `<tr data-i="${f.i}">
         <td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
-        <td>${f.bet_on ? esc(f.bet_on) : '<span style="color:var(--muted)">no value</span>'}</td>
-        <td class="num">${f.bet_on ? f.bet_odds.toFixed(2) : "—"}</td>
+        <td>${esc(f.bet_on)}</td>
+        <td class="num">${f.bet_odds.toFixed(2)}</td>
         <td class="num alloc-out">$0</td><td class="num ret-out">—</td></tr>`).join("")}
       <tr style="font-weight:700"><td colspan="3">Total if every placed bet wins</td>
         <td class="num alloc-total-out">$0</td><td class="num ret-total-out">—</td></tr>

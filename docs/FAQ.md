@@ -1322,3 +1322,15 @@ Past events stays Rule-A-only (the real money view). Most weeks all four
 rules pick the same fighters and differ only in sizing; the interesting
 rows are where a rule sits a fight out (like C/E skipping three of Rule
 A's four UFC 330 bets).
+
+### Why did the allocator show fights the model wasn't betting (e.g. Ruziboev vs Page)?
+
+The Performance tab's bankroll allocator used to render every fight the
+model could predict, including ones where it found no value — those rows
+sat at a permanent $0 stake whatever bankroll you typed (the splitting
+maths always ignored them; only the display included them). Fixed Sep
+2026: the table now lists only the fights with a positive Kelly edge,
+and the "N of M fights the model finds value in" line above it carries
+the rest of the context. The model's full read on a card (picks with no
+value attached) still lives in predictions_output.md on the
+weekly-predictions-log branch.
