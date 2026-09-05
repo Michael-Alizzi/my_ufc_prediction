@@ -1,0 +1,14 @@
+{
+ "2026-08-15|UFC 330: Makhachev vs. Machado Garry": {
+  "winners": ["Islam Makhachev", "Chidi Njokuani", "Donte Johnson", "Neil Magny"],
+  "voids": [["Charles Johnson", "Jose Ochoa"]]
+ },
+ "2026-08-22|UFC Fight Night: Hernandez vs. Rodrigues": {
+  "winners": ["Chris Padilla", "Roman Dolidze", "Anthony Hernandez"],
+  "voids": []
+ },
+ "2026-08-29|UFC Fight Night: Nurmagomedov vs. Song": {
+  "winners": ["Denise Gomes", "Sumudaerji", "Song Yadong"],
+  "voids": []
+ }
+}
