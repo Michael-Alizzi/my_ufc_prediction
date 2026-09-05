@@ -313,8 +313,14 @@ def main():
                           .replace('href="DATA_DICTIONARY.md"', 'href="#dictionary"')
                           .replace('href="../', 'href="' + repo))
 
+    # Fight winners per scored event (cumulative winners.json on the log
+    # branch, keyed "date|event" to match the ledger; appended by the Monday
+    # scoring Routine, backfilled Sep 2026 for the first three events).
+    winners = json.loads(git_show("origin/weekly-predictions-log:winners.json") or "{}")
+
     aest = datetime.now(timezone(timedelta(hours=10)))
     html = (TEMPLATE
+            .replace("__WINNERS__", json.dumps(winners))
             .replace("__DATA__", json.dumps(data))
             .replace("__HIST__", json.dumps(hist))
             .replace("__NEXT__", json.dumps(upcoming))
@@ -935,35 +941,50 @@ if (!n) {
 }
 
 // Experiments tab: per-event bets under every rule (A + C/E/F shadows),
-// stakes parsed from the same shadow strings score_card.py grades from.
+// stakes parsed from the same shadow strings score_card.py grades from;
+// winners from the log branch's cumulative winners.json.
+const WINNERS = __WINNERS__;
 const shadowEventsEl = document.getElementById("shadow-events");
 if (!n) {
   shadowEventsEl.innerHTML = `<div class="empty" style="margin-top:0">No events scored yet.</div>`;
 } else {
   shadowEventsEl.innerHTML = ev.slice().reverse().map(e => {
     const rows = (EVENT_DETAIL[e.date + "|" + e.event] || []).filter(f => f.stake || /[CEF]: \$/.test(f.shadow || ""));
+    const res = WINNERS[e.date + "|" + e.event] || {};
+    const wl = (res.winners || []).map(w => w.toLowerCase());
+    const winnerOf = f => {
+      if ((res.voids || []).some(v => new Set(v.map(x => x.toLowerCase())).has(f.f1.toLowerCase()))) return {name: "void", won: null};
+      const w = [f.f1, f.f2].find(x => wl.includes(x.toLowerCase()));
+      return w ? {name: w, won: f.bet_on && w.toLowerCase() === f.bet_on.toLowerCase()} : null;
+    };
     const body = rows.length
       ? `<div class="chart-scroll" style="margin-top:10px"><table>
-          <tr><th>Fight</th><th>Bet on</th><th class="num">Odds</th>
+          <tr><th>Fight</th><th>Bet on</th><th class="num">Odds</th><th>Winner</th>
             <th class="num">A</th><th class="num">C</th><th class="num">E</th><th class="num">F</th></tr>
           ${rows.map(f => {
             const sh = {};
             for (const m of (f.shadow || "").matchAll(/([CEF]): \$(\d+)/g)) sh[m[1]] = +m[2];
             const cell = v => v ? fmt$(v) : `<span style="color:var(--muted)">—</span>`;
+            const w = winnerOf(f);
+            const wCell = !w ? `<span style="color:var(--muted)">—</span>`
+              : w.won === null ? `<span style="color:var(--muted)">void</span>`
+              : `<span class="${w.won ? "pos" : "neg"}">${esc(w.name)} ${w.won ? "✓" : "✗"}</span>`;
             return `<tr><td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
               <td>${esc(f.bet_on || f.pick)}</td>
               <td class="num">${f.bet_odds ? f.bet_odds.toFixed(2) : "—"}</td>
+              <td>${wCell}</td>
               <td class="num">${cell(f.stake)}</td><td class="num">${cell(sh.C)}</td>
               <td class="num">${cell(sh.E)}</td><td class="num">${cell(sh.F)}</td></tr>`;
           }).join("")}
+          <tr style="font-weight:700"><td colspan="4">Event net (real $)</td>
+            ${"ACEF".split("").map(r => e.rules[r]
+              ? `<td class="num ${cls(e.rules[r].net)}">${sign$(e.rules[r].net)}</td>`
+              : `<td class="num">—</td>`).join("")}</tr>
         </table></div>`
       : `<p class="sub" style="margin:10px 0 0">Per-fight detail unavailable for this event.</p>`;
-    const nets = "ACEF".split("").filter(r => e.rules[r])
-      .map(r => `${r} <span class="${cls(e.rules[r].net)}">${sign$(e.rules[r].net)}</span>`).join(" · ");
     return `<details style="margin-top:10px;border:1px solid var(--border);border-radius:6px;padding:12px 16px">
-      <summary style="cursor:pointer;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px">
-        <span><strong>${esc(e.event)}</strong> <span style="color:var(--muted)">&middot; ${e.date}</span></span>
-        <span>${nets}</span>
+      <summary style="cursor:pointer;font-size:14px">
+        <strong>${esc(e.event)}</strong> <span style="color:var(--muted)">&middot; ${e.date}</span>
       </summary>
       ${body}
     </details>`;
