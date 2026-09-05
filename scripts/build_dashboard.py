@@ -959,24 +959,23 @@ if (!n) {
     };
     const body = rows.length
       ? `<div class="chart-scroll" style="margin-top:10px"><table>
-          <tr><th>Fight</th><th>Bet on</th><th class="num">Odds</th><th>Winner</th>
+          <tr><th>Fight</th><th>Bet on <span style="color:var(--muted);font-weight:400">(green won, red lost)</span></th><th class="num">Odds</th>
             <th class="num">A</th><th class="num">C</th><th class="num">E</th><th class="num">F</th></tr>
           ${rows.map(f => {
             const sh = {};
             for (const m of (f.shadow || "").matchAll(/([CEF]): \$(\d+)/g)) sh[m[1]] = +m[2];
             const cell = v => v ? fmt$(v) : `<span style="color:var(--muted)">—</span>`;
             const w = winnerOf(f);
-            const wCell = !w ? `<span style="color:var(--muted)">—</span>`
-              : w.won === null ? `<span style="color:var(--muted)">void</span>`
-              : `<span class="${w.won ? "pos" : "neg"}">${esc(w.name)} ${w.won ? "✓" : "✗"}</span>`;
+            const betCell = !w ? esc(f.bet_on || f.pick)
+              : w.won === null ? `<span style="color:var(--muted)">${esc(f.bet_on || f.pick)} (void)</span>`
+              : `<span class="${w.won ? "pos" : "neg"}">${esc(f.bet_on || f.pick)}</span>`;
             return `<tr><td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
-              <td>${esc(f.bet_on || f.pick)}</td>
+              <td>${betCell}</td>
               <td class="num">${f.bet_odds ? f.bet_odds.toFixed(2) : "—"}</td>
-              <td>${wCell}</td>
               <td class="num">${cell(f.stake)}</td><td class="num">${cell(sh.C)}</td>
               <td class="num">${cell(sh.E)}</td><td class="num">${cell(sh.F)}</td></tr>`;
           }).join("")}
-          <tr style="font-weight:700"><td colspan="4">Event net (real $)</td>
+          <tr style="font-weight:700"><td colspan="3">Event net (real $)</td>
             ${"ACEF".split("").map(r => e.rules[r]
               ? `<td class="num ${cls(e.rules[r].net)}">${sign$(e.rules[r].net)}</td>`
               : `<td class="num">—</td>`).join("")}</tr>
