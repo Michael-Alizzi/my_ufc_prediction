@@ -1,0 +1,79 @@
+[
+ {
+  "fighter1": "Sofia Montenegro",
+  "fighter2": "Delphine Benouaich",
+  "close1": 2.13,
+  "close2": 1.72,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Luis Felipe Dias",
+  "fighter2": "Matthieu Duclos",
+  "close1": 1.97,
+  "close2": 1.85,
+  "source": "au_median(6 books)"
+ },
+ {
+  "fighter1": "Klaudia Syguła",
+  "fighter2": "Nora Cornolle",
+  "close1": 1.88,
+  "close2": 1.96,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Fabia Sintes",
+  "fighter2": "Michael Aljarouj",
+  "close1": 2.08,
+  "close2": 1.78,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Pavel Andrusca",
+  "fighter2": "Nathaniel Wood",
+  "close1": 3.44,
+  "close2": 1.32,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Modestas Bukauskas",
+  "fighter2": "Oumar Sy",
+  "close1": 2.96,
+  "close2": 1.4,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Ryan Spann",
+  "fighter2": "Mario Pinto",
+  "close1": 3.62,
+  "close2": 1.29,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Felipe Lima",
+  "fighter2": "Morgan Charriere",
+  "close1": 1.5,
+  "close2": 2.62,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Trevor Peek",
+  "fighter2": "Kurtis Campbell",
+  "close1": 4.2,
+  "close2": 1.23,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Punahele Soriano",
+  "fighter2": "Daniil Donchenko",
+  "close1": 2.9,
+  "close2": 1.42,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Axel Sola",
+  "fighter2": "Fares Ziam",
+  "close1": 2.32,
+  "close2": 1.61,
+  "source": "sportsbet"
+ }
+]
