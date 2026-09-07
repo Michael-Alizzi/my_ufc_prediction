@@ -1334,3 +1334,15 @@ and the "N of M fights the model finds value in" line above it carries
 the rest of the context. The model's full read on a card (picks with no
 value attached) still lives in predictions_output.md on the
 weekly-predictions-log branch.
+
+### Why isn't the latest event in the dashboard as past data yet? Doesn't that happen Monday mornings?
+
+Monday **evenings** — the scoring Routine fires 6 PM AEST (cron `0 8 * * 1`
+UTC), not the morning. A card fought Sunday morning AEST sits as the
+"upcoming card" in the Performance tab's allocator until that run grades
+it: fetch results, `score_card.py` (with the pre-fight CLV snapshot since
+Sep 2026), append ledger.md and winners.json, republish the dashboard.
+The 6 PM slot was deliberate in the 27 Aug schedule swap: it clears any
+late-finishing Sunday-AEST cards with margin and still lands days before
+Friday's card-day job replaces card.json. On-demand scoring is always
+available by asking in the session — the Routine is a floor, not a gate.
