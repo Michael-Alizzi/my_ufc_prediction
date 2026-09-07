@@ -1,14 +1,51 @@
 {
  "2026-08-15|UFC 330: Makhachev vs. Machado Garry": {
-  "winners": ["Islam Makhachev", "Chidi Njokuani", "Donte Johnson", "Neil Magny"],
-  "voids": [["Charles Johnson", "Jose Ochoa"]]
+  "winners": [
+   "Islam Makhachev",
+   "Chidi Njokuani",
+   "Donte Johnson",
+   "Neil Magny"
+  ],
+  "voids": [
+   [
+    "Charles Johnson",
+    "Jose Ochoa"
+   ]
+  ]
  },
  "2026-08-22|UFC Fight Night: Hernandez vs. Rodrigues": {
-  "winners": ["Chris Padilla", "Roman Dolidze", "Anthony Hernandez"],
+  "winners": [
+   "Chris Padilla",
+   "Roman Dolidze",
+   "Anthony Hernandez"
+  ],
   "voids": []
  },
  "2026-08-29|UFC Fight Night: Nurmagomedov vs. Song": {
-  "winners": ["Denise Gomes", "Sumudaerji", "Song Yadong"],
+  "winners": [
+   "Denise Gomes",
+   "Sumudaerji",
+   "Song Yadong"
+  ],
+  "voids": []
+ },
+ "2026-09-05|UFC Fight Night: Hooker vs. Parnasse": {
+  "winners": [
+   "Delphine Benouaich",
+   "Matthieu Duclos",
+   "Nora Cornolle",
+   "Fabia Sintes",
+   "Pavel Andrusca",
+   "Modestas Bukauskas",
+   "Mario Pinto",
+   "Felipe Lima",
+   "Losene Keita",
+   "Kurtis Campbell",
+   "Daniil Donchenko",
+   "Michael Page",
+   "Axel Sola",
+   "Salahdine Parnasse"
+  ],
   "voids": []
  }
 }
