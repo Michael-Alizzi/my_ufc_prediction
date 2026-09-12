@@ -1,79 +1,86 @@
 [
  {
-  "fighter1": "Sofia Montenegro",
-  "fighter2": "Delphine Benouaich",
-  "close1": 2.13,
-  "close2": 1.72,
+  "fighter1": "Regina Tarin",
+  "fighter2": "JJ Aldrich",
+  "close1": 1.33,
+  "close2": 3.35,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Luis Felipe Dias",
-  "fighter2": "Matthieu Duclos",
-  "close1": 1.97,
-  "close2": 1.85,
-  "source": "au_median(6 books)"
- },
- {
-  "fighter1": "Klaudia Syguła",
-  "fighter2": "Nora Cornolle",
-  "close1": 1.88,
-  "close2": 1.96,
+  "fighter1": "Sean King",
+  "fighter2": "Jessie Rosas",
+  "close1": 1.45,
+  "close2": 2.77,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Fabia Sintes",
-  "fighter2": "Michael Aljarouj",
-  "close1": 2.08,
-  "close2": 1.78,
+  "fighter1": "Thomas Gantt",
+  "fighter2": "Drakkar Klose",
+  "close1": 1.21,
+  "close2": 4.45,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Pavel Andrusca",
-  "fighter2": "Nathaniel Wood",
-  "close1": 3.44,
-  "close2": 1.32,
+  "fighter1": "Yousri Belgaroui",
+  "fighter2": "Djorden Santos",
+  "close1": 1.1,
+  "close2": 7.0,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Modestas Bukauskas",
-  "fighter2": "Oumar Sy",
-  "close1": 2.96,
-  "close2": 1.4,
+  "fighter1": "Ignacio Bahamondes",
+  "fighter2": "Muslim Salikhov",
+  "close1": 1.17,
+  "close2": 5.1,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Ryan Spann",
-  "fighter2": "Mario Pinto",
-  "close1": 3.62,
-  "close2": 1.29,
+  "fighter1": "Tim Elliott",
+  "fighter2": "Edgar Chairez",
+  "close1": 2.7,
+  "close2": 1.47,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Felipe Lima",
-  "fighter2": "Morgan Charriere",
+  "fighter1": "David Martinez",
+  "fighter2": "Dan Ige",
+  "close1": 1.2,
+  "close2": 4.6,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Waldo Cortes-Acosta",
+  "fighter2": "Curtis Blaydes",
   "close1": 1.5,
-  "close2": 2.62,
+  "close2": 2.6,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Trevor Peek",
-  "fighter2": "Kurtis Campbell",
-  "close1": 4.2,
-  "close2": 1.23,
+  "fighter1": "Manon Fiorot",
+  "fighter2": "Alexa Grasso",
+  "close1": 1.35,
+  "close2": 3.2,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Punahele Soriano",
-  "fighter2": "Daniil Donchenko",
-  "close1": 2.9,
-  "close2": 1.42,
+  "fighter1": "Tommy McMillen",
+  "fighter2": "Marwan Rahiki",
+  "close1": 1.63,
+  "close2": 2.28,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Axel Sola",
-  "fighter2": "Fares Ziam",
-  "close1": 2.32,
-  "close2": 1.61,
+  "fighter1": "Brandon Moreno",
+  "fighter2": "Joseph Morales",
+  "close1": 1.97,
+  "close2": 1.87,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Jean Silva",
+  "fighter2": "Jose Delgado",
+  "close1": 1.21,
+  "close2": 4.45,
   "source": "sportsbet"
  }
 ]
