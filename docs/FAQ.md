@@ -1462,3 +1462,52 @@ same axes; then decide from the evidence whether the calibrator stays, and make
 the backtest and the weekly job agree on raw-vs-calibrated. Reporting plus one
 consistency fix — no threshold change, and the 0.5 decision rule and §11's
 no-tuning scar stand.
+
+### Why calibrate so the scores average to 0.5?
+
+They don't average 0.5 — and that's the useful part of the question. On the
+shipped artifact's OOF pool the calibrated scores average **0.5566**, against a
+red win rate of 0.6327. The constraint isn't on the mean, it's on a single
+**point**: `fit_intercept=False` on the score centred at 0.5 pins raw 0.5 to
+calibrated 0.5. Everything else is free to move.
+
+Three reasons that anchor is there.
+
+**1. A fight has no red corner at predict time.** `predict_winner(red, blue)`
+takes red = `fighter1` from `card.json`, which `scripts/fetch_card_odds.py`
+fills from the odds API's `home_team`/`away_team` — an arbitrary label in MMA,
+not a corner. So the model must give the same answer whichever way the pair is
+passed: p(A beats B) + p(B beats A) = 1. The slope-only map delivers that
+exactly, because σ is antisymmetric — σ(−x) = 1 − σ(x) — so
+`f(1 − p) = 1 − f(p)` identically:
+
+| raw p | shipped `f(p) + f(1−p)` | with an intercept |
+|---|---|---|
+| 0.30 | 1.000000 | 1.157 |
+| 0.45 | 1.000000 | 1.185 |
+| 0.60 | 1.000000 | 1.179 |
+| 0.80 | 1.000000 | 1.128 |
+
+With an intercept the model contradicts itself on argument order: raw 0.5 maps
+to 0.594, so pass the same even matchup both ways and *both* fighters come back
+"favoured at 59.4%".
+
+**2. The decision would drift away from the display.** The winner is decided on
+the raw score at 0.5. An unconstrained intercept was tried first and mapped 0.5
+to 0.61 — every fight with raw in [0.41, 0.50) was decided one way and displayed
+favouring the other. That is a real shipped bug, which is why the notebook cell
+carries the comment it does.
+
+**3. The intercept would be learning the corner, not the fighters.** What it
+picks up is the red-corner base rate — ufcstats lists the favourite as red more
+often, so red wins 63.3% of OOF rows while a mirror-trained model predicts 55.8%.
+Real in that dataset, worthless live, where red is whoever the odds feed listed
+first. Applying it would inflate whichever fighter appears first on the card, and
+Kelly would stake on the inflation.
+
+**The cost, stated honestly.** A slope can only expand or shrink probabilities
+symmetrically about 0.5; it cannot shift them. So the per-band gaps in the
+KAN-57 entry above don't get corrected — they persist by design. The right
+reading is that they are the price of order-invariance, not a defect: 0.5 is
+also exactly where `mirror_fights()` puts the training prior, so the anchor and
+the training design agree on what "no opinion" means.
