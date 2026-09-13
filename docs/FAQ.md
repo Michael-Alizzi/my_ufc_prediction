@@ -1588,3 +1588,72 @@ we bet real money off these numbers, expensive nonsense.
 
 So: the dial adjusts how strongly we read the pull; centring at 0.5 is what
 guarantees the middle of the rope is still the middle afterwards.
+
+### Worked example: the calibration maths, number by number
+
+One fight. The model says **0.72** for the red-corner fighter. Here is every
+step, with the shipped dial setting β = 4.6149.
+
+**Step 1 — centre it.** Subtract the neutral point:
+
+```
+x = p − 0.5 = 0.72 − 0.5 = 0.22
+```
+
+`p = 0.72` is the model's raw confidence red wins. `0.5` is the coin-flip point.
+`x = 0.22` is how far toward red the model is leaning — *signed*, so positive
+means red, negative means blue. This is the only thing the dial ever sees.
+
+**Step 2 — turn the dial.** Multiply by β:
+
+```
+z = β × x = 4.6149 × 0.22 = 1.0153
+```
+
+`β = 4.6149` is the **only number the calibrator learns** — one slope, fitted on
+~7,900 past predictions so that the numbers it produces match how often those
+fights actually went that way. It says how much a unit of "leaning" is worth.
+Because of the shape of the curve, **β = 4 is roughly the do-nothing setting**;
+above 4 stretches confidence away from the middle, below 4 squeezes it toward
+the middle. Same raw 0.72 under different dials:
+
+| β | 0.72 becomes | meaning |
+|---|---|---|
+| 2 | 0.608 | heavy squeeze — "you're overconfident" |
+| 4 | 0.707 | leave it about as it was |
+| **4.6149** | **0.734** | the fitted value: a mild stretch |
+| 8 | 0.853 | heavy stretch — "you're underconfident" |
+
+**Step 3 — turn it back into a probability.**
+
+```
+calibrated = 1 / (1 + e^−z) = 1 / (1 + e^−1.0153) = 0.7340
+```
+
+`z = 1.0153` is in **log-odds**, the natural scale for this curve. Un-log it and
+it's plain betting odds: e^1.0153 = **2.76**, i.e. red wins 2.76 times for every
+1 loss. As a probability that's 2.76 / (2.76 + 1) = **0.734** — the same answer.
+z = 0 would be 1-to-1, a coin flip, which is exactly the anchor the centring in
+step 1 bought us.
+
+So **0.72 → 0.734**: a stretch of +0.014.
+
+**The mirror check.** Pass the same fight the other way round (blue listed
+first) and the raw score is 0.28, so x = −0.22, z = −1.0153, calibrated =
+**0.266**. And 0.734 + 0.266 = 1.000000 exactly. The model can't contradict
+itself on argument order — see the anchor entry above for why that matters.
+
+**What it's worth in money.** Say a bookmaker offers 1.50 on red.
+
+| | probability | fair price | edge at 1.50 | Kelly fraction |
+|---|---|---|---|---|
+| raw | 0.7200 | 1.389 | +0.0800 | 16.0% |
+| calibrated | 0.7340 | 1.362 | +0.1011 | 20.2% |
+
+Edge is `p × odds − 1`; the Kelly fraction is `edge / (odds − 1)` — that's
+`kelly_edge()` in `predict.py`, and the weekly job splits the bankroll across
+value bets in proportion to it. A **1.4-percentage-point** change in the
+probability becomes a **26% bigger stake**. That is the whole reason KAN-57 cares
+that the backtest bets off raw scores while the live job stakes off calibrated
+ones: on small edges, a difference this size decides both how much goes on and
+whether the bet is placed at all.
