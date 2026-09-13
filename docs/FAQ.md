@@ -1384,3 +1384,81 @@ Jira is the outside-in view (what's open, what's done); `EXPERIMENTS.md` and
 `ledger.md` remain the actual records, and nothing syncs automatically — the
 ticket is updated by hand when a stream's state changes, e.g. when the trial's
 tenth event is graded.
+
+### What is KAN-57 (calibration reporting) actually asking for?
+
+[KAN-57](https://cinder.atlassian.net/browse/KAN-57) is the unfinished half of
+the second "worth adding" item on the Jira story: *a Brier score or reliability
+curve alongside precision, since calibration is what actually matters and
+precision won't reveal a miscalibrated model.*
+
+**What already exists.** More than the ticket's one-liner suggests:
+
+1. A **Platt calibrator** is fitted every run (notebook § Probability
+   Calibration) — a slope-only logistic regression on pooled walk-forward OOF
+   scores centred at 0.5, `σ(β·(p − 0.5))`, currently β ≈ 4.6. Slope-only, so
+   raw 0.5 maps to calibrated 0.5 exactly and the displayed favourite can never
+   contradict the 0.5 decision.
+2. A **Brier non-regression assert** guards it: `calibrated_brier <= raw_brier +
+   0.01`.
+3. Every experiment entry reports **model log-loss vs the market's vig-free
+   log-loss** on the pooled-OOF fights matched to closing odds.
+
+**What is missing** is anything that looks at calibration *by probability band*.
+Log-loss and Brier are single numbers over ~7.9k fights; they can look fine while
+particular bands are badly off, and the McNemar/Wilcoxon gates only test picks
+and ROI. Binning the shipped artifact's own OOF pool takes about ten lines and
+shows it immediately:
+
+| raw p(red) bin | n | mean predicted | actual red win rate | gap |
+|---|---|---|---|---|
+| 0.1–0.2 | 241 | 0.160 | 0.266 | −0.106 |
+| 0.2–0.3 | 482 | 0.252 | 0.409 | −0.157 |
+| 0.3–0.4 | 654 | 0.357 | 0.466 | −0.109 |
+| 0.4–0.5 | 1684 | 0.456 | 0.520 | −0.064 |
+| 0.5–0.6 | 1702 | 0.544 | 0.635 | −0.091 |
+| 0.6–0.7 | 996 | 0.648 | 0.710 | −0.061 |
+| 0.7–0.8 | 958 | 0.752 | 0.808 | −0.056 |
+| 0.8–0.9 | 772 | 0.844 | 0.880 | −0.036 |
+
+The gap is **negative in every bin**: red outperforms its prediction whether the
+model favours red or blue. That is not under-confidence (which would flip sign
+either side of 0.5) — it is a **base-rate shift**. Across the pool the model
+predicts red at 55.8% while red actually wins 63.3%, because `mirror_fights()`
+trains on an exactly 50/50 prior while the OOF rows are real, corner-ordered
+fights where ufcstats lists the favourite as red more often than not.
+
+**The trap this reveals.** Refitting the calibrator *with* an intercept removes
+most of the gap and looks spectacular — pooled-OOF log-loss 0.6009 → 0.5886,
+Brier 0.2083 → 0.2027. That 0.012 of log-loss is roughly the size of the entire
+market gap this project exists to close. It is **not skill**: it is the
+red-corner prior, and it maps raw 0.5 to 0.594, breaking the rule that the
+displayed favourite matches the decision. Any future calibration work must
+report the shift and the symmetric (under/over-confidence) components
+separately, or it will bank a corner artifact as an edge.
+
+**Two related findings the binning turned up**, both folded into KAN-57:
+
+* The slope-only calibrator currently makes the pooled OOF *slightly worse* on
+  the very pool it was fit on — Brier 0.2083 → 0.2087, log-loss 0.6009 → 0.6029.
+  Not a regularisation artifact (an unpenalised refit gives β = 4.705 and the
+  same numbers); the no-intercept family simply cannot beat the raw score here.
+  It passes only because the assert allows +0.01 of Brier slack. So the
+  calibrator may be earning nothing and could be dropped — worth deciding
+  explicitly rather than leaving it in because it "doesn't hurt".
+* **The backtest and the live job use different probabilities.** `oof_export`
+  stores the *raw* stacked score, so `odds_backtest.py`, `betting_rule_compare.py`
+  and the dashboard's History replay all bet off raw probabilities — including
+  the λ fit behind rule F. Live, `predict_winner()` returns the *calibrated*
+  probability and `send_weekly_predictions.py` feeds that straight into
+  `kelly_edge`. Mean |calibrated − raw| is only 0.012 (max 0.083), but residual
+  edges are small by construction (entry 9), so that is enough to flip marginal
+  bets on or off. Backtested ROI and live staking should run off the same number.
+
+**Scope, then.** Add a reliability curve, a per-decile calibration table and a
+Brier score to the notebook's stability-check cell, computed on pooled OOF and
+split into shift vs symmetric components, with the market's own curve on the
+same axes; then decide from the evidence whether the calibrator stays, and make
+the backtest and the weekly job agree on raw-vs-calibrated. Reporting plus one
+consistency fix — no threshold change, and the 0.5 decision rule and §11's
+no-tuning scar stand.
