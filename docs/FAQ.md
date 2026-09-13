@@ -1511,3 +1511,44 @@ KAN-57 entry above don't get corrected — they persist by design. The right
 reading is that they are the price of order-invariance, not a defect: 0.5 is
 also exactly where `mirror_fights()` puts the training prior, so the anchor and
 the training design agree on what "no opinion" means.
+
+### What does "centred at 0.5" mean?
+
+A subtraction. The calibrator isn't fitted on the probability `p`, it's fitted
+on `x = p − 0.5`:
+
+```python
+calibrator.fit((oof_proba.values - 0.5).reshape(-1, 1), oof_y.values)
+```
+
+So a raw score of 0.5 becomes x = 0, 0.8 becomes x = +0.3, 0.2 becomes x = −0.3.
+"Centred at 0.5" just means the input is re-expressed as *distance from 0.5*
+rather than as a probability. `predict.py` does the same shift at serving time —
+`predict_proba([[raw_proba - 0.5]])`.
+
+Why it matters is what it combines with. A logistic regression outputs
+σ(β·x + c), and `fit_intercept=False` forces c = 0. At x = 0 that gives
+σ(0) = 0.5 **exactly, whatever β turns out to be**. So:
+
+* centring chooses *which* raw score is the fixed point (0.5, the neutral score);
+* dropping the intercept is what actually pins it.
+
+Neither does the job alone. With the shipped β ≈ 4.615:
+
+| raw p | x = p − 0.5 | σ(β·x) |
+|---|---|---|
+| 0.20 | −0.30 | 0.2003 |
+| 0.35 | −0.15 | 0.3335 |
+| 0.50 | 0.00 | **0.5000** |
+| 0.65 | +0.15 | 0.6665 |
+| 0.80 | +0.30 | 0.7997 |
+| 0.95 | +0.45 | 0.8886 |
+
+Fit the same no-intercept model on `p` *without* centring and it anchors the
+wrong point — β comes out 1.32, and now p = 0 maps to 0.5 while p = 0.5 maps to
+0.659. A fight the model calls a certain loss for red would display as a coin
+flip. Centring is what moves the anchor from p = 0 to p = 0.5.
+
+(Aside visible in that table: σ(4x) ≈ 0.5 + x for small x, so β ≈ 4.6 is close to
+the identity map — which is why the calibrator moves scores by only 0.012 on
+average, and why KAN-57 asks whether it is earning its place at all.)
