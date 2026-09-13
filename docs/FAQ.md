@@ -504,11 +504,11 @@ Michael's request); the Monday run then finds nothing left to score.
 ### Why is a card scored a day or two after it happens?
 
 Cards run Saturday night US time — Sunday afternoon AEST — and the scoring
-Routine runs Monday 9 AM AEST, so each card is graded the morning after it
+Routine runs Monday 7:30 AM AEST, so each card is graded the morning after it
 ends. (Until 27 Aug 2026 scoring ran Fridays, a ~6-day lag; it was moved with
 the card-day swap both for speed and because scoring must land before the
 card-day job replaces `card.json` with the next card. The Monday slot itself
-moved from 6 PM to 9 AM on 13 Sep 2026.) Ask any time after an event to
+moved from 6 PM to 7:30 AM on 13 Sep 2026.) Ask any time after an event to
 score it earlier by hand; Monday's run then finds nothing left to do.
 
 ### Do fights ever happen on Saturday AEST — does the card-day run always beat them?
@@ -1209,7 +1209,7 @@ card day moved Thursday→Saturday, scoring Friday→Monday and renamed
 | Routine | Cron (UTC) | Local time |
 |---|---|---|
 | `ufc-weekly-card-day` | `0 23 * * 4` | Fri 9 AM AEST |
-| `ufc-monday-scoring` | `0 23 * * 0` | Mon 9 AM AEST |
+| `ufc-monday-scoring` | `30 21 * * 0` | Mon 7:30 AM AEST |
 
 Neither carries an `ended_reason` (permanently disabled) or a
 `suspension_reason` (temporary hold, e.g. a paused subscription) — the two
@@ -1338,8 +1338,8 @@ weekly-predictions-log branch.
 
 ### Why isn't the latest event in the dashboard as past data yet? Doesn't that happen Monday mornings?
 
-It does now — the scoring Routine fires Monday 9 AM AEST (cron `0 23 * * 0`
-UTC, i.e. Sunday 23:00 UTC). Until 13 Sep 2026 it ran Monday 6 PM, so a card
+It does now — the scoring Routine fires Monday 7:30 AM AEST (cron
+`30 21 * * 0` UTC, i.e. Sunday 21:30 UTC). Until 13 Sep 2026 it ran Monday 6 PM, so a card
 fought Sunday morning AEST sat as the "upcoming card" in the Performance
 tab's allocator for most of Monday. Either way the run does the same work:
 fetch results, `score_card.py` (with the pre-fight CLV snapshot since Sep
@@ -1351,9 +1351,10 @@ available by asking in the session — the Routine is a floor, not a gate.
 
 ### Can the scoring Routine run Monday morning instead of the evening?
 
-Yes — done 13 Sep 2026. `ufc-monday-scoring` now fires at **Monday 9 AM
-AEST**, stored as cron `0 23 * * 0` (9 AM AEST = 23:00 UTC the previous day,
-so the cron's day-of-week is Sunday even though the job is a Monday job).
+Yes — done 13 Sep 2026. `ufc-monday-scoring` now fires at **Monday 7:30 AM
+AEST**, stored as cron `30 21 * * 0` (7:30 AM AEST = 21:30 UTC the previous
+day, so the cron's day-of-week is Sunday even though the job is a Monday
+job).
 Nothing else about the job changed: same bankroll, same rules A/C/E/F
 grading, same dashboard republish. The timing constraints it has to respect
 are unchanged and both still hold — it must land *after* the last fight of a

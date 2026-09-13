@@ -102,7 +102,7 @@ prediction and retraining are deliberately SEPARATED. Two cloud Routines, no PC 
   `weekly-predictions-log` branch. That push is the delivery mechanism; there is deliberately no
   email path (SMTP is unreachable from the cloud environment, and a Gmail app password was leaked
   into git history doing it the old way — revoke-and-avoid, don't reintroduce).
-- **Monday 9 AM AEST (scoring day; Friday until 27 Aug 2026, Monday 6 PM until 13 Sep 2026 — moved to land the morning after Sunday-AEST fights, and always BEFORE Friday's card-day job replaces card.json)**: the session fetches results from the web, then
+- **Monday 7:30 AM AEST (scoring day; Friday until 27 Aug 2026, Monday 6 PM until 13 Sep 2026 — moved to land the morning after Sunday-AEST fights, and always BEFORE Friday's card-day job replaces card.json)**: the session fetches results from the web, then
   `scripts/score_card.py` grades rules A/C/E from `card.json` (recomputing stakes with the same
   code that produced them), appends `ledger.md` (the entry-9 10-event promotion record) and
   `collected_odds.csv` (phase-2 own-odds training feed) on the log branch.
