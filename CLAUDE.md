@@ -26,6 +26,12 @@ data = a new scrape committed with the retrain it feeds. Since Aug 2026 the figh
 `Country` column (citizenship; `;`-joined for dual citizens) feeding the home-crowd features —
 CSVs from before that change still run, the home-crowd features just come out all-NaN.
 
+Tracked in Jira as **KAN-8** (<https://cinder.atlassian.net/browse/KAN-8>), a Story under the
+*Business* epic, with one subtask per work stream (experiment log, results logging, the 10-event
+staking trial, the weekly Routines, the dashboard, calibration reporting, the monthly research
+cadence). Updated by hand — nothing syncs; `EXPERIMENTS.md` and `ledger.md` stay the real records.
+See docs/FAQ.md → "Where is this project tracked outside the repo?" for the subtask map.
+
 ## Commands
 
 ```bash

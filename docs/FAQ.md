@@ -1361,3 +1361,26 @@ are unchanged and both still hold — it must land *after* the last fight of a
 Sunday-AEST card (a US Saturday main event finishes ~2 PM AEST Sunday,
 Asia cards earlier) and *before* Friday's card-day job overwrites
 `card.json` with the next event.
+
+### Where is this project tracked outside the repo?
+
+Jira, as **[KAN-8 "UFC Prediction"](https://cinder.atlassian.net/browse/KAN-8)**
+— a Story under the *Business* epic (KAN-2) in Michael's Space. Connected to the
+repo's own records on 13 Sep 2026: the ticket description now carries the links
+(repo, Octagon Ledger dashboard, `ledger.md` on the log branch, EXPERIMENTS.md and
+the docs) plus a dated status block, and seven subtasks split the work:
+
+| Subtask | What it tracks | Status |
+|---|---|---|
+| [KAN-52](https://cinder.atlassian.net/browse/KAN-52) | Model experiment log, entries 1–10 | Done |
+| [KAN-53](https://cinder.atlassian.net/browse/KAN-53) | Automatic results logging into `ledger.md` | Done |
+| [KAN-54](https://cinder.atlassian.net/browse/KAN-54) | 10-event staking trial, A live + C/E/F shadow | In Progress (4/10) |
+| [KAN-55](https://cinder.atlassian.net/browse/KAN-55) | Friday card-day + Monday scoring Routines | Done |
+| [KAN-56](https://cinder.atlassian.net/browse/KAN-56) | Octagon Ledger dashboard | In Progress |
+| [KAN-57](https://cinder.atlassian.net/browse/KAN-57) | Reliability curve + Brier reporting | To Do |
+| [KAN-58](https://cinder.atlassian.net/browse/KAN-58) | Monthly research Routine + next experiment queue | In Progress |
+
+Jira is the outside-in view (what's open, what's done); `EXPERIMENTS.md` and
+`ledger.md` remain the actual records, and nothing syncs automatically — the
+ticket is updated by hand when a stream's state changes, e.g. when the trial's
+tenth event is graded.
