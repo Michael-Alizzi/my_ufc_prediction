@@ -1657,3 +1657,46 @@ probability becomes a **26% bigger stake**. That is the whole reason KAN-57 care
 that the backtest bets off raw scores while the live job stakes off calibrated
 ones: on small edges, a difference this size decides both how much goes on and
 whether the bet is placed at all.
+
+### I've done Platt scaling before to make the average score match the average rate — we never centred. Why here?
+
+Because you had an intercept, and that changes everything about whether centring
+matters.
+
+**With an intercept, centring is a no-op.** Standard Platt is σ(a·s + b). Feed it
+the centred score instead and you get σ(a(s − 0.5) + b′), which is the same
+function with b′ = b + 0.5a — same family, same fit, same predictions. Checked on
+this project's OOF pool: fitted uncentred gives a = 4.3221, b = −1.7828; fitted
+centred gives a = 4.3169, b = 0.3788, and −1.7828 + 0.5(4.3221) = 0.3783. The
+predictions differ by 4×10⁻⁴, which is just solver tolerance. So not centring was
+the right call — it would have bought you nothing.
+
+**And the mean-matching you relied on came free.** You didn't have to engineer it:
+maximum-likelihood logistic regression with an intercept has the first-order
+condition Σ(yᵢ − p̂ᵢ) = 0, which *is* "mean predicted = mean actual" on the fit
+data. On this pool the intercept-ful fit gives mean predicted 0.632724 against a
+base rate of 0.632736. The intercept is the parameter that does it; drop it and
+the guarantee goes with it.
+
+**Which is exactly what we do here, on purpose.** Our calibrator has no
+intercept, so its mean comes out 0.5566 against a 0.6327 base rate — off by 7.6
+points. In your sales model that would be a straightforward bug: the population
+really does convert at some rate, so a model whose average misses it will
+overstate expected revenue.
+
+Here the "base rate" is not a property of the world. Red wins 63% of rows because
+ufcstats tends to list the favourite in the red corner — a labelling convention.
+Live, red is whoever the odds feed happened to name first, so there is no rate to
+match. Meanwhile the thing we *do* need is that p(A beats B) + p(B beats A) = 1,
+and only the no-intercept form gives that. Base-rate matching and order-invariance
+are in direct conflict for this problem, and order-invariance wins.
+
+**The reconciliation, and a concrete job for KAN-57.** The two goals stop fighting
+if calibration is measured on a **mirrored** OOF pool — every fight included in
+both orientations. Then the base rate is exactly 0.5 by construction, the
+corner convention cancels out, and mean-matching and antisymmetry agree. Any
+miscalibration still visible there is real (genuine over- or under-confidence),
+not a labelling artifact. It needs a small change to the export cell, which
+currently stores one orientation per fight (7,869 rows, no duplicates) — the
+swapped-corner predictions aren't saved, so they can't be recovered after the
+fact.
