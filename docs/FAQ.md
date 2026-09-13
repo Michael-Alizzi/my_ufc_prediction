@@ -1552,3 +1552,39 @@ flip. Centring is what moves the anchor from p = 0 to p = 0.5.
 (Aside visible in that table: σ(4x) ≈ 0.5 + x for small x, so β ≈ 4.6 is close to
 the identity map — which is why the calibrator moves scores by only 0.012 on
 average, and why KAN-57 asks whether it is earning its place at all.)
+
+### Same thing, explained simply
+
+Think of the model's output as a tug-of-war rope with a marker in the middle.
+
+The model gives every fight a number between 0 and 1 — how confident it is that
+the red-corner fighter wins. **0.5 is the middle of the rope: no opinion, a coin
+flip.** 0.8 means red is pulling hard. 0.2 means blue is.
+
+**Calibration** is a dial we turn afterwards. Trained models are often bad at
+saying *how* sure they are — a model can be right about who wins but say "70%"
+for fights that actually happen 80% of the time. The dial stretches or squeezes
+those numbers so that fights shown at 70% really do win about 70% of the time.
+It never changes *who* is favoured, only by *how much*. We set the dial using
+thousands of past predictions, so it's fixing a real pattern, not one week's
+noise.
+
+**"Centred at 0.5"** means that before the number goes into the dial, we
+subtract 0.5 from it — so instead of feeding in "0.8", we feed in "+0.3, i.e.
+three-tenths of the way toward red". Like measuring temperature from freezing
+instead of from absolute zero: same information, but now zero means something
+useful.
+
+Why bother? Because of how the dial is built: **whatever you feed in as zero
+comes back out as 50/50.** Subtracting 0.5 first is what makes 0.5 the thing
+that maps to zero — so a fight the model genuinely can't call goes in at the
+middle of the rope and comes out at the middle of the rope. The marker stays put
+no matter how hard we turn the dial.
+
+Skip the subtraction and the dial anchors the wrong end of the rope: a raw score
+of 0 — the model is *certain* red loses — would come back as 0.5, a coin flip,
+and a true 50/50 fight would come back as 66% for red. Both nonsense, and since
+we bet real money off these numbers, expensive nonsense.
+
+So: the dial adjusts how strongly we read the pull; centring at 0.5 is what
+guarantees the middle of the rope is still the middle afterwards.
