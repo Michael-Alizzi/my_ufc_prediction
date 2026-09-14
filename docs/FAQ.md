@@ -1856,3 +1856,50 @@ And note β couldn't fix a corner bias even if you asked it to: a slope moves bo
 sides equally in opposite directions, so it can never shift the level. Confidence
 and lean are genuinely independent — which is why you can fit one and forbid the
 other.
+
+### Why 0.5 specifically?
+
+It isn't really a choice — three independent requirements all land on it.
+
+**1. The symmetry forces it.** We need p(A beats B) + p(B beats A) = 1, i.e.
+f(1 − p) = 1 − f(p) for the calibration map f. Now set p = 0.5, the fight where
+swapping the corners changes nothing:
+
+```
+f(0.5) = 1 − f(0.5)   ⟹   2·f(0.5) = 1   ⟹   f(0.5) = 0.5
+```
+
+Any map that treats the two fighters even-handedly *must* pin 0.5. There was
+never a second candidate; picking a different anchor means giving up
+order-invariance.
+
+**2. It's what the training data says "no information" is.** `mirror_fights()`
+adds every fight a second time with the corners swapped and the label flipped, so
+the training set is exactly 50/50 by construction. A model fitted on that has a
+prior of precisely 0.5 — so 0.5 isn't a convention, it's the score that means
+"the features told me nothing about this fight".
+
+**3. It's already the decision boundary.** The winner is picked by
+`raw >= best_th` with `best_th = 0.5`. If the anchor sat anywhere else, the
+display and the decision would disagree for every score between the two — the
+exact bug that got shipped once when an unconstrained intercept moved the
+crossing point to 0.61.
+
+**What goes wrong anywhere else.** Take a fight the model genuinely can't call,
+priced fair by the book at 2.00 each way, and move the anchor:
+
+| anchor | coin-flip fight displays as | edge at 2.00 | what rule A does |
+|---|---|---|---|
+| 0.500 | 0.500 / 0.500 | +0.000 | no bet |
+| 0.520 | 0.520 / 0.480 | +0.040 | backs the first-listed fighter |
+| 0.550 | 0.550 / 0.450 | +0.100 | backs the first-listed fighter |
+| 0.594 | 0.594 / 0.406 | +0.188 | backs the first-listed fighter, Kelly 0.188 |
+
+Every non-0.5 anchor manufactures an edge on a fight we have no opinion about,
+always on whoever happens to be listed first, and Kelly stakes real money on it.
+(0.594 isn't hypothetical — it's what an intercept-ful fit on this project's pool
+actually produces.)
+
+That three separate arguments — symmetry, the training prior, and the decision
+rule — pick the same number is why the design is stable. Move the anchor and all
+three break at once.
