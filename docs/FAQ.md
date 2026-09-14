@@ -2135,3 +2135,62 @@ so the per-band gaps in the KAN-57 table (red outperforms its prediction in
 every bin) are left in by design — they are the corner artifact, not a model
 error. That's why KAN-57 measures calibration on a mirrored OOF pool, where the
 base rate is 0.5 by construction and the conflict disappears.
+
+### How is β (or the intercept b) calculated?
+
+By **maximum likelihood**, not a formula. The fit picks the value that makes the
+observed wins and losses most probable, by solving one equation per parameter.
+
+**The objective.** For each past fight i with centred score xᵢ and outcome yᵢ,
+the calibrator says p̂ᵢ = σ(β·xᵢ + b). The log-likelihood is
+
+```
+LL(β, b) = Σ [ yᵢ·ln(p̂ᵢ) + (1 − yᵢ)·ln(1 − p̂ᵢ) ]
+```
+
+— negative log-loss, the same metric the market comparison uses.
+
+**Setting the derivatives to zero gives the score equations.** For the logistic
+curve they collapse to
+
+```
+dLL/dβ = Σ xᵢ·(yᵢ − p̂ᵢ) = 0   → residuals uncorrelated with the score
+dLL/db = Σ   (yᵢ − p̂ᵢ) = 0   → residuals sum to zero: mean predicted = mean actual
+```
+
+The second line is the whole intercept story: fitting b *forces* the average
+prediction to equal the base rate (63% red on our pool). Dropping b means that
+equation is never imposed, so the mean stays at 0.557.
+
+**Toy example, five fights, slope only.**
+
+| fight | x = p − 0.5 | y |
+|---|---|---|
+| 1 | −0.30 | 0 |
+| 2 | −0.10 | 1 |
+| 3 | +0.10 | 1 |
+| 4 | +0.20 | 0 |
+| 5 | +0.40 | 1 |
+
+| β | LL | gradient Σ xᵢ(yᵢ − p̂ᵢ) |
+|---|---|---|
+| 1 | −3.254 | +0.173 |
+| 3 | −3.051 | +0.035 |
+| **3.6045** | **−3.040** | **0.000** |
+| 4 | −3.044 | −0.021 |
+| 5 | −3.090 | −0.068 |
+
+Gradient positive below 3.6 (push β up), negative above (push it down), so the
+fit lands at β = 3.6045. There the x-weighted residuals are +0.076, −0.059,
++0.041, −0.135, +0.077 — summing to zero, the only condition β must satisfy.
+sklearn's lbfgs does the same search numerically.
+
+**Same toy with an intercept:** a = 3.42, b = 0.26, and the second equation now
+holds too — mean predicted 0.600 = mean actual 3/5. The intercept bought
+base-rate matching and nothing else.
+
+**On the real pool.** At the shipped β = 4.6149 the gradient is +5.02, not zero,
+because sklearn's default L2 penalty pulls β slightly toward zero; the
+unpenalised fit is 4.7048 (the Jira ticket's figure) with identical predictions
+to 3 dp. The likelihood is flat near the optimum (β = 4 → −4757, β = 5 → −4746,
+fit → −4744), which is why the calibrator barely moves anything.
