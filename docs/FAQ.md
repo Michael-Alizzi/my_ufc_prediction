@@ -1784,3 +1784,39 @@ proportion to their Kelly numbers:
 3.50 the edge is still −0.069. At 4.00 it turns +0.064, a Kelly of 0.021 — a
 real bet, but a tenth of red's weight, so on a card with both it would draw
 about a tenth of the money.
+
+### So β corrects under/over-confidence, centred at 0.5 because the model is biased toward red?
+
+First half right, second half backwards — and the flip is the whole point.
+
+**β does correct confidence.** That's exactly its job: β > 4 stretches scores away
+from the middle (fixing under-confidence), β < 4 squeezes them toward it (fixing
+over-confidence). One knob, one job.
+
+**But the centring is not there to correct a red bias. It's there so that the
+correction can never express one.** Think of two separate ways a model can be
+miscalibrated:
+
+* **Spread** — how far from the middle it dares to go. Symmetric: it treats both
+  fighters the same. This is β's department.
+* **Tilt** — systematically favouring one side regardless of who's fighting. This
+  would need a *second* parameter, the intercept, which we deliberately don't
+  have.
+
+Centring at 0.5 plus `fit_intercept=False` removes the tilt knob from the model
+entirely. A pure stretch about 0.5 pushes each score further out *in whichever
+direction it already pointed* — it can never add a net lean toward red.
+
+**And the red tilt in the data is real; we just refuse to correct it.** Red wins
+63.3% of the historical rows while the model averages 55.8%. That gap is left
+sitting there on purpose, because "red" is a listing convention (ufcstats tends
+to put the favourite there), not a property of a fighter — and live, red is
+whoever the odds feed happened to name first. Correcting it would mean
+systematically inflating whoever appears first on the card.
+
+The numbers show β is powerless against it anyway: calibration moves the mean
+prediction from 0.5580 to 0.5566 — **fourteen ten-thousandths**, against a gap of
+7.5 points. Only an intercept could close that, which is the fix we don't want.
+
+So: **β = how confident, and nothing else. The centring = a guarantee that the
+correction stays even-handed between the two corners.**
