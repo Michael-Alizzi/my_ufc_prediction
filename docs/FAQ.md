@@ -1700,3 +1700,44 @@ not a labelling artifact. It needs a small change to the export cell, which
 currently stores one orientation per fight (7,869 rows, no duplicates) — the
 swapped-corner predictions aren't saved, so they can't be recovered after the
 fact.
+
+### In the mirror check, what is 0.266, and what's red's equivalent?
+
+The thing to hold onto: **the model never knows anyone's name.** It always answers
+one question — *what is the probability that the fighter I was handed first
+wins?* Swap who you hand it first and it answers a different question about the
+same fight.
+
+| | run 1: red handed first | run 2: blue handed first |
+|---|---|---|
+| raw p (first fighter wins) | 0.72 | 0.28 |
+| x = p − 0.5 | **+0.22** | **−0.22** |
+| z = β·x | **+1.0153** | **−1.0153** |
+| e^z, as odds | 2.76 wins per loss | 0.362 wins per loss (≈ 1 win per 2.76 losses) |
+| calibrated answer | **0.7340** | **0.2660** |
+| in words | "red wins 73.4%" | "blue wins 26.6%" |
+
+So 0.266 is **blue's win probability**, and red's equivalent is **0.734** — the
+number from run 1. They aren't two different beliefs, they're the same belief
+written from two viewpoints. Notice the sign of x and z simply flips: a positive
+z means the first-listed fighter is favoured, a negative z means they're the
+underdog.
+
+**Why the sum matters.** Exactly one fighter wins, so the two answers have to add
+to 1. Ours give 0.734 + 0.266 = 1.000000. If they summed to, say, 1.05, the model
+would be claiming a 105% chance that somebody wins the fight — and you could back
+*both* fighters and show a profit on paper that doesn't exist.
+
+**Where this actually bites.** The weekly job never runs the model twice. It runs
+it once and gets the other side by subtraction:
+
+```python
+for name, p, o in ((fight["fighter1"], proba, fight.get("odds1")),
+                   (fight["fighter2"], 1 - proba, fight.get("odds2"))):
+```
+
+That `1 - proba` is only honest if the model really would have said 0.266 when
+handed blue first. The mirror check is what proves the shortcut is legitimate.
+With an intercept in the calibrator it wouldn't be: the model would have said
+something else, and every blue-side stake on every card would be sized off a
+number the model never actually produced.
