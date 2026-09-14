@@ -1985,3 +1985,101 @@ count is *one* fitted parameter (4.6149) against Platt's *two* (4.3221, −1.782
 Which also answers it empirically: if centring were quietly supplying an
 intercept, we'd have two free parameters and the mean predicted probability would
 match the base rate for free. It doesn't — 0.5566 against 0.6327.
+
+### "Centred on 0.5" — one fight, every number explained
+
+Take a fight where the model's raw score for the red-corner fighter is
+**p = 0.65**. The shipped calibrator (13 Sep 2026 artifact) has one learned
+number, **β = 4.6149**, and no intercept. Here is the whole calculation.
+
+**Step 1 — centre: `x = p − 0.5`**
+
+```
+x = 0.65 − 0.5 = +0.15
+```
+
+| number | what it is |
+|---|---|
+| `0.65` | the ensemble's raw output: "65% red wins" |
+| `0.5` | the neutral score — a coin flip, and the training prior (`mirror_fights()` makes the training set exactly 50/50) |
+| `+0.15` | the *lean*: 15 points toward red. Sign carries the direction (negative would mean toward blue); size carries how strong |
+
+"Centred on 0.5" means **this subtraction and nothing more**: the calibrator is
+fitted on, and later fed, `p − 0.5` instead of `p`. That is the literal code,
+`calibrator.fit((oof_proba.values - 0.5).reshape(-1, 1), oof_y.values)` in
+the notebook and `predict_proba([[raw_proba - 0.5]])` in `predict.py`.
+
+**Step 2 — scale: `z = β · x`**
+
+```
+z = 4.6149 × 0.15 = +0.6922
+```
+
+| number | what it is |
+|---|---|
+| `4.6149` | β, the only fitted parameter: how many log-odds one point of lean is worth. Fitted on 7,869 pooled walk-forward OOF fights |
+| `+0.6922` | the calibrated **log-odds** for red. Un-log it: e^0.6922 = 1.998, so red wins about 2 times for every 1 loss — odds of 2:1 |
+
+**Step 3 — squash back to a probability: `σ(z) = 1 / (1 + e^−z)`**
+
+```
+e^−0.6922 = 0.5005
+calibrated = 1 / (1 + 0.5005) = 0.6665
+```
+
+| number | what it is |
+|---|---|
+| `0.5005` | e^−z: the odds *against* red, 1 loss per 2 wins |
+| `0.6665` | the calibrated probability. 2 wins / (2 wins + 1 loss) = 2/3 — same answer as the odds reading |
+
+So **0.65 → 0.6665**: a stretch of +0.0165. β > 4 means "you were slightly
+under-confident, lean a touch harder".
+
+**Now the same fight with the corners swapped.** Raw score for blue-listed-first
+is 0.35:
+
+```
+x = 0.35 − 0.5 = −0.15         (same lean, opposite sign)
+z = 4.6149 × −0.15 = −0.6922   (same log-odds, opposite sign)
+calibrated = 1 / (1 + e^0.6922) = 1 / (1 + 1.998) = 0.3335
+```
+
+And 0.6665 + 0.3335 = **1.0000**. That is the guarantee centring buys: because
+x flips sign when the corners swap, and σ(−z) = 1 − σ(z), the two orientations
+always sum to one.
+
+**And the fight the model can't call.** Raw 0.5:
+
+```
+x = 0.5 − 0.5 = 0
+z = 4.6149 × 0 = 0
+calibrated = 1 / (1 + e^0) = 1 / 2 = 0.5
+```
+
+Note β never mattered in that line — `β × 0 = 0` whatever β is. That is what
+"raw 0.5 maps to calibrated 0.5 exactly" means: the anchor is arithmetic, not a
+fitted coincidence.
+
+**What goes wrong without the subtraction.** Fit the identical no-intercept
+model on `p` instead of `p − 0.5` (checked on the same OOF pool) and β comes
+out **1.3200**. The fixed point is now wherever the input is zero — which is
+p = 0, not p = 0.5:
+
+| raw p | centred: x, z, calibrated | uncentred: z = 1.32·p, calibrated |
+|---|---|---|
+| 0.00 | −0.50, −2.307, **0.0905** | 0.000, **0.5000** |
+| 0.35 | −0.15, −0.692, 0.3335 | 0.462, 0.6135 |
+| 0.50 | 0.00, 0.000, **0.5000** | 0.660, **0.6593** |
+| 0.65 | +0.15, +0.692, 0.6665 | 0.858, 0.7022 |
+| 1.00 | +0.50, +2.307, 0.9095 | 1.320, 0.7892 |
+
+Read the uncentred column: a fight the model is *certain* red loses (0.00)
+displays as a coin flip, a genuine coin flip (0.50) displays as 66% red, and the
+0.35 / 0.65 pair sums to 1.316, not 1 — the model now contradicts itself
+depending on which fighter is listed first. Every number in that column is
+above 0.5, so it would call red the favourite in every fight on the card.
+
+**In one sentence:** centring on 0.5 re-expresses the raw score as a signed
+distance from the coin-flip point, so that the no-intercept calibrator's
+built-in fixed point (input 0 → output 0.5) lands on the neutral score rather
+than on p = 0.
