@@ -1820,3 +1820,39 @@ prediction from 0.5580 to 0.5566 — **fourteen ten-thousandths**, against a gap
 
 So: **β = how confident, and nothing else. The centring = a guarantee that the
 correction stays even-handed between the two corners.**
+
+### So β corrects under/over-confidence, and centring stops a red bias?
+
+First half exactly right, second half worth straightening out — they're two
+separate knobs doing two separate jobs.
+
+A logistic calibrator σ(a·x + b) has only two things it can do:
+
+* **the slope `a` (our β) — how confident.** Stretches or squeezes the
+  probabilities symmetrically about the anchor. β > 4 stretches (fixes an
+  under-confident model), β < 4 squeezes (fixes an over-confident one). This is
+  the knob we keep and fit.
+* **the intercept `b` — which way it leans.** Shifts everything one direction.
+  This is the knob that would introduce a red bias, and we set it to zero.
+
+So it isn't centring that prevents the red bias — **`fit_intercept=False` is**.
+Keep the intercept and centre anyway and you still get the bias: fitted on this
+project's pool it maps a raw 0.5 to 0.594, red-favouring, centred or not.
+
+Centring does something different: it decides **which raw score the anchor sits
+on**. With no intercept the map always pins whatever you feed in as zero, so
+subtracting 0.5 first is what puts the pin on the neutral score. Skip it and you
+still have no bias term, but the pin lands on p = 0 — a fight the model is
+*certain* red loses would come back as a coin flip. Both pieces are needed, and
+neither substitutes for the other.
+
+One more correction worth making: the bias wouldn't be coming *from the model*.
+The model is mirror-trained, so it has no corner preference to fix — it's the
+calibrator's intercept that would go looking at the training labels, notice red
+wins 63% of them, and bake that in. The anchor isn't repairing a biased model,
+it's stopping the calibrator from adding a bias that was never there.
+
+And note β couldn't fix a corner bias even if you asked it to: a slope moves both
+sides equally in opposite directions, so it can never shift the level. Confidence
+and lean are genuinely independent — which is why you can fit one and forbid the
+other.
