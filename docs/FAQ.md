@@ -1903,3 +1903,44 @@ actually produces.)
 That three separate arguments — symmetry, the training prior, and the decision
 rule — pick the same number is why the design is stable. Move the anchor and all
 three break at once.
+
+### "The displayed favourite can never contradict the 0.5 decision" — how would it?
+
+Every fight produces **two** numbers, from different places:
+
+* the **decision** — who we say wins — comes from the **raw** score:
+  `winner = red if raw_proba >= best_th else blue`, with `best_th = 0.5`;
+* the **displayed confidence** comes from the **calibrated** score, then
+  `confidence = proba if winner == fighter1 else 1 - proba`.
+
+They describe the same fight, so they had better agree about who is favoured.
+
+**Why the decision is made on the raw score at all.** Calibration is monotonic —
+it stretches and squeezes but never reorders — so it cannot change which fighter
+looks stronger. The *only* thing it could change is which side of 0.5 a score
+lands on, and that is fixed entirely by where the map crosses 0.5. Pin the
+crossing at 0.5 and thresholding the raw score and thresholding the calibrated
+score are the *same decision*, always. The anchor turns "which number do we
+threshold?" into a non-question.
+
+**Unpin it and they come apart.** Fit the calibrator with an intercept on this
+project's pool and you get σ(4.3221·p − 1.7828), which crosses 0.5 at a raw score
+of **0.4125**, not 0.5. So every raw score in [0.4125, 0.5) is decided *blue*
+while the calibrated number says *red* is favoured. Take raw = 0.45:
+
+| | calibrated p(red) | printed row |
+|---|---|---|
+| shipped (slope only) | 0.4426 | prediction **BLUE**, confidence **55.7%** ✓ |
+| with an intercept | 0.5405 | prediction **BLUE**, confidence **46.0%** ✗ |
+
+That second row is nonsense on its face: we are picking blue and reporting 46%
+confidence in blue. The weekly predictions table would print it exactly like
+that, because `1 - proba` on a red-favouring calibrated number is below half.
+
+**It isn't a rare corner case.** 1,557 of the 7,869 fights in the current OOF
+pool sit in that band — **one fight in five**. On a typical 12-fight card that's
+two or three rows where the pick and the confidence point at different fighters.
+
+So the phrase means: because σ(β·(p − 0.5)) is pinned at 0.5, the calibrated
+number is on the same side of even as the raw number for *every possible input*.
+Not usually. Always.
