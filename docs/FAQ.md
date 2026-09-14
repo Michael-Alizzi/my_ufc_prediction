@@ -2194,3 +2194,22 @@ because sklearn's default L2 penalty pulls β slightly toward zero; the
 unpenalised fit is 4.7048 (the Jira ticket's figure) with identical predictions
 to 3 dp. The likelihood is flat near the optimum (β = 4 → −4757, β = 5 → −4746,
 fit → −4744), which is why the calibrator barely moves anything.
+
+### In that toy table, did fight 1 predict blue to win?
+
+Yes. x = −0.30 means raw p(red) = 0.20, so blue was favoured at 80%; y = 0
+means red lost, so blue won and the call was right. Both columns are from red's
+point of view: x < 0 is a blue lean, y = 1 is a red win.
+
+| fight | raw p(red) | favoured | y | result | call |
+|---|---|---|---|---|---|
+| 1 | 0.20 | blue | 0 | blue won | right |
+| 2 | 0.40 | blue | 1 | red won | wrong |
+| 3 | 0.60 | red | 1 | red won | right |
+| 4 | 0.70 | red | 0 | blue won | wrong |
+| 5 | 0.90 | red | 1 | red won | right |
+
+The residual y − p̂ is each fight's surprise. Fight 1 (p̂ = 0.2532, residual
+−0.2532) is a small surprise — blue winning was expected. Fight 4 (residual
+−0.6728) is the biggest: a 67% favourite lost, so it pulls hardest on β through
+the gradient, and downward — "be less confident".
