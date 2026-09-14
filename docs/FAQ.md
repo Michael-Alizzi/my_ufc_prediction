@@ -1741,3 +1741,46 @@ handed blue first. The mirror check is what proves the shortcut is legitimate.
 With an intercept in the calibrator it wouldn't be: the model would have said
 something else, and every blue-side stake on every card would be sized off a
 number the model never actually produced.
+
+### What is each fighter worth in dollars?
+
+Two different dollar questions, and they have different answers.
+
+**1. The fair price — what each side is worth as a price.** Flip the probability:
+
+| | probability | fair decimal price | $10 at that price returns |
+|---|---|---|---|
+| red | 0.7340 | 1/0.7340 = **1.362** | $13.62 |
+| blue | 0.2660 | 1/0.2660 = **3.759** | $37.59 |
+
+These are the prices at which *neither* bet makes or loses money in the long run
+— the model's own vig-free book. The two implied probabilities add to exactly
+1.0000, which is the mirror check from the entry above showing up as money: a
+real bookmaker's two prices always add to *more* than 1, and the excess is the
+vig.
+
+**2. What actually goes on the fight.** That needs a bookmaker's price to compare
+against. Say the book offers red 1.50 and blue 2.50 (6.7% overround):
+
+| | model p | offered | implied | edge = p×odds − 1 | Kelly |
+|---|---|---|---|---|---|
+| red | 0.7340 | 1.50 | 0.6667 | **+0.1010** | 0.2020 |
+| blue | 0.2660 | 2.50 | 0.4000 | −0.3350 | 0 |
+
+Red is worth backing at 1.50 because the book prices it at 66.7% and the model
+says 73.4%. **Blue is worth $0** — at 2.50 the book is asking for 40% and the
+model only gives it 26.6%. At most one side of a fight can ever be a value bet.
+
+**The stake is not the Kelly fraction.** That 0.2020 is a *weight*, not "20% of
+the bankroll". Rule A deploys the whole $50 across a card's value bets in
+proportion to their Kelly numbers:
+
+* if red is the card's only value bet, the **entire $50** goes on it — returning
+  $75 (profit +$25) if red wins, −$50 if not;
+* if the card has one other value bet with Kelly 0.05, the split is 0.2020 :
+  0.05, so **$40 on red and $10 on the other**.
+
+**What would make blue backable?** Blue needs a price above its fair 3.759. At
+3.50 the edge is still −0.069. At 4.00 it turns +0.064, a Kelly of 0.021 — a
+real bet, but a tenth of red's weight, so on a card with both it would draw
+about a tenth of the money.
