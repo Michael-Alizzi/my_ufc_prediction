@@ -1944,3 +1944,44 @@ two or three rows where the pick and the confidence point at different fighters.
 So the phrase means: because σ(β·(p − 0.5)) is pinned at 0.5, the calibrated
 number is on the same side of even as the raw number for *every possible input*.
 Not usually. Always.
+
+### Isn't the 0.5 acting as the intercept?
+
+A constant term does appear — but it isn't free, and that's the whole difference.
+
+Multiply our model out:
+
+```
+σ(β·(p − 0.5))  =  σ(β·p − 0.5β)  =  σ(4.6149·p − 2.3074)
+```
+
+(identical to 2×10⁻¹⁶, i.e. exactly). So yes, there is a −2.3074 sitting there
+looking like an intercept. The catch: it is **forced to equal −β/2**. Change the
+slope and it moves with it. A real intercept is a number the fit picks on its own
+to make the data fit better — and when allowed to, it picks something else
+entirely:
+
+| | slope a | constant b | b as a fraction of a | crosses 0.5 at |
+|---|---|---|---|---|
+| ours | 4.6149 | −2.3074 (**forced** = −a/2) | exactly −0.5 | p = 0.5000 |
+| standard Platt | 4.3221 | −1.7828 (**chosen**) | −0.4125 | p = 0.4125 |
+
+Given a = 4.3221, the constraint would have demanded b = −2.1610. The free fit
+chose −1.7828 instead, because that fits the data better — and in doing so it
+slid the crossing point to 0.4125, which is the decision/display contradiction
+from the entry above.
+
+**The geometry.** On the log-odds scale calibration is just a straight line,
+z = a·p + b, with two degrees of freedom: how steep it is, and how high it sits.
+Ours nails the line through the point (0.5, 0) and lets only the slope pivot
+around it — a line on a hinge, free to rotate, not to slide. Standard Platt lets
+it do both.
+
+So the precise statement isn't "we set b to zero". It's **b = −a/2** — a
+constraint linking the two, not a fixed value. Writing it as `fit_intercept=False`
+on the centred score is simply the tidy way to express that, and it's why the
+count is *one* fitted parameter (4.6149) against Platt's *two* (4.3221, −1.7828).
+
+Which also answers it empirically: if centring were quietly supplying an
+intercept, we'd have two free parameters and the mean predicted probability would
+match the base rate for free. It doesn't — 0.5566 against 0.6327.
