@@ -2083,3 +2083,27 @@ above 0.5, so it would call red the favourite in every fight on the card.
 distance from the coin-flip point, so that the no-intercept calibrator's
 built-in fixed point (input 0 → output 0.5) lands on the neutral score rather
 than on p = 0.
+
+### So without centring, a coin flip favours red?
+
+Yes — a raw 0.5 comes out at 0.659 for red — and it's worse than a lean:
+**every** fight comes out red-favoured.
+
+The reason is structural, not learned. With no intercept the calibrator is
+σ(β · input), and the only point it can pin is input 0 → output 0.5. Uncentred,
+input 0 is raw p = 0, so "red certainly loses" becomes a coin flip. β must be
+positive (a higher raw score does go with more red wins), so every raw score
+above 0 maps above 0.5 — the map physically cannot produce a blue-favoured
+number. The fitted β of 1.32 is the least-bad compromise: a shallow slope that
+squashes everything into 0.5–0.79 rather than pushing it anywhere sensible.
+
+That makes it a different beast from the intercept case above. An intercept-ful
+fit maps 0.5 → 0.594 because it has *read the 63% red base rate off the
+training labels*. The uncentred no-intercept fit maps 0.5 → 0.659 without
+consulting a base rate at all — its anchor is simply welded to the wrong end of
+the scale. Two different failures; centring plus no intercept is the only
+combination that avoids both.
+
+For the record, the uncentred version never shipped — it's the hypothetical
+that shows why the subtraction is there. The bug that did ship was the
+intercept-ful one that moved the crossing point to 0.61.
