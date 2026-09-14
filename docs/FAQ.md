@@ -424,6 +424,612 @@ not against a coin flip.
 
 ---
 
+## Calibration
+
+### What is KAN-57 (calibration reporting) actually asking for?
+
+[KAN-57](https://cinder.atlassian.net/browse/KAN-57) is the unfinished half of
+the second "worth adding" item on the Jira story: *a Brier score or reliability
+curve alongside precision, since calibration is what actually matters and
+precision won't reveal a miscalibrated model.*
+
+**What already exists.** More than the ticket's one-liner suggests:
+
+1. A **Platt calibrator** is fitted every run (notebook § Probability
+   Calibration) — a slope-only logistic regression on pooled walk-forward OOF
+   scores centred at 0.5, `σ(β·(p − 0.5))`, currently β ≈ 4.6. Slope-only, so
+   raw 0.5 maps to calibrated 0.5 exactly and the displayed favourite can never
+   contradict the 0.5 decision.
+2. A **Brier non-regression assert** guards it: `calibrated_brier <= raw_brier +
+   0.01`.
+3. Every experiment entry reports **model log-loss vs the market's vig-free
+   log-loss** on the pooled-OOF fights matched to closing odds.
+
+**What is missing** is anything that looks at calibration *by probability band*.
+Log-loss and Brier are single numbers over ~7.9k fights; they can look fine while
+particular bands are badly off, and the McNemar/Wilcoxon gates only test picks
+and ROI. Binning the shipped artifact's own OOF pool takes about ten lines and
+shows it immediately:
+
+| raw p(red) bin | n | mean predicted | actual red win rate | gap |
+|---|---|---|---|---|
+| 0.1–0.2 | 241 | 0.160 | 0.266 | −0.106 |
+| 0.2–0.3 | 482 | 0.252 | 0.409 | −0.157 |
+| 0.3–0.4 | 654 | 0.357 | 0.466 | −0.109 |
+| 0.4–0.5 | 1684 | 0.456 | 0.520 | −0.064 |
+| 0.5–0.6 | 1702 | 0.544 | 0.635 | −0.091 |
+| 0.6–0.7 | 996 | 0.648 | 0.710 | −0.061 |
+| 0.7–0.8 | 958 | 0.752 | 0.808 | −0.056 |
+| 0.8–0.9 | 772 | 0.844 | 0.880 | −0.036 |
+
+The gap is **negative in every bin**: red outperforms its prediction whether the
+model favours red or blue. That is not under-confidence (which would flip sign
+either side of 0.5) — it is a **base-rate shift**. Across the pool the model
+predicts red at 55.8% while red actually wins 63.3%, because `mirror_fights()`
+trains on an exactly 50/50 prior while the OOF rows are real, corner-ordered
+fights where ufcstats lists the favourite as red more often than not.
+
+**The trap this reveals.** Refitting the calibrator *with* an intercept removes
+most of the gap and looks spectacular — pooled-OOF log-loss 0.6009 → 0.5886,
+Brier 0.2083 → 0.2027. That 0.012 of log-loss is roughly the size of the entire
+market gap this project exists to close. It is **not skill**: it is the
+red-corner prior, and it maps raw 0.5 to 0.594, breaking the rule that the
+displayed favourite matches the decision. Any future calibration work must
+report the shift and the symmetric (under/over-confidence) components
+separately, or it will bank a corner artifact as an edge.
+
+**Two related findings the binning turned up**, both folded into KAN-57:
+
+* The slope-only calibrator currently makes the pooled OOF *slightly worse* on
+  the very pool it was fit on — Brier 0.2083 → 0.2087, log-loss 0.6009 → 0.6029.
+  Not a regularisation artifact (an unpenalised refit gives β = 4.705 and the
+  same numbers); the no-intercept family simply cannot beat the raw score here.
+  It passes only because the assert allows +0.01 of Brier slack. So the
+  calibrator may be earning nothing and could be dropped — worth deciding
+  explicitly rather than leaving it in because it "doesn't hurt".
+* **The backtest and the live job use different probabilities.** `oof_export`
+  stores the *raw* stacked score, so `odds_backtest.py`, `betting_rule_compare.py`
+  and the dashboard's History replay all bet off raw probabilities — including
+  the λ fit behind rule F. Live, `predict_winner()` returns the *calibrated*
+  probability and `send_weekly_predictions.py` feeds that straight into
+  `kelly_edge`. Mean |calibrated − raw| is only 0.012 (max 0.083), but residual
+  edges are small by construction (entry 9), so that is enough to flip marginal
+  bets on or off. Backtested ROI and live staking should run off the same number.
+
+**Scope, then.** Add a reliability curve, a per-decile calibration table and a
+Brier score to the notebook's stability-check cell, computed on pooled OOF and
+split into shift vs symmetric components, with the market's own curve on the
+same axes; then decide from the evidence whether the calibrator stays, and make
+the backtest and the weekly job agree on raw-vs-calibrated. Reporting plus one
+consistency fix — no threshold change, and the 0.5 decision rule and §11's
+no-tuning scar stand.
+
+### What does "centred at 0.5" mean?
+
+A subtraction. The calibrator isn't fitted on the probability `p`, it's fitted
+on `x = p − 0.5`:
+
+```python
+calibrator.fit((oof_proba.values - 0.5).reshape(-1, 1), oof_y.values)
+```
+
+So raw 0.5 becomes x = 0, 0.8 becomes +0.3, 0.2 becomes −0.3: the score
+re-expressed as a *signed distance from the coin-flip point* — positive leans
+red, negative leans blue. `predict.py` does the same shift at serving time
+(`predict_proba([[raw_proba - 0.5]])`).
+
+**Why it matters is what it combines with.** A logistic regression outputs
+σ(β·x + c) and `fit_intercept=False` forces c = 0, so the map has one built-in
+fixed point: input 0 → σ(0) = 0.5, whatever β is (β × 0 = 0). Centring decides
+*which raw score* sits on that fixed point. Subtract 0.5 first and it's the
+neutral score; don't, and it's p = 0. With the shipped β = 4.6149:
+
+| raw p | centred: x = p − 0.5 → σ(β·x) | uncentred: σ(1.32·p) |
+|---|---|---|
+| 0.00 | −0.50 → **0.0905** | **0.5000** |
+| 0.20 | −0.30 → 0.2003 | 0.5656 |
+| 0.35 | −0.15 → 0.3335 | 0.6135 |
+| 0.50 | 0.00 → **0.5000** | **0.6593** |
+| 0.65 | +0.15 → 0.6665 | 0.7022 |
+| 0.80 | +0.30 → 0.7997 | 0.7419 |
+| 1.00 | +0.50 → 0.9095 | 0.7892 |
+
+(1.32 is what the same no-intercept fit produces on this pool when fed `p`
+instead of `p − 0.5`.)
+
+**Read the uncentred column.** A fight the model is *certain* red loses displays
+as a coin flip; a genuine coin flip displays as 66% red; 0.35 and 0.65 — the
+same fight with the corners swapped — sum to 1.316, not 1. And every value is
+above 0.5, so *every* fight on the card comes out red-favoured. That last one
+is structural, not learned: with no intercept the only pinnable point is
+input 0 → 0.5, β has to be positive (higher raw scores do go with more red
+wins), so every raw score above 0 lands above 0.5. The map physically cannot
+produce a blue-favoured number; the fitted 1.32 is just the least-bad slope,
+squashing everything into 0.5–0.79. That is a different failure from an
+intercept-ful fit, which maps 0.5 → 0.594 because it *read the 63% red base
+rate off the labels* (see "Why is there no intercept?"). Two different ways to
+favour red; centring plus no intercept is the only combination that avoids
+both. (The uncentred version never shipped — the bug that did ship was the
+intercept-ful one.)
+
+**Aside visible in the centred column:** σ(4x) ≈ 0.5 + x for small x, so
+β ≈ 4.6 is close to the identity map — which is why the calibrator moves scores
+by only 0.012 on average, and why KAN-57 asks whether it is earning its place
+at all.
+
+**In plain terms.** Think of the model's output as a tug-of-war rope with a
+marker in the middle: 0.5 is no opinion, 0.8 is red pulling hard, 0.2 is blue.
+Calibration is a dial turned afterwards that stretches or squeezes how hard we
+read the pull, set from thousands of past fights; it never changes *who* is
+favoured, only by *how much*. "Centred at 0.5" means that before a number goes
+into the dial we subtract 0.5 — like measuring temperature from freezing
+instead of absolute zero — because whatever goes in as zero comes out as 50/50.
+Subtracting first is what makes the middle of the rope go in at the middle and
+come out at the middle, however hard the dial is turned.
+
+
+### Worked example: the calibration maths, number by number
+
+One fight. The model says **0.72** for the red-corner fighter. Here is every
+step, with the shipped dial setting β = 4.6149.
+
+**Step 1 — centre it.** Subtract the neutral point:
+
+```
+x = p − 0.5 = 0.72 − 0.5 = 0.22
+```
+
+`p = 0.72` is the model's raw confidence red wins. `0.5` is the coin-flip point.
+`x = 0.22` is how far toward red the model is leaning — *signed*, so positive
+means red, negative means blue. This is the only thing the dial ever sees.
+
+**Step 2 — turn the dial.** Multiply by β:
+
+```
+z = β × x = 4.6149 × 0.22 = 1.0153
+```
+
+`β = 4.6149` is the **only number the calibrator learns** — one slope, fitted on
+~7,900 past predictions so that the numbers it produces match how often those
+fights actually went that way. It says how much a unit of "leaning" is worth.
+Because of the shape of the curve, **β = 4 is roughly the do-nothing setting**;
+above 4 stretches confidence away from the middle, below 4 squeezes it toward
+the middle. Same raw 0.72 under different dials:
+
+| β | 0.72 becomes | meaning |
+|---|---|---|
+| 2 | 0.608 | heavy squeeze — "you're overconfident" |
+| 4 | 0.707 | leave it about as it was |
+| **4.6149** | **0.734** | the fitted value: a mild stretch |
+| 8 | 0.853 | heavy stretch — "you're underconfident" |
+
+**Step 3 — turn it back into a probability.**
+
+```
+calibrated = 1 / (1 + e^−z) = 1 / (1 + e^−1.0153) = 0.7340
+```
+
+`z = 1.0153` is in **log-odds**, the natural scale for this curve. Un-log it and
+it's plain betting odds: e^1.0153 = **2.76**, i.e. red wins 2.76 times for every
+1 loss. As a probability that's 2.76 / (2.76 + 1) = **0.734** — the same answer.
+z = 0 would be 1-to-1, a coin flip, which is exactly the anchor the centring in
+step 1 bought us.
+
+So **0.72 → 0.734**: a stretch of +0.014.
+
+**The mirror check.** Pass the same fight the other way round (blue listed
+first) and the raw score is 0.28, so x = −0.22, z = −1.0153, calibrated =
+**0.266**. And 0.734 + 0.266 = 1.000000 exactly. The model can't contradict
+itself on argument order — see "Why is there no intercept?" for why that matters.
+
+**What it's worth in money.** Say a bookmaker offers 1.50 on red.
+
+| | probability | fair price | edge at 1.50 | Kelly fraction |
+|---|---|---|---|---|
+| raw | 0.7200 | 1.389 | +0.0800 | 16.0% |
+| calibrated | 0.7340 | 1.362 | +0.1011 | 20.2% |
+
+Edge is `p × odds − 1`; the Kelly fraction is `edge / (odds − 1)` — that's
+`kelly_edge()` in `predict.py`, and the weekly job splits the bankroll across
+value bets in proportion to it. A **1.4-percentage-point** change in the
+probability becomes a **26% bigger stake**. That is the whole reason KAN-57 cares
+that the backtest bets off raw scores while the live job stakes off calibrated
+ones: on small edges, a difference this size decides both how much goes on and
+whether the bet is placed at all.
+
+### In the mirror check, what is 0.266, and what's red's equivalent?
+
+The thing to hold onto: **the model never knows anyone's name.** It always answers
+one question — *what is the probability that the fighter I was handed first
+wins?* Swap who you hand it first and it answers a different question about the
+same fight.
+
+| | run 1: red handed first | run 2: blue handed first |
+|---|---|---|
+| raw p (first fighter wins) | 0.72 | 0.28 |
+| x = p − 0.5 | **+0.22** | **−0.22** |
+| z = β·x | **+1.0153** | **−1.0153** |
+| e^z, as odds | 2.76 wins per loss | 0.362 wins per loss (≈ 1 win per 2.76 losses) |
+| calibrated answer | **0.7340** | **0.2660** |
+| in words | "red wins 73.4%" | "blue wins 26.6%" |
+
+So 0.266 is **blue's win probability**, and red's equivalent is **0.734** — the
+number from run 1. They aren't two different beliefs, they're the same belief
+written from two viewpoints. Notice the sign of x and z simply flips: a positive
+z means the first-listed fighter is favoured, a negative z means they're the
+underdog.
+
+**Why the sum matters.** Exactly one fighter wins, so the two answers have to add
+to 1. Ours give 0.734 + 0.266 = 1.000000. If they summed to, say, 1.05, the model
+would be claiming a 105% chance that somebody wins the fight — and you could back
+*both* fighters and show a profit on paper that doesn't exist.
+
+**Where this actually bites.** The weekly job never runs the model twice. It runs
+it once and gets the other side by subtraction:
+
+```python
+for name, p, o in ((fight["fighter1"], proba, fight.get("odds1")),
+                   (fight["fighter2"], 1 - proba, fight.get("odds2"))):
+```
+
+That `1 - proba` is only honest if the model really would have said 0.266 when
+handed blue first. The mirror check is what proves the shortcut is legitimate.
+With an intercept in the calibrator it wouldn't be: the model would have said
+something else, and every blue-side stake on every card would be sized off a
+number the model never actually produced.
+
+### What is each fighter worth in dollars?
+
+Two different dollar questions, and they have different answers.
+
+**1. The fair price — what each side is worth as a price.** Flip the probability:
+
+| | probability | fair decimal price | $10 at that price returns |
+|---|---|---|---|
+| red | 0.7340 | 1/0.7340 = **1.362** | $13.62 |
+| blue | 0.2660 | 1/0.2660 = **3.759** | $37.59 |
+
+These are the prices at which *neither* bet makes or loses money in the long run
+— the model's own vig-free book. The two implied probabilities add to exactly
+1.0000, which is the mirror check from the entry above showing up as money: a
+real bookmaker's two prices always add to *more* than 1, and the excess is the
+vig.
+
+**2. What actually goes on the fight.** That needs a bookmaker's price to compare
+against. Say the book offers red 1.50 and blue 2.50 (6.7% overround):
+
+| | model p | offered | implied | edge = p×odds − 1 | Kelly |
+|---|---|---|---|---|---|
+| red | 0.7340 | 1.50 | 0.6667 | **+0.1010** | 0.2020 |
+| blue | 0.2660 | 2.50 | 0.4000 | −0.3350 | 0 |
+
+Red is worth backing at 1.50 because the book prices it at 66.7% and the model
+says 73.4%. **Blue is worth $0** — at 2.50 the book is asking for 40% and the
+model only gives it 26.6%. At most one side of a fight can ever be a value bet.
+
+**The stake is not the Kelly fraction.** That 0.2020 is a *weight*, not "20% of
+the bankroll". Rule A deploys the whole $50 across a card's value bets in
+proportion to their Kelly numbers:
+
+* if red is the card's only value bet, the **entire $50** goes on it — returning
+  $75 (profit +$25) if red wins, −$50 if not;
+* if the card has one other value bet with Kelly 0.05, the split is 0.2020 :
+  0.05, so **$40 on red and $10 on the other**.
+
+**What would make blue backable?** Blue needs a price above its fair 3.759. At
+3.50 the edge is still −0.069. At 4.00 it turns +0.064, a Kelly of 0.021 — a
+real bet, but a tenth of red's weight, so on a card with both it would draw
+about a tenth of the money.
+
+### Why is there no intercept?
+
+Because an intercept is the one parameter that shifts every probability the
+same direction, and in this problem there is no direction it would be right to
+shift. A logistic calibrator σ(a·x + b) has exactly two knobs:
+
+* **the slope `a` (our β) — how confident.** Stretches or squeezes the
+  probabilities symmetrically about the anchor: β > 4 stretches (fixes an
+  under-confident model), β < 4 squeezes (fixes an over-confident one). Kept
+  and fitted.
+* **the intercept `b` — which way it leans.** Shifts everything one direction,
+  regardless of who's fighting. Set to zero.
+
+Three reasons the lean knob is removed, all pointing at the same thing.
+
+**1. A fight has no red corner at predict time.** `predict_winner(red, blue)`
+takes red = `fighter1` from `card.json`, which `scripts/fetch_card_odds.py`
+fills from the odds API's `home_team`/`away_team` — an arbitrary label in MMA,
+not a corner. So the model must give the same answer whichever way the pair is
+passed: p(A beats B) + p(B beats A) = 1. The slope-only map delivers that
+exactly, because σ is antisymmetric — σ(−x) = 1 − σ(x) — so
+`f(1 − p) = 1 − f(p)` identically:
+
+| raw p | shipped `f(p) + f(1−p)` | with an intercept |
+|---|---|---|
+| 0.30 | 1.000000 | 1.157 |
+| 0.45 | 1.000000 | 1.185 |
+| 0.60 | 1.000000 | 1.179 |
+| 0.80 | 1.000000 | 1.128 |
+
+With an intercept the model contradicts itself on argument order: raw 0.5 maps
+to 0.594, so pass the same even matchup both ways and *both* fighters come back
+"favoured at 59.4%".
+
+**2. The decision would drift away from the display.** The winner is decided on
+the raw score at 0.5, and an intercept moves where the calibrated curve crosses
+0.5. An unconstrained intercept was tried first and mapped 0.5 to 0.61 — every
+fight with raw in [0.41, 0.50) was decided one way and displayed favouring the
+other. A real shipped bug, which is why the notebook cell carries the comment
+it does; worked through in the "displayed favourite" entry below.
+
+**3. The intercept would be learning the corner, not the fighters.** Fitting b
+forces mean predicted = mean actual (see "How is β calculated?"), and on the
+OOF pool that is 63.3% red — ufcstats lists the favourite as red more often —
+while the mirror-trained model averages 55.8%. Real in that dataset, worthless
+live, where red is whoever the odds feed listed first. Applying it would
+inflate whichever fighter appears first on the card, and Kelly would stake on
+the inflation. Note the bias wouldn't come *from the model*: mirror training
+gives it no corner preference. It's the calibrator's intercept that would go
+looking at the labels and bake one in — the constraint isn't repairing a biased
+model, it's stopping the calibrator from adding a bias that was never there.
+
+**What the constraint actually pins.** Not the mean — the calibrated scores
+average 0.5566, not 0.5, against a 0.6327 base rate. It pins a single *point*:
+raw 0.5 → calibrated 0.5. Everything else is free to move, and β is powerless
+against the tilt anyway: calibration moves the mean prediction from 0.5580 to
+0.5566, fourteen ten-thousandths, against a 7.5-point gap. A slope moves both
+sides equally in opposite directions, so it can never shift the level —
+confidence and lean are genuinely independent, which is why you can fit one and
+forbid the other.
+
+**The cost, stated honestly.** A slope can only expand or shrink symmetrically
+about 0.5; it cannot shift. So the per-band gaps in the KAN-57 table (red
+outperforms its prediction in every bin) don't get corrected — they persist by
+design, as the price of order-invariance rather than a defect. 0.5 is also
+exactly where `mirror_fights()` puts the training prior, so the anchor and the
+training design agree on what "no opinion" means. That's also why KAN-57
+measures calibration on a *mirrored* OOF pool, where the base rate is 0.5 by
+construction and the conflict disappears.
+
+
+### Why 0.5 specifically?
+
+It isn't really a choice — three independent requirements all land on it.
+
+**1. The symmetry forces it.** We need p(A beats B) + p(B beats A) = 1, i.e.
+f(1 − p) = 1 − f(p) for the calibration map f. Now set p = 0.5, the fight where
+swapping the corners changes nothing:
+
+```
+f(0.5) = 1 − f(0.5)   ⟹   2·f(0.5) = 1   ⟹   f(0.5) = 0.5
+```
+
+Any map that treats the two fighters even-handedly *must* pin 0.5. There was
+never a second candidate; picking a different anchor means giving up
+order-invariance.
+
+**2. It's what the training data says "no information" is.** `mirror_fights()`
+adds every fight a second time with the corners swapped and the label flipped, so
+the training set is exactly 50/50 by construction. A model fitted on that has a
+prior of precisely 0.5 — so 0.5 isn't a convention, it's the score that means
+"the features told me nothing about this fight".
+
+**3. It's already the decision boundary.** The winner is picked by
+`raw >= best_th` with `best_th = 0.5`. If the anchor sat anywhere else, the
+display and the decision would disagree for every score between the two — the
+exact bug that got shipped once when an unconstrained intercept moved the
+crossing point to 0.61.
+
+**What goes wrong anywhere else.** Take a fight the model genuinely can't call,
+priced fair by the book at 2.00 each way, and move the anchor:
+
+| anchor | coin-flip fight displays as | edge at 2.00 | what rule A does |
+|---|---|---|---|
+| 0.500 | 0.500 / 0.500 | +0.000 | no bet |
+| 0.520 | 0.520 / 0.480 | +0.040 | backs the first-listed fighter |
+| 0.550 | 0.550 / 0.450 | +0.100 | backs the first-listed fighter |
+| 0.594 | 0.594 / 0.406 | +0.188 | backs the first-listed fighter, Kelly 0.188 |
+
+Every non-0.5 anchor manufactures an edge on a fight we have no opinion about,
+always on whoever happens to be listed first, and Kelly stakes real money on it.
+(0.594 isn't hypothetical — it's what an intercept-ful fit on this project's pool
+actually produces.)
+
+That three separate arguments — symmetry, the training prior, and the decision
+rule — pick the same number is why the design is stable. Move the anchor and all
+three break at once.
+
+### "The displayed favourite can never contradict the 0.5 decision" — how would it?
+
+Every fight produces **two** numbers, from different places:
+
+* the **decision** — who we say wins — comes from the **raw** score:
+  `winner = red if raw_proba >= best_th else blue`, with `best_th = 0.5`;
+* the **displayed confidence** comes from the **calibrated** score, then
+  `confidence = proba if winner == fighter1 else 1 - proba`.
+
+They describe the same fight, so they had better agree about who is favoured.
+
+**Why the decision is made on the raw score at all.** Calibration is monotonic —
+it stretches and squeezes but never reorders — so it cannot change which fighter
+looks stronger. The *only* thing it could change is which side of 0.5 a score
+lands on, and that is fixed entirely by where the map crosses 0.5. Pin the
+crossing at 0.5 and thresholding the raw score and thresholding the calibrated
+score are the *same decision*, always. The anchor turns "which number do we
+threshold?" into a non-question.
+
+**Unpin it and they come apart.** Fit the calibrator with an intercept on this
+project's pool and you get σ(4.3221·p − 1.7828), which crosses 0.5 at a raw score
+of **0.4125**, not 0.5. So every raw score in [0.4125, 0.5) is decided *blue*
+while the calibrated number says *red* is favoured. Take raw = 0.45:
+
+| | calibrated p(red) | printed row |
+|---|---|---|
+| shipped (slope only) | 0.4426 | prediction **BLUE**, confidence **55.7%** ✓ |
+| with an intercept | 0.5405 | prediction **BLUE**, confidence **46.0%** ✗ |
+
+That second row is nonsense on its face: we are picking blue and reporting 46%
+confidence in blue. The weekly predictions table would print it exactly like
+that, because `1 - proba` on a red-favouring calibrated number is below half.
+
+**It isn't a rare corner case.** 1,557 of the 7,869 fights in the current OOF
+pool sit in that band — **one fight in five**. On a typical 12-fight card that's
+two or three rows where the pick and the confidence point at different fighters.
+
+So the phrase means: because σ(β·(p − 0.5)) is pinned at 0.5, the calibrated
+number is on the same side of even as the raw number for *every possible input*.
+Not usually. Always.
+
+### Isn't the 0.5 acting as the intercept?
+
+A constant term does appear — but it isn't free, and that's the whole difference.
+
+Multiply our model out:
+
+```
+σ(β·(p − 0.5))  =  σ(β·p − 0.5β)  =  σ(4.6149·p − 2.3074)
+```
+
+(identical to 2×10⁻¹⁶, i.e. exactly). So yes, there is a −2.3074 sitting there
+looking like an intercept. The catch: it is **forced to equal −β/2**. Change the
+slope and it moves with it. A real intercept is a number the fit picks on its own
+to make the data fit better — and when allowed to, it picks something else
+entirely:
+
+| | slope a | constant b | b as a fraction of a | crosses 0.5 at |
+|---|---|---|---|---|
+| ours | 4.6149 | −2.3074 (**forced** = −a/2) | exactly −0.5 | p = 0.5000 |
+| standard Platt | 4.3221 | −1.7828 (**chosen**) | −0.4125 | p = 0.4125 |
+
+Given a = 4.3221, the constraint would have demanded b = −2.1610. The free fit
+chose −1.7828 instead, because that fits the data better — and in doing so it
+slid the crossing point to 0.4125, which is the decision/display contradiction
+from the entry above.
+
+**The geometry.** On the log-odds scale calibration is just a straight line,
+z = a·p + b, with two degrees of freedom: how steep it is, and how high it sits.
+Ours nails the line through the point (0.5, 0) and lets only the slope pivot
+around it — a line on a hinge, free to rotate, not to slide. Standard Platt lets
+it do both.
+
+So the precise statement isn't "we set b to zero". It's **b = −a/2** — a
+constraint linking the two, not a fixed value. Writing it as `fit_intercept=False`
+on the centred score is simply the tidy way to express that, and it's why the
+count is *one* fitted parameter (4.6149) against Platt's *two* (4.3221, −1.7828).
+
+Which also answers it empirically: if centring were quietly supplying an
+intercept, we'd have two free parameters and the mean predicted probability would
+match the base rate for free. It doesn't — 0.5566 against 0.6327.
+
+### I've done Platt scaling before to make the average score match the average rate — we never centred. Why here?
+
+Because you had an intercept, and that changes everything about whether centring
+matters.
+
+**With an intercept, centring is a no-op.** Standard Platt is σ(a·s + b). Feed it
+the centred score instead and you get σ(a(s − 0.5) + b′), which is the same
+function with b′ = b + 0.5a — same family, same fit, same predictions. Checked on
+this project's OOF pool: fitted uncentred gives a = 4.3221, b = −1.7828; fitted
+centred gives a = 4.3169, b = 0.3788, and −1.7828 + 0.5(4.3221) = 0.3783. The
+predictions differ by 4×10⁻⁴, which is just solver tolerance. So not centring was
+the right call — it would have bought you nothing.
+
+**And the mean-matching you relied on came free.** You didn't have to engineer it:
+maximum-likelihood logistic regression with an intercept has the first-order
+condition Σ(yᵢ − p̂ᵢ) = 0, which *is* "mean predicted = mean actual" on the fit
+data. On this pool the intercept-ful fit gives mean predicted 0.632724 against a
+base rate of 0.632736. The intercept is the parameter that does it; drop it and
+the guarantee goes with it.
+
+**Which is exactly what we do here, on purpose.** Our calibrator has no
+intercept, so its mean comes out 0.5566 against a 0.6327 base rate — off by 7.6
+points. In your sales model that would be a straightforward bug: the population
+really does convert at some rate, so a model whose average misses it will
+overstate expected revenue.
+
+Here the "base rate" is not a property of the world. Red wins 63% of rows because
+ufcstats tends to list the favourite in the red corner — a labelling convention.
+Live, red is whoever the odds feed happened to name first, so there is no rate to
+match. Meanwhile the thing we *do* need is that p(A beats B) + p(B beats A) = 1,
+and only the no-intercept form gives that. Base-rate matching and order-invariance
+are in direct conflict for this problem, and order-invariance wins.
+
+**The reconciliation, and a concrete job for KAN-57.** The two goals stop fighting
+if calibration is measured on a **mirrored** OOF pool — every fight included in
+both orientations. Then the base rate is exactly 0.5 by construction, the
+corner convention cancels out, and mean-matching and antisymmetry agree. Any
+miscalibration still visible there is real (genuine over- or under-confidence),
+not a labelling artifact. It needs a small change to the export cell, which
+currently stores one orientation per fight (7,869 rows, no duplicates) — the
+swapped-corner predictions aren't saved, so they can't be recovered after the
+fact.
+
+### How is β (or the intercept b) calculated?
+
+By **maximum likelihood**, not a formula. The fit picks the value that makes the
+observed wins and losses most probable, by solving one equation per parameter.
+
+**The objective.** For each past fight i with centred score xᵢ and outcome yᵢ,
+the calibrator says p̂ᵢ = σ(β·xᵢ + b). The log-likelihood is
+
+```
+LL(β, b) = Σ [ yᵢ·ln(p̂ᵢ) + (1 − yᵢ)·ln(1 − p̂ᵢ) ]
+```
+
+— negative log-loss, the same metric the market comparison uses.
+
+**Setting the derivatives to zero gives the score equations.** For the logistic
+curve they collapse to
+
+```
+dLL/dβ = Σ xᵢ·(yᵢ − p̂ᵢ) = 0   → residuals uncorrelated with the score
+dLL/db = Σ   (yᵢ − p̂ᵢ) = 0   → residuals sum to zero: mean predicted = mean actual
+```
+
+The second line is the whole intercept story: fitting b *forces* the average
+prediction to equal the base rate (63% red on our pool). Dropping b means that
+equation is never imposed, so the mean stays at 0.557.
+
+**Toy example, five fights, slope only.**
+
+| fight | x = p − 0.5 | raw p(red) | favoured | y | result | call |
+|---|---|---|---|---|---|---|
+| 1 | −0.30 | 0.20 | blue | 0 | blue won | right |
+| 2 | −0.10 | 0.40 | blue | 1 | red won | wrong |
+| 3 | +0.10 | 0.60 | red | 1 | red won | right |
+| 4 | +0.20 | 0.70 | red | 0 | blue won | wrong |
+| 5 | +0.40 | 0.90 | red | 1 | red won | right |
+
+Both x and y are from red's point of view: x < 0 is a blue lean, y = 1 is a
+red win. Three of five right.
+
+| β | LL | gradient Σ xᵢ(yᵢ − p̂ᵢ) |
+|---|---|---|
+| 1 | −3.254 | +0.173 |
+| 3 | −3.051 | +0.035 |
+| **3.6045** | **−3.040** | **0.000** |
+| 4 | −3.044 | −0.021 |
+| 5 | −3.090 | −0.068 |
+
+Gradient positive below 3.6 (push β up), negative above (push it down), so the
+fit lands at β = 3.6045. There the x-weighted residuals are +0.076, −0.059,
++0.041, −0.135, +0.077 — summing to zero, the only condition β must satisfy.
+sklearn's lbfgs does the same search numerically. The residual y − p̂ is each fight's
+surprise: fight 1 (p̂ = 0.2532, residual −0.2532) is small because blue winning
+was expected; fight 4 (residual −0.6728) is the biggest — a 67% favourite lost —
+so it pulls hardest on β, and downward: "be less confident".
+
+**Same toy with an intercept:** a = 3.42, b = 0.26, and the second equation now
+holds too — mean predicted 0.600 = mean actual 3/5. The intercept bought
+base-rate matching and nothing else.
+
+**On the real pool.** At the shipped β = 4.6149 the gradient is +5.02, not zero,
+because sklearn's default L2 penalty pulls β slightly toward zero; the
+unpenalised fit is 4.7048 (the Jira ticket's figure) with identical predictions
+to 3 dp. The likelihood is flat near the optimum (β = 4 → −4757, β = 5 → −4746,
+fit → −4744), which is why the calibrator barely moves anything.
+
+
 ## Operations
 
 ### What runs when? / How does the whole pipeline fit together?
@@ -504,12 +1110,20 @@ Michael's request); the Monday run then finds nothing left to score.
 ### Why is a card scored a day or two after it happens?
 
 Cards run Saturday night US time — Sunday afternoon AEST — and the scoring
-Routine runs Monday 7:30 AM AEST, so each card is graded the morning after it
-ends. (Until 27 Aug 2026 scoring ran Fridays, a ~6-day lag; it was moved with
-the card-day swap both for speed and because scoring must land before the
-card-day job replaces `card.json` with the next card. The Monday slot itself
-moved from 6 PM to 7:30 AM on 13 Sep 2026.) Ask any time after an event to
-score it earlier by hand; Monday's run then finds nothing left to do.
+Routine (`ufc-monday-scoring`) fires **Monday 7:30 AM AEST**, stored as cron
+`30 21 * * 0` (21:30 UTC the previous day, so the cron's day-of-week is Sunday
+even though it's a Monday job). So each card is graded the morning after it
+ends. The slot has to land *after* the last fight of a Sunday-AEST card (a US
+Saturday main event finishes ~2 PM AEST Sunday, late-finishing cards ~8 PM;
+Asia cards earlier) and *before* Friday's card-day job overwrites `card.json`
+with the next event. History: until 27 Aug 2026 scoring ran Fridays, a ~6-day
+lag, moved with the card-day swap; until 13 Sep 2026 it ran Monday 6 PM, so a
+card fought Sunday morning AEST sat as the "upcoming card" in the Performance
+tab's allocator for most of Monday. The run does the same work either way:
+fetch results, `score_card.py` (with the pre-fight CLV snapshot since Sep
+2026), append ledger.md and winners.json, republish the dashboard. Ask any time
+after an event to score it earlier by hand; Monday's run then finds nothing
+left to do — the Routine is a floor, not a gate.
 
 ### Do fights ever happen on Saturday AEST — does the card-day run always beat them?
 
@@ -1336,32 +1950,6 @@ the rest of the context. The model's full read on a card (picks with no
 value attached) still lives in predictions_output.md on the
 weekly-predictions-log branch.
 
-### Why isn't the latest event in the dashboard as past data yet? Doesn't that happen Monday mornings?
-
-It does now — the scoring Routine fires Monday 7:30 AM AEST (cron
-`30 21 * * 0` UTC, i.e. Sunday 21:30 UTC). Until 13 Sep 2026 it ran Monday 6 PM, so a card
-fought Sunday morning AEST sat as the "upcoming card" in the Performance
-tab's allocator for most of Monday. Either way the run does the same work:
-fetch results, `score_card.py` (with the pre-fight CLV snapshot since Sep
-2026), append ledger.md and winners.json, republish the dashboard. The
-morning slot still clears late-finishing Sunday-AEST cards (a US Saturday
-card ends around 8 PM Sunday AEST at the latest) and lands days before
-Friday's card-day job replaces card.json. On-demand scoring is always
-available by asking in the session — the Routine is a floor, not a gate.
-
-### Can the scoring Routine run Monday morning instead of the evening?
-
-Yes — done 13 Sep 2026. `ufc-monday-scoring` now fires at **Monday 7:30 AM
-AEST**, stored as cron `30 21 * * 0` (7:30 AM AEST = 21:30 UTC the previous
-day, so the cron's day-of-week is Sunday even though the job is a Monday
-job).
-Nothing else about the job changed: same bankroll, same rules A/C/E/F
-grading, same dashboard republish. The timing constraints it has to respect
-are unchanged and both still hold — it must land *after* the last fight of a
-Sunday-AEST card (a US Saturday main event finishes ~2 PM AEST Sunday,
-Asia cards earlier) and *before* Friday's card-day job overwrites
-`card.json` with the next event.
-
 ### Where is this project tracked outside the repo?
 
 Jira, as **[KAN-8 "UFC Prediction"](https://cinder.atlassian.net/browse/KAN-8)**
@@ -1384,832 +1972,3 @@ Jira is the outside-in view (what's open, what's done); `EXPERIMENTS.md` and
 `ledger.md` remain the actual records, and nothing syncs automatically — the
 ticket is updated by hand when a stream's state changes, e.g. when the trial's
 tenth event is graded.
-
-### What is KAN-57 (calibration reporting) actually asking for?
-
-[KAN-57](https://cinder.atlassian.net/browse/KAN-57) is the unfinished half of
-the second "worth adding" item on the Jira story: *a Brier score or reliability
-curve alongside precision, since calibration is what actually matters and
-precision won't reveal a miscalibrated model.*
-
-**What already exists.** More than the ticket's one-liner suggests:
-
-1. A **Platt calibrator** is fitted every run (notebook § Probability
-   Calibration) — a slope-only logistic regression on pooled walk-forward OOF
-   scores centred at 0.5, `σ(β·(p − 0.5))`, currently β ≈ 4.6. Slope-only, so
-   raw 0.5 maps to calibrated 0.5 exactly and the displayed favourite can never
-   contradict the 0.5 decision.
-2. A **Brier non-regression assert** guards it: `calibrated_brier <= raw_brier +
-   0.01`.
-3. Every experiment entry reports **model log-loss vs the market's vig-free
-   log-loss** on the pooled-OOF fights matched to closing odds.
-
-**What is missing** is anything that looks at calibration *by probability band*.
-Log-loss and Brier are single numbers over ~7.9k fights; they can look fine while
-particular bands are badly off, and the McNemar/Wilcoxon gates only test picks
-and ROI. Binning the shipped artifact's own OOF pool takes about ten lines and
-shows it immediately:
-
-| raw p(red) bin | n | mean predicted | actual red win rate | gap |
-|---|---|---|---|---|
-| 0.1–0.2 | 241 | 0.160 | 0.266 | −0.106 |
-| 0.2–0.3 | 482 | 0.252 | 0.409 | −0.157 |
-| 0.3–0.4 | 654 | 0.357 | 0.466 | −0.109 |
-| 0.4–0.5 | 1684 | 0.456 | 0.520 | −0.064 |
-| 0.5–0.6 | 1702 | 0.544 | 0.635 | −0.091 |
-| 0.6–0.7 | 996 | 0.648 | 0.710 | −0.061 |
-| 0.7–0.8 | 958 | 0.752 | 0.808 | −0.056 |
-| 0.8–0.9 | 772 | 0.844 | 0.880 | −0.036 |
-
-The gap is **negative in every bin**: red outperforms its prediction whether the
-model favours red or blue. That is not under-confidence (which would flip sign
-either side of 0.5) — it is a **base-rate shift**. Across the pool the model
-predicts red at 55.8% while red actually wins 63.3%, because `mirror_fights()`
-trains on an exactly 50/50 prior while the OOF rows are real, corner-ordered
-fights where ufcstats lists the favourite as red more often than not.
-
-**The trap this reveals.** Refitting the calibrator *with* an intercept removes
-most of the gap and looks spectacular — pooled-OOF log-loss 0.6009 → 0.5886,
-Brier 0.2083 → 0.2027. That 0.012 of log-loss is roughly the size of the entire
-market gap this project exists to close. It is **not skill**: it is the
-red-corner prior, and it maps raw 0.5 to 0.594, breaking the rule that the
-displayed favourite matches the decision. Any future calibration work must
-report the shift and the symmetric (under/over-confidence) components
-separately, or it will bank a corner artifact as an edge.
-
-**Two related findings the binning turned up**, both folded into KAN-57:
-
-* The slope-only calibrator currently makes the pooled OOF *slightly worse* on
-  the very pool it was fit on — Brier 0.2083 → 0.2087, log-loss 0.6009 → 0.6029.
-  Not a regularisation artifact (an unpenalised refit gives β = 4.705 and the
-  same numbers); the no-intercept family simply cannot beat the raw score here.
-  It passes only because the assert allows +0.01 of Brier slack. So the
-  calibrator may be earning nothing and could be dropped — worth deciding
-  explicitly rather than leaving it in because it "doesn't hurt".
-* **The backtest and the live job use different probabilities.** `oof_export`
-  stores the *raw* stacked score, so `odds_backtest.py`, `betting_rule_compare.py`
-  and the dashboard's History replay all bet off raw probabilities — including
-  the λ fit behind rule F. Live, `predict_winner()` returns the *calibrated*
-  probability and `send_weekly_predictions.py` feeds that straight into
-  `kelly_edge`. Mean |calibrated − raw| is only 0.012 (max 0.083), but residual
-  edges are small by construction (entry 9), so that is enough to flip marginal
-  bets on or off. Backtested ROI and live staking should run off the same number.
-
-**Scope, then.** Add a reliability curve, a per-decile calibration table and a
-Brier score to the notebook's stability-check cell, computed on pooled OOF and
-split into shift vs symmetric components, with the market's own curve on the
-same axes; then decide from the evidence whether the calibrator stays, and make
-the backtest and the weekly job agree on raw-vs-calibrated. Reporting plus one
-consistency fix — no threshold change, and the 0.5 decision rule and §11's
-no-tuning scar stand.
-
-### Why calibrate so the scores average to 0.5?
-
-They don't average 0.5 — and that's the useful part of the question. On the
-shipped artifact's OOF pool the calibrated scores average **0.5566**, against a
-red win rate of 0.6327. The constraint isn't on the mean, it's on a single
-**point**: `fit_intercept=False` on the score centred at 0.5 pins raw 0.5 to
-calibrated 0.5. Everything else is free to move.
-
-Three reasons that anchor is there.
-
-**1. A fight has no red corner at predict time.** `predict_winner(red, blue)`
-takes red = `fighter1` from `card.json`, which `scripts/fetch_card_odds.py`
-fills from the odds API's `home_team`/`away_team` — an arbitrary label in MMA,
-not a corner. So the model must give the same answer whichever way the pair is
-passed: p(A beats B) + p(B beats A) = 1. The slope-only map delivers that
-exactly, because σ is antisymmetric — σ(−x) = 1 − σ(x) — so
-`f(1 − p) = 1 − f(p)` identically:
-
-| raw p | shipped `f(p) + f(1−p)` | with an intercept |
-|---|---|---|
-| 0.30 | 1.000000 | 1.157 |
-| 0.45 | 1.000000 | 1.185 |
-| 0.60 | 1.000000 | 1.179 |
-| 0.80 | 1.000000 | 1.128 |
-
-With an intercept the model contradicts itself on argument order: raw 0.5 maps
-to 0.594, so pass the same even matchup both ways and *both* fighters come back
-"favoured at 59.4%".
-
-**2. The decision would drift away from the display.** The winner is decided on
-the raw score at 0.5. An unconstrained intercept was tried first and mapped 0.5
-to 0.61 — every fight with raw in [0.41, 0.50) was decided one way and displayed
-favouring the other. That is a real shipped bug, which is why the notebook cell
-carries the comment it does.
-
-**3. The intercept would be learning the corner, not the fighters.** What it
-picks up is the red-corner base rate — ufcstats lists the favourite as red more
-often, so red wins 63.3% of OOF rows while a mirror-trained model predicts 55.8%.
-Real in that dataset, worthless live, where red is whoever the odds feed listed
-first. Applying it would inflate whichever fighter appears first on the card, and
-Kelly would stake on the inflation.
-
-**The cost, stated honestly.** A slope can only expand or shrink probabilities
-symmetrically about 0.5; it cannot shift them. So the per-band gaps in the
-KAN-57 entry above don't get corrected — they persist by design. The right
-reading is that they are the price of order-invariance, not a defect: 0.5 is
-also exactly where `mirror_fights()` puts the training prior, so the anchor and
-the training design agree on what "no opinion" means.
-
-### What does "centred at 0.5" mean?
-
-A subtraction. The calibrator isn't fitted on the probability `p`, it's fitted
-on `x = p − 0.5`:
-
-```python
-calibrator.fit((oof_proba.values - 0.5).reshape(-1, 1), oof_y.values)
-```
-
-So a raw score of 0.5 becomes x = 0, 0.8 becomes x = +0.3, 0.2 becomes x = −0.3.
-"Centred at 0.5" just means the input is re-expressed as *distance from 0.5*
-rather than as a probability. `predict.py` does the same shift at serving time —
-`predict_proba([[raw_proba - 0.5]])`.
-
-Why it matters is what it combines with. A logistic regression outputs
-σ(β·x + c), and `fit_intercept=False` forces c = 0. At x = 0 that gives
-σ(0) = 0.5 **exactly, whatever β turns out to be**. So:
-
-* centring chooses *which* raw score is the fixed point (0.5, the neutral score);
-* dropping the intercept is what actually pins it.
-
-Neither does the job alone. With the shipped β ≈ 4.615:
-
-| raw p | x = p − 0.5 | σ(β·x) |
-|---|---|---|
-| 0.20 | −0.30 | 0.2003 |
-| 0.35 | −0.15 | 0.3335 |
-| 0.50 | 0.00 | **0.5000** |
-| 0.65 | +0.15 | 0.6665 |
-| 0.80 | +0.30 | 0.7997 |
-| 0.95 | +0.45 | 0.8886 |
-
-Fit the same no-intercept model on `p` *without* centring and it anchors the
-wrong point — β comes out 1.32, and now p = 0 maps to 0.5 while p = 0.5 maps to
-0.659. A fight the model calls a certain loss for red would display as a coin
-flip. Centring is what moves the anchor from p = 0 to p = 0.5.
-
-(Aside visible in that table: σ(4x) ≈ 0.5 + x for small x, so β ≈ 4.6 is close to
-the identity map — which is why the calibrator moves scores by only 0.012 on
-average, and why KAN-57 asks whether it is earning its place at all.)
-
-### Same thing, explained simply
-
-Think of the model's output as a tug-of-war rope with a marker in the middle.
-
-The model gives every fight a number between 0 and 1 — how confident it is that
-the red-corner fighter wins. **0.5 is the middle of the rope: no opinion, a coin
-flip.** 0.8 means red is pulling hard. 0.2 means blue is.
-
-**Calibration** is a dial we turn afterwards. Trained models are often bad at
-saying *how* sure they are — a model can be right about who wins but say "70%"
-for fights that actually happen 80% of the time. The dial stretches or squeezes
-those numbers so that fights shown at 70% really do win about 70% of the time.
-It never changes *who* is favoured, only by *how much*. We set the dial using
-thousands of past predictions, so it's fixing a real pattern, not one week's
-noise.
-
-**"Centred at 0.5"** means that before the number goes into the dial, we
-subtract 0.5 from it — so instead of feeding in "0.8", we feed in "+0.3, i.e.
-three-tenths of the way toward red". Like measuring temperature from freezing
-instead of from absolute zero: same information, but now zero means something
-useful.
-
-Why bother? Because of how the dial is built: **whatever you feed in as zero
-comes back out as 50/50.** Subtracting 0.5 first is what makes 0.5 the thing
-that maps to zero — so a fight the model genuinely can't call goes in at the
-middle of the rope and comes out at the middle of the rope. The marker stays put
-no matter how hard we turn the dial.
-
-Skip the subtraction and the dial anchors the wrong end of the rope: a raw score
-of 0 — the model is *certain* red loses — would come back as 0.5, a coin flip,
-and a true 50/50 fight would come back as 66% for red. Both nonsense, and since
-we bet real money off these numbers, expensive nonsense.
-
-So: the dial adjusts how strongly we read the pull; centring at 0.5 is what
-guarantees the middle of the rope is still the middle afterwards.
-
-### Worked example: the calibration maths, number by number
-
-One fight. The model says **0.72** for the red-corner fighter. Here is every
-step, with the shipped dial setting β = 4.6149.
-
-**Step 1 — centre it.** Subtract the neutral point:
-
-```
-x = p − 0.5 = 0.72 − 0.5 = 0.22
-```
-
-`p = 0.72` is the model's raw confidence red wins. `0.5` is the coin-flip point.
-`x = 0.22` is how far toward red the model is leaning — *signed*, so positive
-means red, negative means blue. This is the only thing the dial ever sees.
-
-**Step 2 — turn the dial.** Multiply by β:
-
-```
-z = β × x = 4.6149 × 0.22 = 1.0153
-```
-
-`β = 4.6149` is the **only number the calibrator learns** — one slope, fitted on
-~7,900 past predictions so that the numbers it produces match how often those
-fights actually went that way. It says how much a unit of "leaning" is worth.
-Because of the shape of the curve, **β = 4 is roughly the do-nothing setting**;
-above 4 stretches confidence away from the middle, below 4 squeezes it toward
-the middle. Same raw 0.72 under different dials:
-
-| β | 0.72 becomes | meaning |
-|---|---|---|
-| 2 | 0.608 | heavy squeeze — "you're overconfident" |
-| 4 | 0.707 | leave it about as it was |
-| **4.6149** | **0.734** | the fitted value: a mild stretch |
-| 8 | 0.853 | heavy stretch — "you're underconfident" |
-
-**Step 3 — turn it back into a probability.**
-
-```
-calibrated = 1 / (1 + e^−z) = 1 / (1 + e^−1.0153) = 0.7340
-```
-
-`z = 1.0153` is in **log-odds**, the natural scale for this curve. Un-log it and
-it's plain betting odds: e^1.0153 = **2.76**, i.e. red wins 2.76 times for every
-1 loss. As a probability that's 2.76 / (2.76 + 1) = **0.734** — the same answer.
-z = 0 would be 1-to-1, a coin flip, which is exactly the anchor the centring in
-step 1 bought us.
-
-So **0.72 → 0.734**: a stretch of +0.014.
-
-**The mirror check.** Pass the same fight the other way round (blue listed
-first) and the raw score is 0.28, so x = −0.22, z = −1.0153, calibrated =
-**0.266**. And 0.734 + 0.266 = 1.000000 exactly. The model can't contradict
-itself on argument order — see the anchor entry above for why that matters.
-
-**What it's worth in money.** Say a bookmaker offers 1.50 on red.
-
-| | probability | fair price | edge at 1.50 | Kelly fraction |
-|---|---|---|---|---|
-| raw | 0.7200 | 1.389 | +0.0800 | 16.0% |
-| calibrated | 0.7340 | 1.362 | +0.1011 | 20.2% |
-
-Edge is `p × odds − 1`; the Kelly fraction is `edge / (odds − 1)` — that's
-`kelly_edge()` in `predict.py`, and the weekly job splits the bankroll across
-value bets in proportion to it. A **1.4-percentage-point** change in the
-probability becomes a **26% bigger stake**. That is the whole reason KAN-57 cares
-that the backtest bets off raw scores while the live job stakes off calibrated
-ones: on small edges, a difference this size decides both how much goes on and
-whether the bet is placed at all.
-
-### I've done Platt scaling before to make the average score match the average rate — we never centred. Why here?
-
-Because you had an intercept, and that changes everything about whether centring
-matters.
-
-**With an intercept, centring is a no-op.** Standard Platt is σ(a·s + b). Feed it
-the centred score instead and you get σ(a(s − 0.5) + b′), which is the same
-function with b′ = b + 0.5a — same family, same fit, same predictions. Checked on
-this project's OOF pool: fitted uncentred gives a = 4.3221, b = −1.7828; fitted
-centred gives a = 4.3169, b = 0.3788, and −1.7828 + 0.5(4.3221) = 0.3783. The
-predictions differ by 4×10⁻⁴, which is just solver tolerance. So not centring was
-the right call — it would have bought you nothing.
-
-**And the mean-matching you relied on came free.** You didn't have to engineer it:
-maximum-likelihood logistic regression with an intercept has the first-order
-condition Σ(yᵢ − p̂ᵢ) = 0, which *is* "mean predicted = mean actual" on the fit
-data. On this pool the intercept-ful fit gives mean predicted 0.632724 against a
-base rate of 0.632736. The intercept is the parameter that does it; drop it and
-the guarantee goes with it.
-
-**Which is exactly what we do here, on purpose.** Our calibrator has no
-intercept, so its mean comes out 0.5566 against a 0.6327 base rate — off by 7.6
-points. In your sales model that would be a straightforward bug: the population
-really does convert at some rate, so a model whose average misses it will
-overstate expected revenue.
-
-Here the "base rate" is not a property of the world. Red wins 63% of rows because
-ufcstats tends to list the favourite in the red corner — a labelling convention.
-Live, red is whoever the odds feed happened to name first, so there is no rate to
-match. Meanwhile the thing we *do* need is that p(A beats B) + p(B beats A) = 1,
-and only the no-intercept form gives that. Base-rate matching and order-invariance
-are in direct conflict for this problem, and order-invariance wins.
-
-**The reconciliation, and a concrete job for KAN-57.** The two goals stop fighting
-if calibration is measured on a **mirrored** OOF pool — every fight included in
-both orientations. Then the base rate is exactly 0.5 by construction, the
-corner convention cancels out, and mean-matching and antisymmetry agree. Any
-miscalibration still visible there is real (genuine over- or under-confidence),
-not a labelling artifact. It needs a small change to the export cell, which
-currently stores one orientation per fight (7,869 rows, no duplicates) — the
-swapped-corner predictions aren't saved, so they can't be recovered after the
-fact.
-
-### In the mirror check, what is 0.266, and what's red's equivalent?
-
-The thing to hold onto: **the model never knows anyone's name.** It always answers
-one question — *what is the probability that the fighter I was handed first
-wins?* Swap who you hand it first and it answers a different question about the
-same fight.
-
-| | run 1: red handed first | run 2: blue handed first |
-|---|---|---|
-| raw p (first fighter wins) | 0.72 | 0.28 |
-| x = p − 0.5 | **+0.22** | **−0.22** |
-| z = β·x | **+1.0153** | **−1.0153** |
-| e^z, as odds | 2.76 wins per loss | 0.362 wins per loss (≈ 1 win per 2.76 losses) |
-| calibrated answer | **0.7340** | **0.2660** |
-| in words | "red wins 73.4%" | "blue wins 26.6%" |
-
-So 0.266 is **blue's win probability**, and red's equivalent is **0.734** — the
-number from run 1. They aren't two different beliefs, they're the same belief
-written from two viewpoints. Notice the sign of x and z simply flips: a positive
-z means the first-listed fighter is favoured, a negative z means they're the
-underdog.
-
-**Why the sum matters.** Exactly one fighter wins, so the two answers have to add
-to 1. Ours give 0.734 + 0.266 = 1.000000. If they summed to, say, 1.05, the model
-would be claiming a 105% chance that somebody wins the fight — and you could back
-*both* fighters and show a profit on paper that doesn't exist.
-
-**Where this actually bites.** The weekly job never runs the model twice. It runs
-it once and gets the other side by subtraction:
-
-```python
-for name, p, o in ((fight["fighter1"], proba, fight.get("odds1")),
-                   (fight["fighter2"], 1 - proba, fight.get("odds2"))):
-```
-
-That `1 - proba` is only honest if the model really would have said 0.266 when
-handed blue first. The mirror check is what proves the shortcut is legitimate.
-With an intercept in the calibrator it wouldn't be: the model would have said
-something else, and every blue-side stake on every card would be sized off a
-number the model never actually produced.
-
-### What is each fighter worth in dollars?
-
-Two different dollar questions, and they have different answers.
-
-**1. The fair price — what each side is worth as a price.** Flip the probability:
-
-| | probability | fair decimal price | $10 at that price returns |
-|---|---|---|---|
-| red | 0.7340 | 1/0.7340 = **1.362** | $13.62 |
-| blue | 0.2660 | 1/0.2660 = **3.759** | $37.59 |
-
-These are the prices at which *neither* bet makes or loses money in the long run
-— the model's own vig-free book. The two implied probabilities add to exactly
-1.0000, which is the mirror check from the entry above showing up as money: a
-real bookmaker's two prices always add to *more* than 1, and the excess is the
-vig.
-
-**2. What actually goes on the fight.** That needs a bookmaker's price to compare
-against. Say the book offers red 1.50 and blue 2.50 (6.7% overround):
-
-| | model p | offered | implied | edge = p×odds − 1 | Kelly |
-|---|---|---|---|---|---|
-| red | 0.7340 | 1.50 | 0.6667 | **+0.1010** | 0.2020 |
-| blue | 0.2660 | 2.50 | 0.4000 | −0.3350 | 0 |
-
-Red is worth backing at 1.50 because the book prices it at 66.7% and the model
-says 73.4%. **Blue is worth $0** — at 2.50 the book is asking for 40% and the
-model only gives it 26.6%. At most one side of a fight can ever be a value bet.
-
-**The stake is not the Kelly fraction.** That 0.2020 is a *weight*, not "20% of
-the bankroll". Rule A deploys the whole $50 across a card's value bets in
-proportion to their Kelly numbers:
-
-* if red is the card's only value bet, the **entire $50** goes on it — returning
-  $75 (profit +$25) if red wins, −$50 if not;
-* if the card has one other value bet with Kelly 0.05, the split is 0.2020 :
-  0.05, so **$40 on red and $10 on the other**.
-
-**What would make blue backable?** Blue needs a price above its fair 3.759. At
-3.50 the edge is still −0.069. At 4.00 it turns +0.064, a Kelly of 0.021 — a
-real bet, but a tenth of red's weight, so on a card with both it would draw
-about a tenth of the money.
-
-### So β corrects under/over-confidence, centred at 0.5 because the model is biased toward red?
-
-First half right, second half backwards — and the flip is the whole point.
-
-**β does correct confidence.** That's exactly its job: β > 4 stretches scores away
-from the middle (fixing under-confidence), β < 4 squeezes them toward it (fixing
-over-confidence). One knob, one job.
-
-**But the centring is not there to correct a red bias. It's there so that the
-correction can never express one.** Think of two separate ways a model can be
-miscalibrated:
-
-* **Spread** — how far from the middle it dares to go. Symmetric: it treats both
-  fighters the same. This is β's department.
-* **Tilt** — systematically favouring one side regardless of who's fighting. This
-  would need a *second* parameter, the intercept, which we deliberately don't
-  have.
-
-Centring at 0.5 plus `fit_intercept=False` removes the tilt knob from the model
-entirely. A pure stretch about 0.5 pushes each score further out *in whichever
-direction it already pointed* — it can never add a net lean toward red.
-
-**And the red tilt in the data is real; we just refuse to correct it.** Red wins
-63.3% of the historical rows while the model averages 55.8%. That gap is left
-sitting there on purpose, because "red" is a listing convention (ufcstats tends
-to put the favourite there), not a property of a fighter — and live, red is
-whoever the odds feed happened to name first. Correcting it would mean
-systematically inflating whoever appears first on the card.
-
-The numbers show β is powerless against it anyway: calibration moves the mean
-prediction from 0.5580 to 0.5566 — **fourteen ten-thousandths**, against a gap of
-7.5 points. Only an intercept could close that, which is the fix we don't want.
-
-So: **β = how confident, and nothing else. The centring = a guarantee that the
-correction stays even-handed between the two corners.**
-
-### So β corrects under/over-confidence, and centring stops a red bias?
-
-First half exactly right, second half worth straightening out — they're two
-separate knobs doing two separate jobs.
-
-A logistic calibrator σ(a·x + b) has only two things it can do:
-
-* **the slope `a` (our β) — how confident.** Stretches or squeezes the
-  probabilities symmetrically about the anchor. β > 4 stretches (fixes an
-  under-confident model), β < 4 squeezes (fixes an over-confident one). This is
-  the knob we keep and fit.
-* **the intercept `b` — which way it leans.** Shifts everything one direction.
-  This is the knob that would introduce a red bias, and we set it to zero.
-
-So it isn't centring that prevents the red bias — **`fit_intercept=False` is**.
-Keep the intercept and centre anyway and you still get the bias: fitted on this
-project's pool it maps a raw 0.5 to 0.594, red-favouring, centred or not.
-
-Centring does something different: it decides **which raw score the anchor sits
-on**. With no intercept the map always pins whatever you feed in as zero, so
-subtracting 0.5 first is what puts the pin on the neutral score. Skip it and you
-still have no bias term, but the pin lands on p = 0 — a fight the model is
-*certain* red loses would come back as a coin flip. Both pieces are needed, and
-neither substitutes for the other.
-
-One more correction worth making: the bias wouldn't be coming *from the model*.
-The model is mirror-trained, so it has no corner preference to fix — it's the
-calibrator's intercept that would go looking at the training labels, notice red
-wins 63% of them, and bake that in. The anchor isn't repairing a biased model,
-it's stopping the calibrator from adding a bias that was never there.
-
-And note β couldn't fix a corner bias even if you asked it to: a slope moves both
-sides equally in opposite directions, so it can never shift the level. Confidence
-and lean are genuinely independent — which is why you can fit one and forbid the
-other.
-
-### Why 0.5 specifically?
-
-It isn't really a choice — three independent requirements all land on it.
-
-**1. The symmetry forces it.** We need p(A beats B) + p(B beats A) = 1, i.e.
-f(1 − p) = 1 − f(p) for the calibration map f. Now set p = 0.5, the fight where
-swapping the corners changes nothing:
-
-```
-f(0.5) = 1 − f(0.5)   ⟹   2·f(0.5) = 1   ⟹   f(0.5) = 0.5
-```
-
-Any map that treats the two fighters even-handedly *must* pin 0.5. There was
-never a second candidate; picking a different anchor means giving up
-order-invariance.
-
-**2. It's what the training data says "no information" is.** `mirror_fights()`
-adds every fight a second time with the corners swapped and the label flipped, so
-the training set is exactly 50/50 by construction. A model fitted on that has a
-prior of precisely 0.5 — so 0.5 isn't a convention, it's the score that means
-"the features told me nothing about this fight".
-
-**3. It's already the decision boundary.** The winner is picked by
-`raw >= best_th` with `best_th = 0.5`. If the anchor sat anywhere else, the
-display and the decision would disagree for every score between the two — the
-exact bug that got shipped once when an unconstrained intercept moved the
-crossing point to 0.61.
-
-**What goes wrong anywhere else.** Take a fight the model genuinely can't call,
-priced fair by the book at 2.00 each way, and move the anchor:
-
-| anchor | coin-flip fight displays as | edge at 2.00 | what rule A does |
-|---|---|---|---|
-| 0.500 | 0.500 / 0.500 | +0.000 | no bet |
-| 0.520 | 0.520 / 0.480 | +0.040 | backs the first-listed fighter |
-| 0.550 | 0.550 / 0.450 | +0.100 | backs the first-listed fighter |
-| 0.594 | 0.594 / 0.406 | +0.188 | backs the first-listed fighter, Kelly 0.188 |
-
-Every non-0.5 anchor manufactures an edge on a fight we have no opinion about,
-always on whoever happens to be listed first, and Kelly stakes real money on it.
-(0.594 isn't hypothetical — it's what an intercept-ful fit on this project's pool
-actually produces.)
-
-That three separate arguments — symmetry, the training prior, and the decision
-rule — pick the same number is why the design is stable. Move the anchor and all
-three break at once.
-
-### "The displayed favourite can never contradict the 0.5 decision" — how would it?
-
-Every fight produces **two** numbers, from different places:
-
-* the **decision** — who we say wins — comes from the **raw** score:
-  `winner = red if raw_proba >= best_th else blue`, with `best_th = 0.5`;
-* the **displayed confidence** comes from the **calibrated** score, then
-  `confidence = proba if winner == fighter1 else 1 - proba`.
-
-They describe the same fight, so they had better agree about who is favoured.
-
-**Why the decision is made on the raw score at all.** Calibration is monotonic —
-it stretches and squeezes but never reorders — so it cannot change which fighter
-looks stronger. The *only* thing it could change is which side of 0.5 a score
-lands on, and that is fixed entirely by where the map crosses 0.5. Pin the
-crossing at 0.5 and thresholding the raw score and thresholding the calibrated
-score are the *same decision*, always. The anchor turns "which number do we
-threshold?" into a non-question.
-
-**Unpin it and they come apart.** Fit the calibrator with an intercept on this
-project's pool and you get σ(4.3221·p − 1.7828), which crosses 0.5 at a raw score
-of **0.4125**, not 0.5. So every raw score in [0.4125, 0.5) is decided *blue*
-while the calibrated number says *red* is favoured. Take raw = 0.45:
-
-| | calibrated p(red) | printed row |
-|---|---|---|
-| shipped (slope only) | 0.4426 | prediction **BLUE**, confidence **55.7%** ✓ |
-| with an intercept | 0.5405 | prediction **BLUE**, confidence **46.0%** ✗ |
-
-That second row is nonsense on its face: we are picking blue and reporting 46%
-confidence in blue. The weekly predictions table would print it exactly like
-that, because `1 - proba` on a red-favouring calibrated number is below half.
-
-**It isn't a rare corner case.** 1,557 of the 7,869 fights in the current OOF
-pool sit in that band — **one fight in five**. On a typical 12-fight card that's
-two or three rows where the pick and the confidence point at different fighters.
-
-So the phrase means: because σ(β·(p − 0.5)) is pinned at 0.5, the calibrated
-number is on the same side of even as the raw number for *every possible input*.
-Not usually. Always.
-
-### Isn't the 0.5 acting as the intercept?
-
-A constant term does appear — but it isn't free, and that's the whole difference.
-
-Multiply our model out:
-
-```
-σ(β·(p − 0.5))  =  σ(β·p − 0.5β)  =  σ(4.6149·p − 2.3074)
-```
-
-(identical to 2×10⁻¹⁶, i.e. exactly). So yes, there is a −2.3074 sitting there
-looking like an intercept. The catch: it is **forced to equal −β/2**. Change the
-slope and it moves with it. A real intercept is a number the fit picks on its own
-to make the data fit better — and when allowed to, it picks something else
-entirely:
-
-| | slope a | constant b | b as a fraction of a | crosses 0.5 at |
-|---|---|---|---|---|
-| ours | 4.6149 | −2.3074 (**forced** = −a/2) | exactly −0.5 | p = 0.5000 |
-| standard Platt | 4.3221 | −1.7828 (**chosen**) | −0.4125 | p = 0.4125 |
-
-Given a = 4.3221, the constraint would have demanded b = −2.1610. The free fit
-chose −1.7828 instead, because that fits the data better — and in doing so it
-slid the crossing point to 0.4125, which is the decision/display contradiction
-from the entry above.
-
-**The geometry.** On the log-odds scale calibration is just a straight line,
-z = a·p + b, with two degrees of freedom: how steep it is, and how high it sits.
-Ours nails the line through the point (0.5, 0) and lets only the slope pivot
-around it — a line on a hinge, free to rotate, not to slide. Standard Platt lets
-it do both.
-
-So the precise statement isn't "we set b to zero". It's **b = −a/2** — a
-constraint linking the two, not a fixed value. Writing it as `fit_intercept=False`
-on the centred score is simply the tidy way to express that, and it's why the
-count is *one* fitted parameter (4.6149) against Platt's *two* (4.3221, −1.7828).
-
-Which also answers it empirically: if centring were quietly supplying an
-intercept, we'd have two free parameters and the mean predicted probability would
-match the base rate for free. It doesn't — 0.5566 against 0.6327.
-
-### "Centred on 0.5" — one fight, every number explained
-
-Take a fight where the model's raw score for the red-corner fighter is
-**p = 0.65**. The shipped calibrator (13 Sep 2026 artifact) has one learned
-number, **β = 4.6149**, and no intercept. Here is the whole calculation.
-
-**Step 1 — centre: `x = p − 0.5`**
-
-```
-x = 0.65 − 0.5 = +0.15
-```
-
-| number | what it is |
-|---|---|
-| `0.65` | the ensemble's raw output: "65% red wins" |
-| `0.5` | the neutral score — a coin flip, and the training prior (`mirror_fights()` makes the training set exactly 50/50) |
-| `+0.15` | the *lean*: 15 points toward red. Sign carries the direction (negative would mean toward blue); size carries how strong |
-
-"Centred on 0.5" means **this subtraction and nothing more**: the calibrator is
-fitted on, and later fed, `p − 0.5` instead of `p`. That is the literal code,
-`calibrator.fit((oof_proba.values - 0.5).reshape(-1, 1), oof_y.values)` in
-the notebook and `predict_proba([[raw_proba - 0.5]])` in `predict.py`.
-
-**Step 2 — scale: `z = β · x`**
-
-```
-z = 4.6149 × 0.15 = +0.6922
-```
-
-| number | what it is |
-|---|---|
-| `4.6149` | β, the only fitted parameter: how many log-odds one point of lean is worth. Fitted on 7,869 pooled walk-forward OOF fights |
-| `+0.6922` | the calibrated **log-odds** for red. Un-log it: e^0.6922 = 1.998, so red wins about 2 times for every 1 loss — odds of 2:1 |
-
-**Step 3 — squash back to a probability: `σ(z) = 1 / (1 + e^−z)`**
-
-```
-e^−0.6922 = 0.5005
-calibrated = 1 / (1 + 0.5005) = 0.6665
-```
-
-| number | what it is |
-|---|---|
-| `0.5005` | e^−z: the odds *against* red, 1 loss per 2 wins |
-| `0.6665` | the calibrated probability. 2 wins / (2 wins + 1 loss) = 2/3 — same answer as the odds reading |
-
-So **0.65 → 0.6665**: a stretch of +0.0165. β > 4 means "you were slightly
-under-confident, lean a touch harder".
-
-**Now the same fight with the corners swapped.** Raw score for blue-listed-first
-is 0.35:
-
-```
-x = 0.35 − 0.5 = −0.15         (same lean, opposite sign)
-z = 4.6149 × −0.15 = −0.6922   (same log-odds, opposite sign)
-calibrated = 1 / (1 + e^0.6922) = 1 / (1 + 1.998) = 0.3335
-```
-
-And 0.6665 + 0.3335 = **1.0000**. That is the guarantee centring buys: because
-x flips sign when the corners swap, and σ(−z) = 1 − σ(z), the two orientations
-always sum to one.
-
-**And the fight the model can't call.** Raw 0.5:
-
-```
-x = 0.5 − 0.5 = 0
-z = 4.6149 × 0 = 0
-calibrated = 1 / (1 + e^0) = 1 / 2 = 0.5
-```
-
-Note β never mattered in that line — `β × 0 = 0` whatever β is. That is what
-"raw 0.5 maps to calibrated 0.5 exactly" means: the anchor is arithmetic, not a
-fitted coincidence.
-
-**What goes wrong without the subtraction.** Fit the identical no-intercept
-model on `p` instead of `p − 0.5` (checked on the same OOF pool) and β comes
-out **1.3200**. The fixed point is now wherever the input is zero — which is
-p = 0, not p = 0.5:
-
-| raw p | centred: x, z, calibrated | uncentred: z = 1.32·p, calibrated |
-|---|---|---|
-| 0.00 | −0.50, −2.307, **0.0905** | 0.000, **0.5000** |
-| 0.35 | −0.15, −0.692, 0.3335 | 0.462, 0.6135 |
-| 0.50 | 0.00, 0.000, **0.5000** | 0.660, **0.6593** |
-| 0.65 | +0.15, +0.692, 0.6665 | 0.858, 0.7022 |
-| 1.00 | +0.50, +2.307, 0.9095 | 1.320, 0.7892 |
-
-Read the uncentred column: a fight the model is *certain* red loses (0.00)
-displays as a coin flip, a genuine coin flip (0.50) displays as 66% red, and the
-0.35 / 0.65 pair sums to 1.316, not 1 — the model now contradicts itself
-depending on which fighter is listed first. Every number in that column is
-above 0.5, so it would call red the favourite in every fight on the card.
-
-**In one sentence:** centring on 0.5 re-expresses the raw score as a signed
-distance from the coin-flip point, so that the no-intercept calibrator's
-built-in fixed point (input 0 → output 0.5) lands on the neutral score rather
-than on p = 0.
-
-### So without centring, a coin flip favours red?
-
-Yes — a raw 0.5 comes out at 0.659 for red — and it's worse than a lean:
-**every** fight comes out red-favoured.
-
-The reason is structural, not learned. With no intercept the calibrator is
-σ(β · input), and the only point it can pin is input 0 → output 0.5. Uncentred,
-input 0 is raw p = 0, so "red certainly loses" becomes a coin flip. β must be
-positive (a higher raw score does go with more red wins), so every raw score
-above 0 maps above 0.5 — the map physically cannot produce a blue-favoured
-number. The fitted β of 1.32 is the least-bad compromise: a shallow slope that
-squashes everything into 0.5–0.79 rather than pushing it anywhere sensible.
-
-That makes it a different beast from the intercept case above. An intercept-ful
-fit maps 0.5 → 0.594 because it has *read the 63% red base rate off the
-training labels*. The uncentred no-intercept fit maps 0.5 → 0.659 without
-consulting a base rate at all — its anchor is simply welded to the wrong end of
-the scale. Two different failures; centring plus no intercept is the only
-combination that avoids both.
-
-For the record, the uncentred version never shipped — it's the hypothetical
-that shows why the subtraction is there. The bug that did ship was the
-intercept-ful one that moved the crossing point to 0.61.
-
-### Why do we have no intercept?
-
-Because an intercept is the one parameter that shifts every probability the
-same direction, and in this problem there is no direction it would be right to
-shift. Three reasons, all pointing at the same thing:
-
-1. **Red isn't real at predict time.** Live, "red" is whoever the odds feed
-   listed first (`scripts/fetch_card_odds.py`). An intercept is fitted by
-   matching mean predicted to mean actual — 63% red on the OOF pool, because
-   ufcstats tends to list the favourite in red. A labelling convention, not a
-   property of a fighter. Applied live it inflates whoever appears first on the
-   card, and Kelly stakes on the inflation.
-2. **The two orientations must sum to one.** p(A beats B) + p(B beats A) = 1
-   holds exactly for a slope-only map about 0.5 (σ(−z) = 1 − σ(z)). With an
-   intercept the same even matchup passed both ways returns 59.4% for *both*
-   fighters. The mirror-trained model has no corner preference; the intercept
-   would be adding a bias that was never there.
-3. **Decision and display must agree.** The winner is picked on the raw score
-   at 0.5; an intercept moves where the calibrated curve crosses 0.5. The
-   intercept-ful version that shipped crossed at raw 0.41, so one fight in five
-   was decided one way and displayed favouring the other.
-
-**The cost:** a slope alone can only stretch or squeeze symmetrically about 0.5,
-so the per-band gaps in the KAN-57 table (red outperforms its prediction in
-every bin) are left in by design — they are the corner artifact, not a model
-error. That's why KAN-57 measures calibration on a mirrored OOF pool, where the
-base rate is 0.5 by construction and the conflict disappears.
-
-### How is β (or the intercept b) calculated?
-
-By **maximum likelihood**, not a formula. The fit picks the value that makes the
-observed wins and losses most probable, by solving one equation per parameter.
-
-**The objective.** For each past fight i with centred score xᵢ and outcome yᵢ,
-the calibrator says p̂ᵢ = σ(β·xᵢ + b). The log-likelihood is
-
-```
-LL(β, b) = Σ [ yᵢ·ln(p̂ᵢ) + (1 − yᵢ)·ln(1 − p̂ᵢ) ]
-```
-
-— negative log-loss, the same metric the market comparison uses.
-
-**Setting the derivatives to zero gives the score equations.** For the logistic
-curve they collapse to
-
-```
-dLL/dβ = Σ xᵢ·(yᵢ − p̂ᵢ) = 0   → residuals uncorrelated with the score
-dLL/db = Σ   (yᵢ − p̂ᵢ) = 0   → residuals sum to zero: mean predicted = mean actual
-```
-
-The second line is the whole intercept story: fitting b *forces* the average
-prediction to equal the base rate (63% red on our pool). Dropping b means that
-equation is never imposed, so the mean stays at 0.557.
-
-**Toy example, five fights, slope only.**
-
-| fight | x = p − 0.5 | y |
-|---|---|---|
-| 1 | −0.30 | 0 |
-| 2 | −0.10 | 1 |
-| 3 | +0.10 | 1 |
-| 4 | +0.20 | 0 |
-| 5 | +0.40 | 1 |
-
-| β | LL | gradient Σ xᵢ(yᵢ − p̂ᵢ) |
-|---|---|---|
-| 1 | −3.254 | +0.173 |
-| 3 | −3.051 | +0.035 |
-| **3.6045** | **−3.040** | **0.000** |
-| 4 | −3.044 | −0.021 |
-| 5 | −3.090 | −0.068 |
-
-Gradient positive below 3.6 (push β up), negative above (push it down), so the
-fit lands at β = 3.6045. There the x-weighted residuals are +0.076, −0.059,
-+0.041, −0.135, +0.077 — summing to zero, the only condition β must satisfy.
-sklearn's lbfgs does the same search numerically.
-
-**Same toy with an intercept:** a = 3.42, b = 0.26, and the second equation now
-holds too — mean predicted 0.600 = mean actual 3/5. The intercept bought
-base-rate matching and nothing else.
-
-**On the real pool.** At the shipped β = 4.6149 the gradient is +5.02, not zero,
-because sklearn's default L2 penalty pulls β slightly toward zero; the
-unpenalised fit is 4.7048 (the Jira ticket's figure) with identical predictions
-to 3 dp. The likelihood is flat near the optimum (β = 4 → −4757, β = 5 → −4746,
-fit → −4744), which is why the calibrator barely moves anything.
-
-### In that toy table, did fight 1 predict blue to win?
-
-Yes. x = −0.30 means raw p(red) = 0.20, so blue was favoured at 80%; y = 0
-means red lost, so blue won and the call was right. Both columns are from red's
-point of view: x < 0 is a blue lean, y = 1 is a red win.
-
-| fight | raw p(red) | favoured | y | result | call |
-|---|---|---|---|---|---|
-| 1 | 0.20 | blue | 0 | blue won | right |
-| 2 | 0.40 | blue | 1 | red won | wrong |
-| 3 | 0.60 | red | 1 | red won | right |
-| 4 | 0.70 | red | 0 | blue won | wrong |
-| 5 | 0.90 | red | 1 | red won | right |
-
-The residual y − p̂ is each fight's surprise. Fight 1 (p̂ = 0.2532, residual
-−0.2532) is a small surprise — blue winning was expected. Fight 4 (residual
-−0.6728) is the biggest: a 67% favourite lost, so it pulls hardest on β through
-the gradient, and downward — "be less confident".
