@@ -2107,3 +2107,31 @@ combination that avoids both.
 For the record, the uncentred version never shipped — it's the hypothetical
 that shows why the subtraction is there. The bug that did ship was the
 intercept-ful one that moved the crossing point to 0.61.
+
+### Why do we have no intercept?
+
+Because an intercept is the one parameter that shifts every probability the
+same direction, and in this problem there is no direction it would be right to
+shift. Three reasons, all pointing at the same thing:
+
+1. **Red isn't real at predict time.** Live, "red" is whoever the odds feed
+   listed first (`scripts/fetch_card_odds.py`). An intercept is fitted by
+   matching mean predicted to mean actual — 63% red on the OOF pool, because
+   ufcstats tends to list the favourite in red. A labelling convention, not a
+   property of a fighter. Applied live it inflates whoever appears first on the
+   card, and Kelly stakes on the inflation.
+2. **The two orientations must sum to one.** p(A beats B) + p(B beats A) = 1
+   holds exactly for a slope-only map about 0.5 (σ(−z) = 1 − σ(z)). With an
+   intercept the same even matchup passed both ways returns 59.4% for *both*
+   fighters. The mirror-trained model has no corner preference; the intercept
+   would be adding a bias that was never there.
+3. **Decision and display must agree.** The winner is picked on the raw score
+   at 0.5; an intercept moves where the calibrated curve crosses 0.5. The
+   intercept-ful version that shipped crossed at raw 0.41, so one fight in five
+   was decided one way and displayed favouring the other.
+
+**The cost:** a slope alone can only stretch or squeeze symmetrically about 0.5,
+so the per-band gaps in the KAN-57 table (red outperforms its prediction in
+every bin) are left in by design — they are the corner artifact, not a model
+error. That's why KAN-57 measures calibration on a mirrored OOF pool, where the
+base rate is 0.5 by construction and the conflict disappears.
