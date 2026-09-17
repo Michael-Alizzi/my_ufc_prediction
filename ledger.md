@@ -18,3 +18,7 @@
 | 2026-09-05 | UFC Fight Night: Hooker vs. Parnasse | C | $50 | $66.50 | +16.50 | 1/1/0 | +0.33 | +3.1% |
 | 2026-09-05 | UFC Fight Night: Hooker vs. Parnasse | E | $50 | $66.50 | +16.50 | 1/1/0 | +0.33 | +3.1% |
 | 2026-09-05 | UFC Fight Night: Hooker vs. Parnasse | F | $50 | $56.70 | +6.70 | 3/4/0 | +0.23 | +1.3% |
+| 2026-09-12 | Noche UFC: Silva vs. Delgado | A | $50 | $33.66 | -16.34 | 4/7/0 | -0.19 | +1.4% |
+| 2026-09-12 | Noche UFC: Silva vs. Delgado | C | $50 | $0.00 | -50.00 | 0/1/0 | -1.00 | -4.3% |
+| 2026-09-12 | Noche UFC: Silva vs. Delgado | E | $50 | $0.00 | -50.00 | 0/1/0 | -1.00 | -4.3% |
+| 2026-09-12 | Noche UFC: Silva vs. Delgado | F | $49 | $22.50 | -26.50 | 1/4/0 | -2.75 | +0.2% |
