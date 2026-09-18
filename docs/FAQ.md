@@ -1985,3 +1985,22 @@ count is *one* fitted parameter (4.6149) against Platt's *two* (4.3221, −1.782
 Which also answers it empirically: if centring were quietly supplying an
 intercept, we'd have two free parameters and the mean predicted probability would
 match the base rate for free. It doesn't — 0.5566 against 0.6327.
+
+### Why did C and E go all-in on the 6.70 longshot at Noche UFC?
+
+Because Santos was the only bet that survived their filters, and every
+rule normalizes its stakes to sum to the $50 bankroll — one qualifying
+bet × normalize-to-$50 = all-in. C (vig floor) only bets when the edge
+beats the fight's vig: Santos's +10.6% edge cleared the ~5.0% bar while
+all the favourite bets (Martinez +3.0%, Chairez +4.5%, Fiorot +2.7%)
+failed theirs. E (shrunk staking) averages model and market
+probabilities first, which erased every small edge but left a sliver on
+Santos. Neither rule "wanted" $50 in the Kelly sense — C's own fraction
+was 1.9% of bankroll (~$0.93), E's 0.5% (~$0.26) — but with a single
+surviving bet the proportional split degenerates to everything.
+score_card.py's docstring flags exactly this: C is effectively all-in
+most weeks; it had simply won those coin flips (Donte Johnson, Pinto)
+until Santos lost one. The flat-$1 column shows how modest the miss was
+selection-wise (E −$1.00); the −$50 is all sizing. Rules are frozen
+mid-trial (entry 9 pre-registration); a per-bet cap is a legitimate
+post-trial candidate if C/E's selectivity keeps outrunning their sizing.
