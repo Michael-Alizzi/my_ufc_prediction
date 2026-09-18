@@ -6,8 +6,8 @@
   "rounds": 3,
   "odds1": 1.42,
   "odds2": 2.89,
-  "feat_odds1": 1.512,
-  "feat_odds2": 2.951,
+  "feat_odds1": 1.504,
+  "feat_odds2": 2.982,
   "odds_source": "sportsbet",
   "commence": "2026-09-19T22:15:00Z",
   "title_fight": false
@@ -58,8 +58,8 @@
   "rounds": 3,
   "odds1": 2.83,
   "odds2": 1.43,
-  "feat_odds1": 2.897,
-  "feat_odds2": 1.527,
+  "feat_odds1": 2.923,
+  "feat_odds2": 1.52,
   "odds_source": "sportsbet",
   "commence": "2026-09-20T00:15:00Z",
   "title_fight": false
@@ -91,19 +91,6 @@
   "title_fight": false
  },
  {
-  "fighter1": "Renato Moicano",
-  "fighter2": "Brian Ortega",
-  "weight_class": "Lightweight",
-  "rounds": 3,
-  "odds1": 1.46,
-  "odds2": 2.65,
-  "feat_odds1": 1.555,
-  "feat_odds2": 2.803,
-  "odds_source": "sportsbet",
-  "commence": "2026-09-20T01:45:00Z",
-  "title_fight": false
- },
- {
   "fighter1": "Patricio Freire",
   "fighter2": "Dooho Choi",
   "weight_class": "Featherweight",
@@ -123,8 +110,8 @@
   "rounds": 5,
   "odds1": 1.29,
   "odds2": 3.62,
-  "feat_odds1": 1.358,
-  "feat_odds2": 3.791,
+  "feat_odds1": 1.366,
+  "feat_odds2": 3.731,
   "odds_source": "sportsbet",
   "commence": "2026-09-20T02:45:00Z",
   "title_fight": false
