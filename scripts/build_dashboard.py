@@ -868,6 +868,7 @@ if (!NEXT || NEXT.decided) {
     <label style="font-size:13.5px;color:var(--ink-2)">Bankroll $
       <input id="bankroll-input" type="number" min="0" step="1" value="${NEXT.bankroll}"
         style="width:90px;font:14px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 8px;margin-left:6px"></label>
+    <button id="copy-picks" style="margin-left:12px;font:13px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;cursor:pointer">Copy bet names</button>
     <div class="chart-scroll"><table id="alloc-table">
       <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Allocated</th><th class="num">Returns if wins</th></tr>
       ${valueFights.map(f => `<tr data-i="${f.i}">
@@ -881,6 +882,19 @@ if (!NEXT || NEXT.decided) {
     <p class="sub" style="margin:8px 0 0">That total is a ceiling, not an expectation &mdash; each fight is an
       independent bet, so realistically some win and some lose. It's what you'd collect only in the (unlikely)
       case every placed bet comes in.</p>`;
+  const copyBtn = document.getElementById("copy-picks");
+  copyBtn.addEventListener("click", async () => {
+    const names = valueFights.map(f => f.bet_on).join("\n");
+    try { await navigator.clipboard.writeText(names); }
+    catch (e) {  // clipboard API can be blocked in embedded views
+      const ta = document.createElement("textarea");
+      ta.value = names; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); ta.remove();
+    }
+    const old = copyBtn.textContent;
+    copyBtn.textContent = "Copied ✓";
+    setTimeout(() => { copyBtn.textContent = old; }, 1500);
+  });
   const bInput = document.getElementById("bankroll-input");
   const allocRows = [...document.querySelectorAll("#alloc-table tr[data-i]")];
   const allocTotalOut = document.querySelector(".alloc-total-out");
