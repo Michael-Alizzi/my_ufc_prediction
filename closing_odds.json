@@ -1,86 +1,86 @@
 [
  {
-  "fighter1": "Regina Tarin",
-  "fighter2": "JJ Aldrich",
-  "close1": 1.33,
-  "close2": 3.35,
+  "fighter1": "Casey O'Neill",
+  "fighter2": "Eduarda Moura",
+  "close1": 1.42,
+  "close2": 2.89,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Sean King",
-  "fighter2": "Jessie Rosas",
-  "close1": 1.45,
-  "close2": 2.77,
+  "fighter1": "Giga Chikadze",
+  "fighter2": "Joanderson Brito",
+  "close1": 4.35,
+  "close2": 1.22,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Thomas Gantt",
-  "fighter2": "Drakkar Klose",
-  "close1": 1.21,
-  "close2": 4.45,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Yousri Belgaroui",
-  "fighter2": "Djorden Santos",
-  "close1": 1.1,
-  "close2": 7.0,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Ignacio Bahamondes",
-  "fighter2": "Muslim Salikhov",
-  "close1": 1.17,
-  "close2": 5.1,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Tim Elliott",
-  "fighter2": "Edgar Chairez",
-  "close1": 2.7,
-  "close2": 1.47,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "David Martinez",
-  "fighter2": "Dan Ige",
-  "close1": 1.2,
-  "close2": 4.6,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Waldo Cortes-Acosta",
-  "fighter2": "Curtis Blaydes",
+  "fighter1": "Edmen Shahbazyan",
+  "fighter2": "Brunno Ferreira",
   "close1": 1.5,
-  "close2": 2.6,
+  "close2": 2.59,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Manon Fiorot",
-  "fighter2": "Alexa Grasso",
-  "close1": 1.35,
-  "close2": 3.2,
+  "fighter1": "Tai Tuivasa",
+  "fighter2": "Robelis Despaigne",
+  "close1": 4.6,
+  "close2": 1.2,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Tommy McMillen",
-  "fighter2": "Marwan Rahiki",
-  "close1": 1.63,
-  "close2": 2.28,
+  "fighter1": "Marlon Vera",
+  "fighter2": "Charles Jourdain",
+  "close1": 2.75,
+  "close2": 1.46,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Brandon Moreno",
-  "fighter2": "Joseph Morales",
-  "close1": 1.97,
-  "close2": 1.87,
+  "fighter1": "Gable Steveson",
+  "fighter2": "Sean Sharaf",
+  "close1": 1.04,
+  "close2": 11.0,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Jean Silva",
-  "fighter2": "Jose Delgado",
-  "close1": 1.21,
-  "close2": 4.45,
+  "fighter1": "Alonzo Menifield",
+  "fighter2": "Iwo Baraniewski",
+  "close1": 2.97,
+  "close2": 1.4,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Arman Tsarukyan",
+  "fighter2": "Mauricio Ruffy",
+  "close1": 1.3,
+  "close2": 3.52,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Joshua Van",
+  "fighter2": "Alexandre Pantoja",
+  "close1": 1.64,
+  "close2": 2.27,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Ozzy Diaz",
+  "fighter2": "Ryan Gandra",
+  "close1": 5.1,
+  "close2": 1.17,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Joosang Yoo",
+  "fighter2": "Michael Aswell",
+  "close1": 1.55,
+  "close2": 2.47,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Patricio Freire",
+  "fighter2": "Dooho Choi",
+  "close1": 3.29,
+  "close2": 1.34,
   "source": "sportsbet"
  }
 ]
