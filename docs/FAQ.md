@@ -2004,3 +2004,31 @@ until Santos lost one. The flat-$1 column shows how modest the miss was
 selection-wise (E −$1.00); the −$50 is all sizing. Rules are frozen
 mid-trial (entry 9 pre-registration); a per-bet cap is a legitimate
 post-trial candidate if C/E's selectivity keeps outrunning their sizing.
+
+### Why didn't the model bet on Gable Steveson at UFC 331?
+
+It did back him to *win* — Steveson is the model's second-most-confident
+pick on the card at **82.0%**. What it refused was the price. Sportsbet
+had him at **1.04**, which needs a **96.2%** win rate just to break even
+(de-vigged, the market's real opinion is 91.4%). At the model's 82.0%:
+
+    edge = 0.8201 × 1.04 − 1 = −0.147
+
+So every $1 on Steveson returns about **85c** in expectation — a 14.7%
+expected loss. `kelly_edge` floors any negative edge at 0, so the stake
+is $0.
+
+The same disagreement makes the other corner the biggest value on the
+card. Sean Sharaf at **11.00** only needs **9.1%** to break even (8.6%
+de-vigged); the model gives him **18.0%** — roughly double:
+
+    edge  = 0.1799 × 11.00 − 1 = +0.979   (+97.9% expected)
+    kelly = 0.979 / (11.00 − 1) = 9.79% of bankroll  →  $6 of the $50
+
+That's the "bet on the fighter the model predicts to lose" case the
+predictions footer flags: a heavy favourite the market prices as a near
+lock, where the model's dissent is worth far more on the cheap side than
+on the expensive one. The shadows agreed and went harder — C $10, E $15
+on Sharaf (E shrinks to 13.3%, still +46% edge). Worth remembering the
+asymmetry: at 1.04 being right pays 4c per dollar, while at 11.00 being
+right pays $10.
