@@ -501,7 +501,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
 
     <div class="card">
       <h2>Rule comparison &middot; live record</h2>
-      <p class="sub">Rule A is staked with real money; C (vig floor), E (shrunk staking) and F (fitted blend) are shadow-logged on identical cards. Net is the real $50-bankroll-replay number the promotion decision (below) is made on.</p>
+      <p class="sub">Rule A is staked with real money; C (vig floor), E (shrunk staking) and F (fitted blend) are shadow-logged on identical cards. Net is the real $50-bankroll-replay number the promotion decision (below) is made on. Staked and Returned are cumulative across every scored event ($50 re-staked each card), so ROI is return on turnover &mdash; not a return on $50 of capital.</p>
       <div class="chart-scroll"><table id="rule-table"></table></div>
     </div>
 
@@ -800,8 +800,8 @@ initReturnChart(expChartCard, RULES, "Return &amp; performance over time", "net"
 // live Avg CLV yet; the ledger-driven value replaces it as snapshots accrue.
 const RETRO_CLV = { A: 2.5, C: 5.3, E: 5.3, F: 2.6 };
 const rt = document.getElementById("rule-table");
-rt.innerHTML = `<tr><th>Rule</th><th class="num">Staked</th>
-  <th class="num">Returned</th><th class="num">Net</th><th class="num">ROI</th>
+rt.innerHTML = `<tr><th>Rule</th><th class="num" title="Cumulative turnover: $50 re-staked on each of the ${n} scored events, NOT capital at risk — you only ever have one event's $50 down at a time.">Total staked (${n} \u00d7 $50)</th>
+  <th class="num">Returned</th><th class="num">Net</th><th class="num" title="Net divided by total staked — return on turnover, the standard betting measure.">ROI</th>
   <th class="num">Hit rate</th><th class="num">Avg CLV</th><th class="num">Cards ahead of A</th></tr>` +
   RULES.map(r => {
     const t = tot[r];

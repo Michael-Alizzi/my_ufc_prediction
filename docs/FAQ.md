@@ -2032,3 +2032,21 @@ on the expensive one. The shadows agreed and went harder — C $10, E $15
 on Sharaf (E shrinks to 13.3%, still +46% edge). Worth remembering the
 asymmetry: at 1.04 being right pays 4c per dollar, while at 11.00 being
 right pays $10.
+
+### The Rule comparison table says "staked $300" — that's not right, is it?
+
+It is right, but the old label invited the misreading (fixed Sep 2026 to
+"Total staked (N × $50)"). It's **cumulative turnover**: $50 re-staked on
+each of the 6 scored events = $300 of bets placed over the trial. It is
+NOT capital at risk — you only ever have one card's $50 down at a time,
+and you've never needed a $300 float.
+
+The distinction matters for ROI, which divides net by that turnover:
+rule A's +$78.61 / $300 = **+26.2%**, i.e. 26c profit per dollar *passed
+through* the book. Measured against the $50 you actually float it would
+read +157%, which is a different (and much flattier) question. Return on
+turnover is the standard betting measure and the one the backtest's ROIs
+use, so the trial reports it that way for a like-for-like comparison.
+
+Sanity check on the real money: six cards in, you've put $50 down six
+times and are **+$78.61** ahead overall.
