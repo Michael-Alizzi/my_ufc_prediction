@@ -2050,3 +2050,25 @@ use, so the trial reports it that way for a like-for-like comparison.
 
 Sanity check on the real money: six cards in, you've put $50 down six
 times and are **+$78.61** ahead overall.
+
+### 15 × 11 is $165 — why does E show +$143.08 for UFC 331?
+
+Two things sit between the two numbers: the $165 is **gross return** on
+one bet, while +$143.08 is **net profit across all three** of E's bets
+that card.
+
+| E's bet | Stake | Odds | Result | Returns | Profit |
+|---|---|---|---|---|---|
+| Sean Sharaf | $15 | 11.00 | won | $165.00 | **+$150.00** |
+| Edmen Shahbazyan | $18 | 1.56 | won | $28.08 | +$10.08 |
+| Charles Jourdain | $17 | 1.43 | lost | $0.00 | −$17.00 |
+| **Total** | **$50** | | 2/3 | **$193.08** | **+$143.08** |
+
+First, $15 of that $165 is your own stake coming back, so the Sharaf bet
+*profits* $150, not $165 (decimal odds always include the stake —
+11.00 means "$10 profit plus your dollar back"). Second, E spread the
+$50 across three fights, and Jourdain's $17 was lost while Shahbazyan
+added $10.08. So: 150 + 10.08 − 17 = **$143.08**.
+
+The ledger's Returned column shows the gross ($193.08) and Net shows the
+profit (+$143.08); they always differ by exactly that card's stake ($50).
