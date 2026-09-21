@@ -2072,3 +2072,33 @@ added $10.08. So: 150 + 10.08 − 17 = **$143.08**.
 
 The ledger's Returned column shows the gross ($193.08) and Net shows the
 profit (+$143.08); they always differ by exactly that card's stake ($50).
+
+### How is rule A's ROI calculated?
+
+One line, in `scripts/build_dashboard.py:85`:
+
+    ROI = 100 × net / staked        where net = returned − staked
+
+Both inputs are **summed across every scored event first**, then divided
+once — so the Performance tab's Rule A ROI tile and the Experiments
+comparison table read from the same number. With six cards logged:
+
+    staked   = 50 × 6            = $300
+    returned = 49.97 + 44.61 + 92.16 + 54.82 + 33.66 + 103.39 = $378.61
+    net      = 378.61 − 300      = +$78.61
+    ROI      = 100 × 78.61 / 300 = +26.2%
+
+Four things worth knowing about that number:
+
+- **It's pooled, not an average of per-event ROIs.** Every dollar counts
+  equally regardless of which card it rode on. Right now both methods
+  give 26.2% because every card stakes exactly $50; they would diverge
+  the moment a card used a different bankroll.
+- **The denominator is turnover, not capital** — $300 of bets placed,
+  not $300 ever at risk (see the "staked $300" entry above).
+- **Voided fights never enter it.** `score_card.py` skips them before
+  totalling: the stake comes back, so it was never risked.
+- **It's the same convention as the backtest**, so the live +26.2% is
+  comparable in kind to the Backtest reference table's Kelly ROI of
+  +14.0% for rule A — though at six events the live figure is noise, and
+  one card (UFC 331's +106.8%) is doing most of the work.
