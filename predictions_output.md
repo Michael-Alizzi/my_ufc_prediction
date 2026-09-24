@@ -1,20 +1,20 @@
-## UFC Predictions: UFC 331: Van vs. Pantoja 2 (Sep 19, Los Angeles)
-_Generated 2026-09-18 05:33_
+## UFC Predictions: UFC Fight Night: Rosas Jr. vs. Barcelos (Sep 26, 2026)
+_Generated 2026-09-24 23:11_
 
 | Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking $50 total) | Shadow rules (C vig-floor / E shrunk / F fitted-blend, not staked) |
 |---|---|---|---|---|---|---|
-| Casey O'Neill | Eduarda Moura | Flyweight | **Casey O'Neill** | 68.0% | $0 (no value) | - |
-| Giga Chikadze | Joanderson Brito | Featherweight | **Joanderson Brito** | 84.1% | $10 on Joanderson Brito (@1.24, returns ~$12) | F: $9 on Joanderson Brito (@1.24) |
-| Edmen Shahbazyan | Brunno Ferreira | Middleweight | **Edmen Shahbazyan** | 71.1% | $11 on Edmen Shahbazyan (@1.56, returns ~$17) | C: $19 on Edmen Shahbazyan (@1.56) / E: $18 on Edmen Shahbazyan (@1.56) / F: $13 on Edmen Shahbazyan (@1.56) |
-| Tai Tuivasa | Robelis Despaigne | Heavyweight | **Robelis Despaigne** | 84.7% | $0 (no value) | - |
-| Marlon Vera | Charles Jourdain | Bantamweight | **Charles Jourdain** | 76.6% | $12 on Charles Jourdain (@1.43, returns ~$17) | C: $21 on Charles Jourdain (@1.43) / E: $17 on Charles Jourdain (@1.43) / F: $14 on Charles Jourdain (@1.43) |
-| Gable Steveson | Sean Sharaf | Heavyweight | **Gable Steveson** | 82.0% | $6 on Sean Sharaf (@11.00, returns ~$66) | C: $10 on Sean Sharaf (@11.00) / E: $15 on Sean Sharaf (@11.00) / F: $7 on Sean Sharaf (@11.00) |
-| Alonzo Menifield | Iwo Baraniewski | Light Heavyweight | **error** | - | - | - |
-| Patricio Freire | Dooho Choi | Featherweight | **Dooho Choi** | 77.3% | $6 on Dooho Choi (@1.34, returns ~$8) | F: $5 on Dooho Choi (@1.34) |
-| Arman Tsarukyan | Mauricio Ruffy | Lightweight | **Arman Tsarukyan** | 78.4% | $2 on Arman Tsarukyan (@1.29, returns ~$3) | - |
-| Joshua Van | Alexandre Pantoja | Flyweight | **Joshua Van** | 59.2% | $3 on Joshua Van (@1.75, returns ~$5) | F: $2 on Joshua Van (@1.75) |
-| Ozzy Diaz | Ryan Gandra | Middleweight | **error** | - | - | - |
-| Joosang Yoo | Michael Aswell | Featherweight | **no data** | - | - | - |
+| Josiah Harrell | Elves Brener | Lightweight | **Elves Brener** | 55.0% | $7 on Elves Brener (@2.05, returns ~$14) | C: $10 on Elves Brener (@2.05) / E: $9 on Elves Brener (@2.05) / F: $7 on Elves Brener (@2.05) |
+| Yazmin Jauregui | Vanessa Demopoulos | Strawweight | **Yazmin Jauregui** | 84.3% | $1 on Vanessa Demopoulos (@6.75, returns ~$7) | C: $1 on Vanessa Demopoulos (@6.75) / E: $0 on Vanessa Demopoulos (@6.75) / F: $1 on Vanessa Demopoulos (@6.75) |
+| Alatengheili | John Castaneda | Bantamweight | **John Castaneda** | 77.7% | $0 (no value) | - |
+| Mahammadali Osmanli | Ilimbek Akylbek | Bantamweight | **no data** | - | - | - |
+| Melissa Amaya | Valesca Machado | Strawweight | **no data** | - | - | - |
+| Ricky Simon | Montel Jackson | Bantamweight | **Montel Jackson** | 68.5% | $1 on Montel Jackson (@1.48, returns ~$1) | - |
+| Christian Edwards | Rodolfo Bellato | Light Heavyweight | **no data** | - | - | - |
+| Robert Bryczek | Rodolfo Vieira | Middleweight | **Rodolfo Vieira** | 69.3% | $12 on Rodolfo Vieira (@1.62, returns ~$20) | C: $16 on Rodolfo Vieira (@1.62) / E: $15 on Rodolfo Vieira (@1.62) / F: $13 on Rodolfo Vieira (@1.62) |
+| Rinya Nakamura | Brady Hiestand | Bantamweight | **Rinya Nakamura** | 83.3% | $11 on Rinya Nakamura (@1.26, returns ~$14) | E: $1 on Rinya Nakamura (@1.26) / F: $10 on Rinya Nakamura (@1.26) |
+| Luis Hernandez | Sedriques Dumas | Light Heavyweight | **no data** | - | - | - |
+| Ailin Perez | Norma Dumont | Bantamweight | **Ailin Perez** | 59.8% | $1 on Ailin Perez (@1.69, returns ~$2) | - |
+| Raoni Barcelos | Raul Rosas Jr. | Bantamweight | **Raul Rosas Jr.** | 72.8% | $17 on Raul Rosas Jr. (@1.61, returns ~$27) | C: $23 on Raul Rosas Jr. (@1.61) / E: $25 on Raul Rosas Jr. (@1.61) / F: $19 on Raul Rosas Jr. (@1.61) |
 
 _XGBoost + LightGBM + CatBoost, stacked on walk-forward OOF; confidence calibrated the same way._
 _Bet column: how to place a total of $50 — your maximum possible loss — across the card. The $50 is split over every side priced below the model's probability, proportional to Kelly edge; stakes always sum to $50. The bet can be on the fighter the model predicts to lose: a near-coin-flip the market prices as a lock is value on the underdog. The model's edge over bookmakers is unproven — only risk what you're happy to lose._
