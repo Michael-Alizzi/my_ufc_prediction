@@ -868,12 +868,13 @@ if (!NEXT || NEXT.decided) {
     <label style="font-size:13.5px;color:var(--ink-2)">Bankroll $
       <input id="bankroll-input" type="number" min="0" step="1" value="${NEXT.bankroll}"
         style="width:90px;font:14px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 8px;margin-left:6px"></label>
-    <button id="copy-picks" style="margin-left:12px;font:13px system-ui;color:var(--ink);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:6px 10px;cursor:pointer">Copy bet names</button>
     <div class="chart-scroll"><table id="alloc-table">
       <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Allocated</th><th class="num">Returns if wins</th></tr>
       ${valueFights.map(f => `<tr data-i="${f.i}">
         <td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
-        <td>${esc(f.bet_on)}</td>
+        <td>${esc(f.bet_on)}
+          <button class="copy-name-btn" data-name="${esc(f.bet_on)}" title="Copy name" aria-label="Copy ${esc(f.bet_on)}"
+            style="margin-left:6px;font:11px system-ui;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 6px;cursor:pointer;vertical-align:middle">⧉</button></td>
         <td class="num">${f.bet_odds.toFixed(2)}</td>
         <td class="num alloc-out">$0</td><td class="num ret-out">—</td></tr>`).join("")}
       <tr style="font-weight:700"><td colspan="3">Total if every placed bet wins</td>
@@ -882,18 +883,19 @@ if (!NEXT || NEXT.decided) {
     <p class="sub" style="margin:8px 0 0">That total is a ceiling, not an expectation &mdash; each fight is an
       independent bet, so realistically some win and some lose. It's what you'd collect only in the (unlikely)
       case every placed bet comes in.</p>`;
-  const copyBtn = document.getElementById("copy-picks");
-  copyBtn.addEventListener("click", async () => {
-    const names = valueFights.map(f => f.bet_on).join("\n");
-    try { await navigator.clipboard.writeText(names); }
-    catch (e) {  // clipboard API can be blocked in embedded views
-      const ta = document.createElement("textarea");
-      ta.value = names; document.body.appendChild(ta);
-      ta.select(); document.execCommand("copy"); ta.remove();
-    }
-    const old = copyBtn.textContent;
-    copyBtn.textContent = "Copied ✓";
-    setTimeout(() => { copyBtn.textContent = old; }, 1500);
+  upcomingEl.querySelectorAll(".copy-name-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const name = btn.dataset.name;
+      try { await navigator.clipboard.writeText(name); }
+      catch (e) {  // clipboard API can be blocked in embedded views
+        const ta = document.createElement("textarea");
+        ta.value = name; document.body.appendChild(ta);
+        ta.select(); document.execCommand("copy"); ta.remove();
+      }
+      const old = btn.textContent;
+      btn.textContent = "✓";
+      setTimeout(() => { btn.textContent = old; }, 1200);
+    });
   });
   const bInput = document.getElementById("bankroll-input");
   const allocRows = [...document.querySelectorAll("#alloc-table tr[data-i]")];
