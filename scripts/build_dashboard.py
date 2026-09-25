@@ -876,25 +876,40 @@ if (!NEXT || NEXT.decided) {
           <button class="copy-name-btn" data-name="${esc(f.bet_on)}" title="Copy name" aria-label="Copy ${esc(f.bet_on)}"
             style="margin-left:6px;font:11px system-ui;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 6px;cursor:pointer;vertical-align:middle">⧉</button></td>
         <td class="num">${f.bet_odds.toFixed(2)}</td>
-        <td class="num alloc-out">$0</td><td class="num ret-out">—</td></tr>`).join("")}
+        <td class="num"><span class="alloc-out">$0</span>
+          <button class="copy-alloc-btn" title="Copy amount" aria-label="Copy allocated amount"
+            style="margin-left:6px;font:11px system-ui;color:var(--ink-2);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 6px;cursor:pointer;vertical-align:middle">⧉</button></td>
+        <td class="num ret-out">—</td></tr>`).join("")}
       <tr style="font-weight:700"><td colspan="3">Total if every placed bet wins</td>
         <td class="num alloc-total-out">$0</td><td class="num ret-total-out">—</td></tr>
     </table></div>
     <p class="sub" style="margin:8px 0 0">That total is a ceiling, not an expectation &mdash; each fight is an
       independent bet, so realistically some win and some lose. It's what you'd collect only in the (unlikely)
       case every placed bet comes in.</p>`;
+  async function copyToClipboard(text) {
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {  // clipboard API can be blocked in embedded views
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy"); ta.remove();
+    }
+  }
+  function flashCopied(btn) {
+    const old = btn.textContent;
+    btn.textContent = "✓";
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  }
   upcomingEl.querySelectorAll(".copy-name-btn").forEach(btn => {
     btn.addEventListener("click", async () => {
-      const name = btn.dataset.name;
-      try { await navigator.clipboard.writeText(name); }
-      catch (e) {  // clipboard API can be blocked in embedded views
-        const ta = document.createElement("textarea");
-        ta.value = name; document.body.appendChild(ta);
-        ta.select(); document.execCommand("copy"); ta.remove();
-      }
-      const old = btn.textContent;
-      btn.textContent = "✓";
-      setTimeout(() => { btn.textContent = old; }, 1200);
+      await copyToClipboard(btn.dataset.name);
+      flashCopied(btn);
+    });
+  });
+  upcomingEl.querySelectorAll(".copy-alloc-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const amt = btn.closest("tr").querySelector(".alloc-out").textContent.replace(/[^0-9.]/g, "");
+      await copyToClipboard(amt);
+      flashCopied(btn);
     });
   });
   const bInput = document.getElementById("bankroll-input");
