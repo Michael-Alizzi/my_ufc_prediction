@@ -25,6 +25,16 @@ mean/median of a per-fight stat. Every corner feature exists as an
 Draws are dropped (no label). ~950 phantom duplicate rows from 1990s
 tournament nights are deduplicated on (r_fighter, b_fighter, date).
 
+**Corner orientation is not stable over time.** ufcstats lists the *winner*
+in the red corner for 95–100% of fights in every year 1994–2009 (e.g. 2008:
+201 of 201); from 2010 the red corner is a real corner and red wins the
+normal 54–62% that follows from promoters listing the favourite red. Model
+training is orientation-blind (mirroring, METHODOLOGY §2) and every market
+metric is orientation-free, so this does not leak into predictions — but
+any diagnostic that reads the corner label (red win rate vs predicted,
+calibration shift tables, an intercept "edge") must exclude pre-2010 rows
+or score a mirrored pool (research log 2026-10-01).
+
 ## 3. Engineered feature families (all prior-fights-only; NaN = no prior data)
 
 | Family | Columns | Definition |

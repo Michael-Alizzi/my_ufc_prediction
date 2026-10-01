@@ -111,6 +111,45 @@ entry records the full market comparison.
 market tie-break — see entries 3-4 at the bottom of this log; the notes
 below are those investigations' history.)
 
+### Queue additions from the 2026-10-01 research run (docs/RESEARCH_LOG.md)
+
+**11. Drop the probability calibrator (serving/betting code; NO retrain) — pre-registered 2026-10-01, awaiting Michael's go.**
+Change (one variable): `predict_winner` returns the raw stacked probability;
+the notebook's Probability Calibration cell and the artifact's `calibrator`
+key are removed (loading an artifact without the key must not fall back —
+one path). `kelly_edge`, the 0.5 decision rule, the stacker and
+antisymmetry are untouched.
+Evidence (shipped 8e artifact, pooled OOF 7,869 fights): on the MIRRORED
+pool — both orientations, so the ufcstats red-corner base rate cancels —
+raw log-loss 0.6009 / Brier 0.2083 vs calibrated 0.6029 / 0.2087; a
+logit-space slope refits to exactly 1.000 (the raw score is already
+calibrated), the prob-space form refits to the same bad place (β=4.66);
+reliability within 1.5 points in every band; chronological cross-fit
+agrees (raw 0.6009, live form 0.6030, isotonic 0.6050). The live job stakes
+on the calibrated number while every backtest in entries 5–10 (and rule
+F's λ) scored the raw one: mid-favourite stakes run ~30% high, underdog
+stakes 20–45% low, versus what was validated.
+Expectation (written before the change): backtested numbers do not move
+(they already use raw); live stakes come into line with them; log-loss of
+the served probability improves 0.002 on the pool. Gate: none of the
+accuracy gates apply (picks unchanged); the entry records the mirrored-pool
+log-loss/Brier before/after and the stake deltas on the next card.
+Timing: the 10-event staking trial (entry 9; 7 graded) froze its inputs —
+clean path is merge after event 10 is graded (~19 Oct 2026); if merged
+earlier, the entry must note which trial cards staked on raw.
+Not a retread: KAN-57 flagged the in-sample regression and the
+backtest/live mismatch as open questions; this is the measurement it asked
+for, decided.
+
+**12. TFM→GBT distillation (TabTune `TabDistiller`, TabICLv2 teacher) — queue, demoted (expected gain ≤0.001 at 267 features; see research log 2026-10-01 verdict 2).**
+**13. Fractional Kelly (replace the 0.25 cap) — queue, post-trial, entry-9 pre-registration pattern on pooled OOF.**
+**14. Per-round stat trajectories (round-by-round splits from ufcstats via the sibling scraper) — queue, behind 11–12.**
+(Withdrawn: favourite-longshot-bias staking filter — the cited paper found no such bias in MMA.)
+Data note (2026-10-01): ufcstats lists the WINNER as red for 95–100% of
+fights 1994–2009 (normal 54–62% favourite-as-red from 2010). Model and
+market metrics are orientation-free, but any corner-label diagnostic must
+exclude pre-2010 rows (docs/DATA_DICTIONARY.md).
+
 ### 4. Finish-rate shrinkage        (DECIDED: REVERTED — see entry 4)
 
 Expectation for #4 (written before the run, 2026-08-04): the 4 finish-rate
