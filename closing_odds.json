@@ -1,65 +1,86 @@
 [
  {
-  "fighter1": "Yazmin Jauregui",
-  "fighter2": "Vanessa Demopoulos",
-  "close1": 1.1,
-  "close2": 6.8,
+  "fighter1": "Jacobe Smith",
+  "fighter2": "Bruce Whitehead",
+  "close1": 1.08,
+  "close2": 8.5,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Melissa Amaya",
-  "fighter2": "Valesca Machado",
-  "close1": 2.8,
-  "close2": 1.45,
-  "source": "au_median(6 books)"
- },
- {
-  "fighter1": "Ricky Simon",
-  "fighter2": "Montel Jackson",
-  "close1": 2.8,
-  "close2": 1.43,
-  "source": "au_median(6 books)"
- },
- {
-  "fighter1": "Christian Edwards",
-  "fighter2": "Rodolfo Bellato",
-  "close1": 2.45,
-  "close2": 1.55,
-  "source": "au_median(6 books)"
- },
- {
-  "fighter1": "Robert Bryczek",
-  "fighter2": "Rodolfo Vieira",
-  "close1": 2.3,
-  "close2": 1.63,
-  "source": "au_median(6 books)"
- },
- {
-  "fighter1": "Rinya Nakamura",
-  "fighter2": "Brady Hiestand",
-  "close1": 1.25,
-  "close2": 4.0,
+  "fighter1": "Lucas Armand",
+  "fighter2": "Anthony Wint",
+  "close1": 5.0,
+  "close2": 1.18,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Luis Hernandez",
-  "fighter2": "Sedriques Dumas",
-  "close1": 1.41,
+  "fighter1": "Marcus McGhee",
+  "fighter2": "Anthony Romero",
+  "close1": 1.18,
+  "close2": 5.0,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Imanol Rodriguez",
+  "fighter2": "Alden Coria",
+  "close1": 1.7,
+  "close2": 2.16,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Damian Pinas",
+  "fighter2": "Andrey Pulyaev",
+  "close1": 1.17,
+  "close2": 5.1,
+  "source": "au_median(8 books)"
+ },
+ {
+  "fighter1": "Court McGee",
+  "fighter2": "Eric Nolan",
+  "close1": 2.88,
+  "close2": 1.42,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "King Green",
+  "fighter2": "Esteban Ribovics",
+  "close1": 2.65,
+  "close2": 1.49,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Marvin Vettori",
+  "fighter2": "Ismail Naurdiev",
+  "close1": 2.16,
+  "close2": 1.72,
+  "source": "au_median(8 books)"
+ },
+ {
+  "fighter1": "Khaos Williams",
+  "fighter2": "Roberto Soldic",
+  "close1": 2.7,
+  "close2": 1.47,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Ateba Gautier",
+  "fighter2": "Roman Kopylov",
+  "close1": 1.42,
   "close2": 2.9,
-  "source": "au_median(6 books)"
+  "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Ailin Perez",
-  "fighter2": "Norma Dumont",
-  "close1": 1.61,
-  "close2": 2.32,
-  "source": "au_median(6 books)"
+  "fighter1": "Deiveson Figueiredo",
+  "fighter2": "Payton Talbott",
+  "close1": 6.05,
+  "close2": 1.13,
+  "source": "sportsbet"
  },
  {
-  "fighter1": "Raoni Barcelos",
-  "fighter2": "Raul Rosas Jr.",
-  "close1": 2.25,
-  "close2": 1.67,
-  "source": "au_median(6 books)"
+  "fighter1": "Natalia Silva",
+  "fighter2": "Wang Cong",
+  "close1": 1.49,
+  "close2": 2.65,
+  "source": "sportsbet"
  }
 ]
