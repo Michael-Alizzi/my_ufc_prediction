@@ -1,86 +1,72 @@
 [
  {
-  "fighter1": "Jacobe Smith",
-  "fighter2": "Bruce Whitehead",
-  "close1": 1.08,
-  "close2": 8.5,
+  "fighter1": "RJ Harris",
+  "fighter2": "Allen Frye Jr.",
+  "close1": 1.27,
+  "close2": 3.75,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Lucas Armand",
-  "fighter2": "Anthony Wint",
-  "close1": 5.0,
-  "close2": 1.18,
+  "fighter1": "Felipe Franco",
+  "fighter2": "Brendson Ribeiro",
+  "close1": 1.25,
+  "close2": 4.0,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Marcus McGhee",
-  "fighter2": "Anthony Romero",
-  "close1": 1.18,
-  "close2": 5.0,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Imanol Rodriguez",
-  "fighter2": "Alden Coria",
-  "close1": 1.7,
-  "close2": 2.16,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Damian Pinas",
-  "fighter2": "Andrey Pulyaev",
-  "close1": 1.17,
-  "close2": 5.1,
+  "fighter1": "Ernesta Kareckaite",
+  "fighter2": "Melissa Gatto",
+  "close1": 2.04,
+  "close2": 1.8,
   "source": "au_median(8 books)"
  },
  {
-  "fighter1": "Court McGee",
-  "fighter2": "Eric Nolan",
-  "close1": 2.88,
-  "close2": 1.42,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "King Green",
-  "fighter2": "Esteban Ribovics",
-  "close1": 2.65,
-  "close2": 1.49,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Marvin Vettori",
-  "fighter2": "Ismail Naurdiev",
-  "close1": 2.16,
-  "close2": 1.72,
+  "fighter1": "Francisco Prado",
+  "fighter2": "Ismael Bonfim",
+  "close1": 1.67,
+  "close2": 2.25,
   "source": "au_median(8 books)"
  },
  {
-  "fighter1": "Khaos Williams",
-  "fighter2": "Roberto Soldic",
-  "close1": 2.7,
-  "close2": 1.47,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Ateba Gautier",
-  "fighter2": "Roman Kopylov",
-  "close1": 1.42,
-  "close2": 2.9,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Deiveson Figueiredo",
-  "fighter2": "Payton Talbott",
-  "close1": 6.05,
-  "close2": 1.13,
+  "fighter1": "Julius Walker",
+  "fighter2": "Gerald Meerschaert",
+  "close1": 1.31,
+  "close2": 3.5,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Natalia Silva",
-  "fighter2": "Wang Cong",
-  "close1": 1.49,
-  "close2": 2.65,
+  "fighter1": "Niko Price",
+  "fighter2": "Leon Shahbazyan",
+  "close1": 2.2,
+  "close2": 1.67,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Andre Fili",
+  "fighter2": "Kai Kamaka",
+  "close1": 1.65,
+  "close2": 2.25,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Matheus Camilo",
+  "fighter2": "Jai Herbert",
+  "close1": 1.5,
+  "close2": 2.6,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Malcolm Wellmaker",
+  "fighter2": "Otari Tanzilovi",
+  "close1": 1.45,
+  "close2": 2.76,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Brendan Allen",
+  "fighter2": "Christian Leroy Duncan",
+  "close1": 1.81,
+  "close2": 2.04,
   "source": "sportsbet"
  }
 ]
