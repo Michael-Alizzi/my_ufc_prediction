@@ -118,5 +118,26 @@
    "Eric Nolan"
   ],
   "voids": []
+ },
+ "2026-10-10|UFC Fight Night: Allen vs. Duncan": {
+  "winners": [
+   "Alice Pereira",
+   "Allen Frye Jr.",
+   "Brendson Ribeiro",
+   "Francisco Prado",
+   "Julius Walker",
+   "Niko Price",
+   "Andre Fili",
+   "Jai Herbert",
+   "Loopy Godinez",
+   "Otari Tanzilovi",
+   "Brendan Allen"
+  ],
+  "voids": [
+   [
+    "Ernesta Kareckaite",
+    "Melissa Gatto"
+   ]
+  ]
  }
 }
