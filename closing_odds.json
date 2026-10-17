@@ -1,72 +1,79 @@
 [
  {
-  "fighter1": "RJ Harris",
-  "fighter2": "Allen Frye Jr.",
-  "close1": 1.27,
-  "close2": 3.75,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Felipe Franco",
-  "fighter2": "Brendson Ribeiro",
-  "close1": 1.25,
-  "close2": 4.0,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Ernesta Kareckaite",
-  "fighter2": "Melissa Gatto",
-  "close1": 2.04,
-  "close2": 1.8,
+  "fighter1": "Melissa Croden",
+  "fighter2": "Chelsea Chandler",
+  "close1": 1.28,
+  "close2": 3.65,
   "source": "au_median(8 books)"
  },
  {
-  "fighter1": "Francisco Prado",
-  "fighter2": "Ismael Bonfim",
-  "close1": 1.67,
-  "close2": 2.25,
-  "source": "au_median(8 books)"
- },
- {
-  "fighter1": "Julius Walker",
-  "fighter2": "Gerald Meerschaert",
-  "close1": 1.31,
-  "close2": 3.5,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Niko Price",
-  "fighter2": "Leon Shahbazyan",
-  "close1": 2.2,
-  "close2": 1.67,
+  "fighter1": "Cody Chovancek",
+  "fighter2": "Su Young You",
+  "close1": 1.76,
+  "close2": 2.1,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Andre Fili",
-  "fighter2": "Kai Kamaka",
-  "close1": 1.65,
-  "close2": 2.25,
+  "fighter1": "Chad Anheliger",
+  "fighter2": "Steven Koslow",
+  "close1": 2.35,
+  "close2": 1.6,
+  "source": "au_median(8 books)"
+ },
+ {
+  "fighter1": "Joel Faglier",
+  "fighter2": "Javad Mahjoub",
+  "close1": 1.74,
+  "close2": 2.1,
+  "source": "au_median(8 books)"
+ },
+ {
+  "fighter1": "Julien Leblanc",
+  "fighter2": "Nick Galanti",
+  "close1": 5.6,
+  "close2": 1.14,
+  "source": "au_median(8 books)"
+ },
+ {
+  "fighter1": "Tanner Boser",
+  "fighter2": "Jhonata Diniz",
+  "close1": 2.8,
+  "close2": 1.44,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Matheus Camilo",
-  "fighter2": "Jai Herbert",
-  "close1": 1.5,
-  "close2": 2.6,
+  "fighter1": "Mandel Nallo",
+  "fighter2": "Nate Landwehr",
+  "close1": 1.34,
+  "close2": 3.3,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Malcolm Wellmaker",
-  "fighter2": "Otari Tanzilovi",
-  "close1": 1.45,
-  "close2": 2.76,
+  "fighter1": "Marc-Andre Barriault",
+  "fighter2": "Kyle Daukaus",
+  "close1": 2.66,
+  "close2": 1.48,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Brendan Allen",
-  "fighter2": "Christian Leroy Duncan",
-  "close1": 1.81,
-  "close2": 2.04,
+  "fighter1": "Kyle Nelson",
+  "fighter2": "Cristian Perez",
+  "close1": 3.8,
+  "close2": 1.27,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Erin Blanchfield",
+  "fighter2": "Jasmine Jasudavicius",
+  "close1": 1.29,
+  "close2": 3.64,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Joaquin Buckley",
+  "fighter2": "Mike Malott",
+  "close1": 2.1,
+  "close2": 1.75,
   "source": "sportsbet"
  }
 ]
