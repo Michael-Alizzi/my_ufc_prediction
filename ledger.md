@@ -38,3 +38,7 @@
 | 2026-10-10 | UFC Fight Night: Allen vs. Duncan | C | $50 | $33.00 | -17.00 | 1/3/0 | -1.68 | +0.3% |
 | 2026-10-10 | UFC Fight Night: Allen vs. Duncan | E | $49 | $30.36 | -18.64 | 1/3/0 | -1.68 | +0.3% |
 | 2026-10-10 | UFC Fight Night: Allen vs. Duncan | F | $51 | $35.80 | -15.20 | 2/4/0 | -1.28 | +0.3% |
+| 2026-10-17 | UFC Fight Night: Buckley vs. Malott | A | $50 | $4.86 | -45.14 | 1/4/0 | -2.38 | -0.6% |
+| 2026-10-17 | UFC Fight Night: Buckley vs. Malott | C | $50 | $0.00 | -50.00 | 0/2/0 | -2.00 | -1.4% |
+| 2026-10-17 | UFC Fight Night: Buckley vs. Malott | E | $50 | $0.00 | -50.00 | 0/2/0 | -2.00 | -1.4% |
+| 2026-10-17 | UFC Fight Night: Buckley vs. Malott | F | $50 | $0.00 | -50.00 | 1/4/0 | -2.38 | -0.6% |
