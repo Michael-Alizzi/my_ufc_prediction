@@ -154,18 +154,24 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
             continue
 
     # Split the $100 bankroll across all value bets, proportional to Kelly.
+    # A kelly edge can be real but too small to earn even $1 of a modest
+    # bankroll -- drop those from the split entirely (re-checking, since
+    # removing one can push the next-smallest below $1 too) so they never
+    # surface as a "pick" with no actual money behind it.
     value = [p for p in predictions if p.get("kelly", 0) > 0]
-    if value:
+    while value:
         total = sum(p["kelly"] for p in value)
         for p in value:
             p["stake_amt"] = round(bankroll * p["kelly"] / total)
+        dust = [p for p in value if p["stake_amt"] == 0]
+        if not dust:
+            break
+        value = [p for p in value if p["stake_amt"] > 0]
+    if value:
         max(value, key=lambda p: p["kelly"])["stake_amt"] += bankroll - sum(
             p["stake_amt"] for p in value
         )
         for p in value:
-            if p["stake_amt"] == 0:
-                p["stake"] = "$0 (no value)"
-                continue
             payout = round(p["stake_amt"] * p["bet_odds"])
             p["stake"] = (
                 f"${p['stake_amt']} on {p['bet_on'].title()} "
