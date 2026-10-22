@@ -903,33 +903,28 @@ if (!NEXT || NEXT.decided) {
   const retTotalOut = document.querySelector(".ret-total-out");
   function recompute() {
     const total = parseFloat(bInput.value) || 0;
-    // Same split as send_weekly_predictions.py: fights whose Kelly share
-    // rounds to $0 at this bankroll are dropped (re-checked, since dropping
-    // one can push the next-smallest under $1) and their rows hidden.
-    let pool = total > 0 ? valueFights : [];
     let stakes = {};
-    while (pool.length) {
-      const totalK = pool.reduce((s, f) => s + f.kelly, 0);
-      stakes = {};
-      for (const f of pool) stakes[f.i] = Math.round(total * f.kelly / totalK);
-      const kept = pool.filter(f => stakes[f.i] > 0);
-      if (kept.length === pool.length) break;
-      pool = kept;
+    if (valueFights.length && total > 0) {
+      const totalK = valueFights.reduce((s, f) => s + f.kelly, 0);
+      let sum = 0;
+      for (const f of valueFights) {
+        const amt = Math.round(total * f.kelly / totalK);
+        stakes[f.i] = amt; sum += amt;
+      }
+      const top = valueFights.reduce((a, b) => b.kelly > a.kelly ? b : a);
+      stakes[top.i] += total - sum;  // rounding remainder to the biggest edge
     }
-    if (pool.length) {
-      const top = pool.reduce((a, b) => b.kelly > a.kelly ? b : a);
-      stakes[top.i] += total - pool.reduce((s, f) => s + stakes[f.i], 0);
-    }
-    document.getElementById("alloc-count").textContent = pool.length;
-    let stakedSum = 0, returnSum = 0;
+    let stakedSum = 0, returnSum = 0, shown = 0;
     allocRows.forEach(row => {
       const i = +row.dataset.i, f = NEXT.fights[i], amt = stakes[i] || 0;
-      row.hidden = !amt;
+      row.hidden = amt <= 0;
+      if (amt > 0) shown++;
       row.querySelector(".alloc-out").textContent = fmt$(amt);
       row.querySelector(".ret-out").textContent = fmt$(amt * f.bet_odds);
       stakedSum += amt;
       returnSum += amt * f.bet_odds;
     });
+    document.getElementById("alloc-count").textContent = shown;
     allocTotalOut.textContent = fmt$(stakedSum);
     retTotalOut.textContent = returnSum ? fmt$(returnSum) : "—";
   }
