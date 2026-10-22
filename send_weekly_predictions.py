@@ -163,6 +163,9 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
             p["stake_amt"] for p in value
         )
         for p in value:
+            if p["stake_amt"] == 0:
+                p["stake"] = "$0 (no value)"
+                continue
             payout = round(p["stake_amt"] * p["bet_odds"])
             p["stake"] = (
                 f"${p['stake_amt']} on {p['bet_on'].title()} "
