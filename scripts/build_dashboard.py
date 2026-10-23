@@ -38,10 +38,12 @@ ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|([^|]+)\|\s*([ACEF])\s*"
 
 def parse_ledger(path):
     """ledger.md -> ordered event list with per-rule results."""
+    return parse_ledger_lines(open(path)) if os.path.exists(path) else []
+
+
+def parse_ledger_lines(lines):
     events, index = [], {}
-    if not os.path.exists(path):
-        return events
-    for line in open(path):
+    for line in lines:
         m = ROW.match(line.strip())
         if not m:
             continue
@@ -65,16 +67,17 @@ def parse_ledger(path):
     return sorted(events, key=lambda e: e["date"])
 
 
-def summarise(events):
+def summarise(events, staked_by):
     total = {r: {"staked": 0.0, "returned": 0.0, "won": 0, "placed": 0,
                  "void": 0, "ahead": 0, "flat_net": 0.0} for r in "ACEF"}
     for e in events:
+        s = staked_by[e["date"] + "|" + e["event"]]
         for r, row in e["rules"].items():
             t = total[r]
             for k in ("staked", "returned", "won", "placed", "void"):
                 t[k] += row[k]
             t["flat_net"] += row["flat_net"]
-            if r != "A" and "A" in e["rules"] and row["net"] > e["rules"]["A"]["net"]:
+            if r != s and row["net"] > e["rules"][s]["net"]:
                 t["ahead"] += 1
     for r, t in total.items():
         clvs = [e["rules"][r]["clv"] for e in events
@@ -120,7 +123,7 @@ def _card_fights_rows(fights, preds):
     return rows
 
 
-def next_card(events, artifact_path="ensemble.joblib", history_path="fighter_history.parquet"):
+def next_card(events, staked_rule, artifact_path="ensemble.joblib", history_path="fighter_history.parquet"):
     """The most recently logged card (weekly-predictions-log branch) with
     live odds and each fight's kelly fraction, for the Performance tab's
     bankroll allocator. None if nothing is logged yet or the artifacts this
@@ -138,12 +141,12 @@ def next_card(events, artifact_path="ensemble.joblib", history_path="fighter_his
 
     sys.path.insert(0, ".")
     from predict import load_artifacts, load_history
-    from send_weekly_predictions import make_predictions
+    from send_weekly_predictions import make_predictions, stake_slip
     # event_country isn't persisted anywhere the rebuild can recover, so
     # home-crowd features come back NaN here -- confidence can differ
     # slightly from the original run's; the caption says so.
-    preds = make_predictions(fights, load_history(), load_artifacts(),
-                             bankroll=bankroll)
+    preds = stake_slip(make_predictions(fights, load_history(), load_artifacts(),
+                                        bankroll=bankroll), staked_rule)
     rows = _card_fights_rows(fights, preds)
     if not rows:
         return None
@@ -154,31 +157,22 @@ def next_card(events, artifact_path="ensemble.joblib", history_path="fighter_his
 
 def _event_rule_stats(fights, preds):
     """Per-rule (A/C/E/F) bet count and sum of market-implied win% for one
-    event, parsed from the same `shadow` strings scripts/score_card.py
-    grades from -- gives every rule (not just A) an odds trail for the
-    bet-rate/avg-market-win% chart metrics. Returns (fights_offered, stats)."""
+    event, from the same per-rule stakes scripts/score_card.py grades --
+    gives every rule an odds trail for the bet-rate/avg-market-win% chart
+    metrics. Returns (fights_offered, stats)."""
     stats = {r: {"bets": 0, "implied_sum": 0.0} for r in "ACEF"}
     offered = 0
     for p, f in zip(preds, fights):
         if p.get("prediction") in ("error", "no data") or not (f.get("odds1") and f.get("odds2")):
             continue
         offered += 1
-        if p.get("bet_on") and p.get("bet_odds"):
-            stats["A"]["bets"] += 1
-            stats["A"]["implied_sum"] += 100.0 / p["bet_odds"]
-        for part in (p.get("shadow") or "").split(" / "):
-            if part.startswith(("C:", "E:", "F:")):
-                try:
-                    odds = float(part.split("(@")[1].rstrip(")"))
-                except (IndexError, ValueError):
-                    continue
-                rule = part[0]
-                stats[rule]["bets"] += 1
-                stats[rule]["implied_sum"] += 100.0 / odds
+        for rule, (_, odds, _) in p["stakes"].items():
+            stats[rule]["bets"] += 1
+            stats[rule]["implied_sum"] += 100.0 / odds
     return offered, stats
 
 
-def event_history(events, artifact_path="ensemble.joblib", history_path="fighter_history.parquet"):
+def event_history(events, staked_by, artifact_path="ensemble.joblib", history_path="fighter_history.parquet"):
     """Per-fight betting detail AND per-rule aggregate stats (bet count,
     avg market-implied win%, fights offered) for every ledger event: which
     card.json posted it (walking weekly-predictions-log's history, since
@@ -198,7 +192,7 @@ def event_history(events, artifact_path="ensemble.joblib", history_path="fighter
 
     sys.path.insert(0, ".")
     from predict import load_artifacts, load_history
-    from send_weekly_predictions import make_predictions
+    from send_weekly_predictions import make_predictions, stake_slip
     artifacts, history = load_artifacts(), load_history()
 
     detail, stats = {}, {}
@@ -217,8 +211,9 @@ def event_history(events, artifact_path="ensemble.joblib", history_path="fighter
         fights = json.loads(raw)
         bankroll_m = re.search(r"risking \$(\d+)", match_pred)
         bankroll = int(bankroll_m.group(1)) if bankroll_m else 50
-        preds = make_predictions(fights, history, artifacts, bankroll=bankroll)
         key = e["date"] + "|" + e["event"]
+        preds = stake_slip(make_predictions(fights, history, artifacts, bankroll=bankroll),
+                           staked_by[key])
         detail[key] = _card_fights_rows(fights, preds)
         offered, rule_stats = _event_rule_stats(fights, preds)
         stats[key] = {"offered": offered, "rules": rule_stats}
@@ -295,11 +290,14 @@ def main():
     ap.add_argument("--out", default="dashboard.html")
     args = ap.parse_args()
 
+    from promotion_test import ALPHA, BLOCK, evaluate
     events = parse_ledger(args.ledger)
-    data = {"events": events, "totals": summarise(events)}
+    trial = evaluate(events)
+    trial.update(alpha=ALPHA, block=BLOCK)
+    data = {"events": events, "totals": summarise(events, trial["staked_by"])}
     hist = backtest(args.odds, args.artifact)
-    upcoming = next_card(events, args.artifact)
-    event_detail, event_stats = event_history(events, args.artifact)
+    upcoming = next_card(events, trial["current"]["staked"], args.artifact)
+    event_detail, event_stats = event_history(events, trial["staked_by"], args.artifact)
 
     md = markdown.Markdown(extensions=["tables", "fenced_code"])
     docs_html = {key: md.reset().convert(open(path).read()) if os.path.exists(path)
@@ -322,6 +320,7 @@ def main():
     html = (TEMPLATE
             .replace("__WINNERS__", json.dumps(winners))
             .replace("__DATA__", json.dumps(data))
+            .replace("__TRIAL__", json.dumps(trial))
             .replace("__HIST__", json.dumps(hist))
             .replace("__NEXT__", json.dumps(upcoming))
             .replace("__EVENT_DETAIL__", json.dumps(event_detail))
@@ -488,7 +487,7 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     <div class="card" id="upcoming-card"></div>
     <div class="card">
       <h2>Past events</h2>
-      <p class="sub">Click an event for every fight and what rule A staked on it.</p>
+      <p class="sub">Click an event for every fight and what the staked rule bet on it.</p>
       <div id="events-list"></div>
     </div>
   </section>
@@ -497,17 +496,18 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
     <!-- rule/trial explainer lives in Methodology 13.1 (moved 23 Aug 2026) -->
 
     <div class="tiles" id="tiles"></div>
+    <div class="card" id="exp-results"></div>
     <div id="charts"></div>
 
     <div class="card">
       <h2>Rule comparison &middot; live record</h2>
-      <p class="sub">Rule A is staked with real money; C (vig floor), E (shrunk staking) and F (fitted blend) are shadow-logged on identical cards. Net is the real $50-bankroll-replay number the promotion decision (below) is made on. Staked and Returned are cumulative across every scored event ($50 re-staked each card), so ROI is return on turnover &mdash; not a return on $50 of capital.</p>
+      <p class="sub">One rule is staked with real money (marked below; the Experiment results decide which); the other three are shadow-logged on identical cards. Net is the real $50-bankroll-replay number the promotion decision (below) is made on. Staked and Returned are cumulative across every scored event ($50 re-staked each card), so ROI is return on turnover &mdash; not a return on $50 of capital.</p>
       <div class="chart-scroll"><table id="rule-table"></table></div>
     </div>
 
     <div class="card">
       <h2>Bets by event &middot; every rule</h2>
-      <p class="sub">Click an event for each fight's stake under all four rules — A (staked) beside the C/E/F shadows. Same fighter and odds per fight; the rules differ in whether and how much they bet.</p>
+      <p class="sub">Click an event for each fight's stake under all four rules — the staked rule beside the three shadows. Same fighter and odds per fight; the rules differ in whether and how much they bet.</p>
       <div id="shadow-events"></div>
     </div>
 
@@ -559,6 +559,8 @@ TEMPLATE = r"""<title>Octagon Ledger</title>
 
 <script>
 const DATA = __DATA__;
+const TRIAL = __TRIAL__;
+const STAKED = TRIAL.current.staked, STAKED_BY = TRIAL.staked_by;
 const RULES = ["A", "C", "E", "F"];
 const RULE_NAME = {A: "A · kelly value", C: "C · vig floor", E: "E · shrunk", F: "F · fitted blend"};
 const fmt$ = v => (v < 0 ? "−$" : "$") + Math.abs(v).toFixed(2);
@@ -618,12 +620,36 @@ function tile(k, v, s, vClass) {
   tiles.insertAdjacentHTML("beforeend",
     `<div class="tile"><div class="k">${k}</div><div class="v ${vClass || ""}">${v}</div><div class="s">${s}</div></div>`);
 }
-if (n) {
-  const lead = RULES.map(r => [r, tot[r].net]).sort((a, b) => b[1] - a[1])[0];
-  tile("Trial progress", n + " / 10", "leader so far: rule " + lead[0] + " (" + sign$(lead[1]) + ")");
-} else {
-  tile("Trial progress", "0 / 10", "first grading pending");
-}
+const doneExp = TRIAL.blocks.length, lastExp = TRIAL.blocks[doneExp - 1];
+tile("Experiment " + (doneExp + 1), TRIAL.current.n + " / " + TRIAL.block,
+  "cards scored · rule " + STAKED + " staked");
+tile("Experiments completed", doneExp,
+  lastExp ? "last: " + (lastExp.winner ? "switched to rule " + lastExp.winner : "rule " + lastExp.staked + " stayed")
+          : "first verdict after " + TRIAL.block + " cards");
+
+// -- experiment results (EXPERIMENTS.md entry 11 block test) -------------------
+const expEl = document.getElementById("exp-results");
+const pCut = TRIAL.alpha.toFixed(3);
+const challengers = s => RULES.filter(r => r !== s);
+expEl.innerHTML = `<h2>Experiment results</h2>
+  <p class="sub">Each experiment is a block of ${TRIAL.block} cards, judged once when its last card is scored. Each
+    other rule's per-card $ net minus the staked rule's goes into an exact sign-flip permutation test. A rule passes
+    if it leads on $ and p &lt; ${pCut} (0.10 split over three challengers). Several pass: most cards ahead wins,
+    then the bigger $ lead. The winner is staked from the next experiment on. No p-values for a block in progress.</p>
+  <div class="chart-scroll"><table>
+    <tr><th>#</th><th>Cards</th><th>Staked</th><th>Challengers ($ · ahead · p)</th><th>Verdict</th></tr>
+    ${TRIAL.blocks.map(b => `<tr><td>${b.number}</td><td>${b.first} to ${b.last}</td><td>${b.staked}</td>
+      <td>${challengers(b.staked).map(r => {
+        const x = b.results[r], ok = x.edge > 0 && x.p < TRIAL.alpha;
+        return `<span class="rule-dot f${r}"></span>${r} <span class="${cls(x.edge)}">${sign$(x.edge)}</span> · ${x.ahead}/${TRIAL.block} · p ${x.p.toFixed(3)}${ok ? " <strong>pass</strong>" : ""}`;
+      }).join("<br>")}</td>
+      <td>${b.winner ? "<strong>switch to " + b.winner + "</strong>" : b.staked + " stays"}</td></tr>`).join("")}
+    <tr><td>${doneExp + 1}</td><td>${TRIAL.current.n} / ${TRIAL.block} scored</td><td>${STAKED}</td>
+      <td>${TRIAL.current.n ? challengers(STAKED).map(r =>
+        `<span class="rule-dot f${r}"></span>${r} <span class="${cls(TRIAL.current.edges[r])}">${sign$(TRIAL.current.edges[r])}</span>`).join("<br>")
+        : `<span style="color:var(--muted)">first card pending</span>`}</td>
+      <td style="color:var(--muted)">in progress</td></tr>
+  </table></div>`;
 
 // -- charts ----------------------------------------------------------------
 const shortName = t => esc(t.replace(/^UFC (Fight Night|on \w+)[:\s]*/i, "").split(":")[0].trim());
@@ -734,7 +760,7 @@ function initReturnChart(container, rules, title, defaultMetric, omit) {
   const uid = "rc" + (chartSeq++);
   const series = buildSeries(rules);
   const legend = rules.length > 1
-    ? `<div class="legend">${rules.map(r => `<span class="l${r}">${r} &middot; ${r === "A" ? "staked" : "shadow"}</span>`).join("")}</div>`
+    ? `<div class="legend">${rules.map(r => `<span class="l${r}">${r} &middot; ${r === STAKED ? "staked" : "shadow"}</span>`).join("")}</div>`
     : "";
   const options = Object.entries(METRIC_DEFS)
     .filter(([k]) => !(omit || []).includes(k))
@@ -802,10 +828,10 @@ const RETRO_CLV = { A: 2.5, C: 5.3, E: 5.3, F: 2.6 };
 const rt = document.getElementById("rule-table");
 rt.innerHTML = `<tr><th>Rule</th><th class="num" title="Cumulative turnover: $50 re-staked on each of the ${n} scored events, NOT capital at risk — you only ever have one event's $50 down at a time.">Total staked (${n} \u00d7 $50)</th>
   <th class="num">Returned</th><th class="num">Net</th><th class="num" title="Net divided by total staked — return on turnover, the standard betting measure.">ROI</th>
-  <th class="num">Hit rate</th><th class="num">Avg CLV</th><th class="num">Cards ahead of A</th></tr>` +
+  <th class="num">Hit rate</th><th class="num">Avg CLV</th><th class="num" title="Cards where this rule's net beat the rule staked on that card">Cards ahead of staked</th></tr>` +
   RULES.map(r => {
     const t = tot[r];
-    return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}${r === "A" ? " (staked)" : " (shadow)"}</td>
+    return `<tr><td><span class="rule-dot f${r}"></span>${RULE_NAME[r]}${r === STAKED ? " (staked)" : " (shadow)"}</td>
       <td class="num">${n ? fmt$(t.staked) : "—"}</td>
       <td class="num">${n ? fmt$(t.returned) : "—"}</td>
       <td class="num ${n ? cls(t.net) : ""}">${n ? sign$(t.net) : "—"}</td>
@@ -814,7 +840,7 @@ rt.innerHTML = `<tr><th>Rule</th><th class="num" title="Cumulative turnover: $50
       <td class="num ${t.clv === null ? "" : cls(t.clv)}" title="avg closing-line value: taken price vs the pre-fight closing snapshot; positive = beat the close">${t.clv === null
         ? (RETRO_CLV[r] !== undefined ? `<span style="color:var(--muted)">+${RETRO_CLV[r]}%*</span>` : "—")
         : (t.clv >= 0 ? "+" : "") + t.clv + "%"}</td>
-      <td class="num">${r === "A" ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
+      <td class="num">${r === STAKED ? "—" : n ? t.ahead + " / " + n : "—"}</td></tr>`;
   }).join("");
 if (RULES.some(r => tot[r].clv === null && RETRO_CLV[r] !== undefined))
   rt.insertAdjacentHTML("afterend",
@@ -826,24 +852,29 @@ if (RULES.some(r => tot[r].clv === null && RETRO_CLV[r] !== undefined))
 const NEXT = __NEXT__;
 const EVENT_DETAIL = __EVENT_DETAIL__;
 
-// P/L so far (rule A -- the real money)
+// P/L so far: the real money, i.e. whichever rule was staked on each card
+const stakedRow = e => e.rules[STAKED_BY[e.date + "|" + e.event]];
+const real = ev.reduce((s, e) => ({staked: s.staked + stakedRow(e).staked,
+  returned: s.returned + stakedRow(e).returned}), {staked: 0, returned: 0});
+real.net = real.returned - real.staked;
+real.roi = real.staked ? Math.round(1000 * real.net / real.staked) / 10 : 0;
 const perfTiles = document.getElementById("perf-tiles");
 if (n) {
   perfTiles.insertAdjacentHTML("beforeend",
     `<div class="tile"><div class="k">Profit / loss so far</div>
-     <div class="v ${cls(A.net)}">${sign$(A.net)}</div>
-     <div class="s">${fmt$(A.staked)} staked &rarr; ${fmt$(A.returned)} back across ${n} event${n === 1 ? "" : "s"}</div></div>
-    <div class="tile"><div class="k">Rule A ROI</div>
-     <div class="v ${cls(A.roi)}">${(A.roi >= 0 ? "+" : "") + A.roi}%</div>
+     <div class="v ${cls(real.net)}">${sign$(real.net)}</div>
+     <div class="s">${fmt$(real.staked)} staked &rarr; ${fmt$(real.returned)} back across ${n} event${n === 1 ? "" : "s"}</div></div>
+    <div class="tile"><div class="k">ROI</div>
+     <div class="v ${cls(real.roi)}">${(real.roi >= 0 ? "+" : "") + real.roi}%</div>
      <div class="s">on money actually staked</div></div>`);
 } else {
   perfTiles.insertAdjacentHTML("beforeend",
     `<div class="tile"><div class="k">Profit / loss so far</div>
      <div class="v">&mdash;</div><div class="s">no events scored yet</div></div>
-    <div class="tile"><div class="k">Rule A ROI</div>
+    <div class="tile"><div class="k">ROI</div>
      <div class="v">&mdash;</div><div class="s">no events scored yet</div></div>`);
 }
-initReturnChart(document.getElementById("perf-chart"), ["A"], "Rule A over time");
+initReturnChart(document.getElementById("perf-chart"), [STAKED], "Rule " + STAKED + " (staked) over time");
 
 // upcoming card: bankroll allocator
 const upcomingEl = document.getElementById("upcoming-card");
@@ -938,11 +969,11 @@ if (!n) {
   eventsListEl.innerHTML = `<div class="empty" style="margin-top:0">No events scored yet.</div>`;
 } else {
   eventsListEl.innerHTML = ev.slice().reverse().map(e => {
-    const a = e.rules.A;
+    const a = stakedRow(e);
     const rows = EVENT_DETAIL[e.date + "|" + e.event] || [];
     const body = rows.length
       ? `<div class="chart-scroll" style="margin-top:10px"><table>
-          <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Rule A stake</th></tr>
+          <tr><th>Fight</th><th>Model pick</th><th class="num">Odds</th><th class="num">Rule ${STAKED_BY[e.date + "|" + e.event]} stake</th></tr>
           ${rows.map(f => `<tr><td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
             <td>${esc(f.pick)} (${esc(f.confidence)})</td>
             <td class="num">${f.bet_on ? f.bet_odds.toFixed(2) : "—"}</td>
@@ -968,7 +999,8 @@ if (!n) {
   shadowEventsEl.innerHTML = `<div class="empty" style="margin-top:0">No events scored yet.</div>`;
 } else {
   shadowEventsEl.innerHTML = ev.slice().reverse().map(e => {
-    const rows = (EVENT_DETAIL[e.date + "|" + e.event] || []).filter(f => f.stake || /[CEF]: \$/.test(f.shadow || ""));
+    const s = STAKED_BY[e.date + "|" + e.event];
+    const rows = (EVENT_DETAIL[e.date + "|" + e.event] || []).filter(f => f.stake || /[ACEF]: \$/.test(f.shadow || ""));
     const res = WINNERS[e.date + "|" + e.event] || {};
     const wl = (res.winners || []).map(w => w.toLowerCase());
     const winnerOf = f => {
@@ -981,8 +1013,8 @@ if (!n) {
           <tr><th>Fight</th><th>Bet on <span style="color:var(--muted);font-weight:400">(green won, red lost)</span></th><th class="num">Odds</th>
             <th class="num">A</th><th class="num">C</th><th class="num">E</th><th class="num">F</th></tr>
           ${rows.map(f => {
-            const sh = {};
-            for (const m of (f.shadow || "").matchAll(/([CEF]): \$(\d+)/g)) sh[m[1]] = +m[2];
+            const sh = {[s]: f.stake};
+            for (const m of (f.shadow || "").matchAll(/([ACEF]): \$(\d+)/g)) sh[m[1]] = +m[2];
             const cell = v => v ? fmt$(v) : `<span style="color:var(--muted)">—</span>`;
             const w = winnerOf(f);
             const betCell = !w ? esc(f.bet_on || f.pick)
@@ -991,7 +1023,7 @@ if (!n) {
             return `<tr><td>${esc(f.f1)} <span style="color:var(--muted)">vs</span> ${esc(f.f2)}</td>
               <td>${betCell}</td>
               <td class="num">${f.bet_odds ? f.bet_odds.toFixed(2) : "—"}</td>
-              <td class="num">${cell(f.stake)}</td><td class="num">${cell(sh.C)}</td>
+              <td class="num">${cell(sh.A)}</td><td class="num">${cell(sh.C)}</td>
               <td class="num">${cell(sh.E)}</td><td class="num">${cell(sh.F)}</td></tr>`;
           }).join("")}
           <tr style="font-weight:700"><td colspan="3">Event net (real $)</td>

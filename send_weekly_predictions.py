@@ -21,6 +21,7 @@ import logging
 import math
 import os
 import shutil
+import sys
 from datetime import datetime
 
 import pandas as pd
@@ -36,16 +37,20 @@ logger = logging.getLogger(__name__)
 # and FROZEN for the forward trial — never refit mid-trial.
 LAMBDA_F = 0.746
 
+RULE_NAMES = {"A": "kelly value", "C": "vig floor", "E": "shrunk staking",
+              "F": "fitted blend"}
+
 
 def make_predictions(fights, history, artifacts, event_country=None, bankroll=100):
-    """Predict each fight and size bets.
+    """Predict each fight and size every rule's bets.
 
-    Bet sizing: the whole $100 bankroll is split across every side of every
-    fight where the model's probability beats the odds' implied probability,
+    Each rule (A/C/E/F, see RULE_NAMES) picks at most one value side per
+    fight; each rule then splits the whole bankroll across its own picks,
     proportionally to Kelly fraction. The value side can be the fighter the
     model predicts to LOSE (a narrow pick priced by the market as a lock).
-    "$0 (no value)" = odds given but neither side is mispriced enough;
-    "-" = no odds provided or the fight couldn't be predicted.
+    Per prediction: "picks" = {rule: (name, odds, kelly)}, "stakes" =
+    {rule: (name, odds, dollars)}. Which rule is the real bet is applied
+    separately by stake_slip().
     """
     predictions = []
     known = set(pd.concat([history["r_fighter"], history["b_fighter"]]).unique())
@@ -98,15 +103,14 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                 k = kelly_edge(p, float(o))
                 if k > 0:
                     bet_on, bet_odds, kelly = name, float(o), k
+            picks = {"A": (bet_on, bet_odds, kelly)} if kelly > 0 else {}
 
-            # Shadow rules C (vig floor), E (shrunk staking) and F (fitted
-            # blend) — logged alongside the production rule A, never staked.
+            # Rules C (vig floor), E (shrunk staking) and F (fitted blend).
             # C/E: EXPERIMENTS.md entry 9 (beat A on the full backtest but
             # tripped the halves-consistency clause). F: entry 10 — logit-space
             # blend of model and vig-free market at the model-trust weight
-            # fitted on the pooled-OOF pool (frozen; never refit mid-trial).
-            # The forward record logged here adjudicates on held-out cards.
-            shadow = {}
+            # fitted on the pooled-OOF pool (frozen). Which rule is staked is
+            # decided by the block promotion test (entry 11).
             if fight.get("odds1") and fight.get("odds2"):
                 o1, o2 = float(fight["odds1"]), float(fight["odds2"])
                 vig = 1 / o1 + 1 / o2 - 1
@@ -114,14 +118,14 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                 if max(e1, e2) > vig:
                     n, p_, o_ = ((fight["fighter1"], proba, o1) if e1 > e2
                                  else (fight["fighter2"], 1 - proba, o2))
-                    shadow["C"] = (n, o_, kelly_edge(p_, o_))
+                    picks["C"] = (n, o_, kelly_edge(p_, o_))
                 imp1 = (1 / o1) / (1 / o1 + 1 / o2)
                 ps = (proba + imp1) / 2
                 for n, p_, o_ in ((fight["fighter1"], ps, o1),
                                   (fight["fighter2"], 1 - ps, o2)):
                     k = kelly_edge(p_, o_)
                     if k > 0:
-                        shadow["E"] = (n, o_, k)
+                        picks["E"] = (n, o_, k)
                 logit = lambda x: math.log(x / (1 - x))  # noqa: E731
                 pc = min(max(proba, 1e-6), 1 - 1e-6)
                 pf = 1 / (1 + math.exp(-(LAMBDA_F * logit(pc)
@@ -130,7 +134,7 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                                   (fight["fighter2"], 1 - pf, o2)):
                     k = kelly_edge(p_, o_)
                     if k > 0:
-                        shadow["F"] = (n, o_, k)
+                        picks["F"] = (n, o_, k)
 
             predictions.append({
                 "fighter1": fight["fighter1"],
@@ -138,11 +142,9 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                 "weight_class": weight_class,
                 "prediction": winner.title(),
                 "confidence": f"{confidence:.1%}",
-                "stake": "$0 (no value)" if has_odds else "-",
-                "bet_on": bet_on,
-                "bet_odds": bet_odds,
-                "kelly": kelly,
-                "shadow": shadow,
+                "has_odds": has_odds,
+                "picks": picks,
+                "stakes": {},
             })
         except Exception as e:
             logger.error(f"Prediction failed for {fight['fighter1']} vs {fight['fighter2']}: {e}")
@@ -153,53 +155,55 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
             })
             continue
 
-    # Split the $100 bankroll across all value bets, proportional to Kelly.
-    # A kelly edge can be real but too small to earn even $1 of a modest
-    # bankroll -- drop those from the split entirely (re-checking, since
-    # removing one can push the next-smallest below $1 too) so they never
-    # surface as a "pick" with no actual money behind it.
-    value = [p for p in predictions if p.get("kelly", 0) > 0]
-    while value:
-        total = sum(p["kelly"] for p in value)
-        for p in value:
-            p["stake_amt"] = round(bankroll * p["kelly"] / total)
-        dust = [p for p in value if p["stake_amt"] == 0]
-        if not dust:
-            break
-        value = [p for p in value if p["stake_amt"] > 0]
-    if value:
-        max(value, key=lambda p: p["kelly"])["stake_amt"] += bankroll - sum(
-            p["stake_amt"] for p in value
-        )
-        for p in value:
-            payout = round(p["stake_amt"] * p["bet_odds"])
-            p["stake"] = (
-                f"${p['stake_amt']} on {p['bet_on'].title()} "
-                f"(@{p['bet_odds']:.2f}, returns ~${payout})"
-            )
-
-    # Shadow bankrolls: each rule's own $100 split, display-only.
-    for rule in ("C", "E", "F"):
-        picks = [p for p in predictions if p.get("shadow", {}).get(rule)]
-        total = sum(p["shadow"][rule][2] for p in picks)
-        for p in picks:
-            name, o, k = p["shadow"][rule]
-            amt = round(bankroll * k / total) if total else 0
-            p.setdefault("shadow_txt", []).append(
-                f"{rule}: ${amt} on {name.title()} (@{o:.2f})")
-    for p in predictions:
-        p["shadow"] = " / ".join(p.get("shadow_txt", [])) or "-"
-        p.pop("shadow_txt", None)
+    # Each rule splits the whole bankroll over its own picks, proportional to
+    # Kelly. A kelly edge can be real but too small to earn even $1 -- drop
+    # those (re-checking, since removing one can push the next-smallest
+    # below $1 too); the rounding remainder goes to the biggest edge.
+    for rule in RULE_NAMES:
+        pool = [p for p in predictions if rule in p.get("picks", {})]
+        while pool:
+            total = sum(p["picks"][rule][2] for p in pool)
+            amts = [round(bankroll * p["picks"][rule][2] / total) for p in pool]
+            if all(amts):
+                break
+            pool = [p for p, a in zip(pool, amts) if a]
+        if not pool:
+            continue
+        top = max(range(len(pool)), key=lambda i: pool[i]["picks"][rule][2])
+        amts[top] += bankroll - sum(amts)
+        for p, a in zip(pool, amts):
+            name, o, _ = p["picks"][rule]
+            p["stakes"][rule] = (name, o, a)
 
     return predictions
 
 
-def format_predictions_markdown(event_title, predictions, bankroll=100):
+def stake_slip(predictions, staked_rule):
+    """Present staked_rule's split as the real bet and the other rules as
+    shadow strings. Sets bet_on/bet_odds/kelly/stake_amt/stake/shadow."""
+    for p in predictions:
+        if "picks" not in p:
+            continue
+        p["bet_on"], p["bet_odds"], p["kelly"] = p["picks"].get(staked_rule, (None, None, 0.0))
+        if staked_rule in p["stakes"]:
+            name, o, a = p["stakes"][staked_rule]
+            p["stake_amt"] = a
+            p["stake"] = f"${a} on {name.title()} (@{o:.2f}, returns ~${round(a * o)})"
+        else:
+            p["stake"] = "$0 (no value)" if p["has_odds"] else "-"
+        p["shadow"] = " / ".join(f"{r}: ${a} on {n.title()} (@{o:.2f})"
+                                 for r, (n, o, a) in p["stakes"].items()
+                                 if r != staked_rule) or "-"
+    return predictions
+
+
+def format_predictions_markdown(event_title, predictions, bankroll, staked_rule):
+    shadows = " / ".join(f"{r} {n}" for r, n in RULE_NAMES.items() if r != staked_rule)
     lines = [
         f"## UFC Predictions: {event_title}",
         f"_Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
         "",
-        f"| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet (risking ${bankroll} total) | Shadow rules (C vig-floor / E shrunk / F fitted-blend, not staked) |",
+        f"| Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet: rule {staked_rule} {RULE_NAMES[staked_rule]} (risking ${bankroll} total) | Shadow rules ({shadows}, not staked) |",
         "|---|---|---|---|---|---|---|",
     ]
     for p in predictions:
@@ -212,8 +216,8 @@ def format_predictions_markdown(event_title, predictions, bankroll=100):
         "",
         "_XGBoost + LightGBM + CatBoost, stacked on walk-forward OOF; confidence calibrated the same way._",
         f"_Bet column: how to place a total of ${bankroll} — your maximum possible loss "
-        f"— across the card. The ${bankroll} is split over every side priced below the "
-        "model's probability, proportional to Kelly edge; stakes always sum to "
+        f"— across the card. The ${bankroll} is split over the staked rule's value "
+        "bets, proportional to Kelly edge; stakes always sum to "
         f"${bankroll}. The bet can be on the fighter the model predicts to lose: a "
         "near-coin-flip the market prices as a lock is value on the underdog. "
         "The model's edge over bookmakers is unproven — only risk what you're "
@@ -235,14 +239,20 @@ def main():
     with open(args.fights_json) as f:
         fights = json.load(f)
 
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts"))
+    from promotion_test import staked_rule_from_log
+    staked_rule = staked_rule_from_log()
+    logger.info(f"Staked rule (EXPERIMENTS.md entry 11 block test): {staked_rule}")
+
     predictions = make_predictions(fights, load_history(), load_artifacts(),
                                    event_country=args.event_country,
                                    bankroll=args.bankroll)
     if not predictions:
         raise SystemExit("No predictions produced")
+    stake_slip(predictions, staked_rule)
 
     md = format_predictions_markdown(args.event_title, predictions,
-                                     bankroll=args.bankroll)
+                                     args.bankroll, staked_rule)
     with open("predictions_output.md", "w") as f:
         f.write(md)
     # card.json goes to weekly-predictions-log beside predictions_output.md so

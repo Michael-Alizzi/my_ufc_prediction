@@ -1388,3 +1388,40 @@ after 10 logged events from F's first card (its clock starts later than
 C/E's), promote iff it beats A on cumulative replay return AND was ahead
 on at least 6 of its 10 cards. Expectation, stated now: E outperforms F on
 the forward record. All ROIs remain upper bounds.
+
+### 11. Rolling block promotion test        2026-10-23, pre-registered (no retrain)
+Entry 9's trial finished at 10 cards (UFC 330 to Buckley vs. Malott, 15 Aug
+to 17 Oct): no shadow rule cleared the Wilcoxon bar (E +$99.47 vs A, p=0.22;
+C +$43.07, p=0.27; F −$7.29, p=0.78), so A stayed. But promotion_test.py
+tested every ledger card, so from card 11 it would have re-tested a growing
+sample every week (peeking: switch the first time p dips under 0.10, and the
+real false-switch rate climbs well above 10%). Michael's redesign replaces it.
+Pre-registered before card 11 (UFC 333, 24 Oct) is scored:
+
+- **Experiments are consecutive, non-overlapping blocks of 10 scored cards**
+  (cards 1–10 = experiment 1, 11–20 = experiment 2, ...), each judged
+  exactly once when its 10th card is scored. No interim p-values.
+- **Test, per challenger** (every rule other than the one staked during the
+  block): per-card real-$ net minus the staked rule's net; one-sided exact
+  sign-flip permutation test on the SUM of those 10 dollar differences (all
+  2^10 sign patterns). Dollars, not ranks, because dollars are what's at
+  stake.
+- **Pass**: leads on $ AND p < 0.10/3 = 0.033 (Bonferroni over the three
+  challengers: ~10% chance per block that any zero-edge rule passes).
+- **Tiebreak** if several pass: most cards ahead of the staked rule, then
+  the bigger $ lead.
+- **Switch**: the winner is staked from the next block's first card; the
+  old staked rule becomes a shadow and can win its place back.
+- **Experiment 1 re-scored under this test**: C p=0.258, E p=0.219,
+  F p=0.675, so A stays, the same verdict as entry 9. Experiment 2 starts at
+  UFC 333 with A staked.
+- **Mechanics** (scripts/promotion_test.py `evaluate`): send_weekly_predictions.py
+  reads the staked rule from the log branch's ledger each card day;
+  score_card.py grades all four rules from one per-rule stakes dict,
+  independent of which is staked. From this change every rule's bankroll
+  split uses A's algorithm (drop sub-$1 Kelly shares, rounding remainder to
+  the biggest edge), so each rule's stakes sum to exactly $50; before it,
+  C/E/F rounded independently and could total $49–51.
+- **Expectation, stated now**: at 10-card blocks and this noise (a +$99 lead
+  gave p=0.22), most blocks end with no switch; a switch needs a strong,
+  consistent edge.

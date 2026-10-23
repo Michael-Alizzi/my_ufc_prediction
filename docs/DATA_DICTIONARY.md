@@ -93,7 +93,7 @@ exact card + odds used (two-slot: `odds1/2` Sportsbet staking prices,
 `feat_odds1/2` de-vigged AU-median feature input), committed beside it so
 any future model can replay the same card mechanically (replay metric; see
 EXPERIMENTS.md). `ledger.md` — per-event graded returns for rules A/C/E/F
-(`scripts/score_card.py`; the entry-9/10 10-event promotion record),
+(`scripts/score_card.py`; the entry-11 block promotion record),
 including a flat-$1-per-bet net column (Aug 2026) alongside the real $
 staked/returned/net — the promotion criterion itself is decided on the
 real-$ bankroll-replay column per the pre-registered text; the flat
