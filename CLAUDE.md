@@ -110,7 +110,7 @@ prediction and retraining are deliberately SEPARATED. Two cloud Routines, no PC 
   into git history doing it the old way — revoke-and-avoid, don't reintroduce).
 - **Monday 7:30 AM AEST (scoring day; Friday until 27 Aug 2026, Monday 6 PM until 13 Sep 2026 — moved to land the morning after Sunday-AEST fights, and always BEFORE Friday's card-day job replaces card.json)**: the session fetches results from the web, then
   `scripts/score_card.py` grades rules A/C/E from `card.json` (recomputing stakes with the same
-  code that produced them), appends `ledger.md` (the entry-9 10-event promotion record) and
+  code that produced them), appends `ledger.md` (the entry-11 block promotion record; the staked rule is derived from it) and
   `collected_odds.csv` (phase-2 own-odds training feed) on the log branch.
 - **Retraining is NOT weekly/automatic.** The model trains on historical odds; a retrain without
   `odds_train.csv` silently produces an odds-BLIND model and regresses entry 5.

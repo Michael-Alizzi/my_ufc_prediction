@@ -825,14 +825,15 @@ Neither is "the truth" and they can legitimately disagree on small samples.
 
 ### What should I actually make the promotion decision off of?
 
-The pre-registered criterion (entry 9, revised Aug 20), not whichever chart
-currently looks most convincing: after 10 logged events, promote a shadow
-rule (C/E/F) over A only if it beats A on **cumulative real-$
-bankroll-replay return** *and* a one-sided **Wilcoxon signed-rank test** on
-the paired per-event differences rejects "no systematic edge" at
-&alpha;=0.10 (`scripts/promotion_test.py`; this replaced the original
-"ahead on 6 of 10 cards" clause, which a zero-edge rule passed 37.7% of
-the time by luck). The criterion was written down
+The pre-registered criterion, not whichever chart currently looks most
+convincing. Since 23 Oct 2026 (entry 11): every block of 10 scored cards is
+one experiment, judged once at its 10th card. A shadow rule replaces the
+staked rule only if it leads on **real-$ return over that block** *and* a
+one-sided exact **dollar permutation test** on the per-card differences
+gives p &lt; 0.033 (0.10 split over three challengers;
+`scripts/promotion_test.py`). If several pass, most cards ahead wins, then
+the bigger $ lead. The first block (entry 9's Wilcoxon trial) ended with A
+staying. The criterion was written down
 and committed before any live result existed &mdash; precisely so that once
 metrics start disagreeing (as real-$ and flat-$1 already do, at event 1),
 there's no temptation to reach for whichever one currently flatters the

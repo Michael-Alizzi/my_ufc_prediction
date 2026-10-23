@@ -331,10 +331,10 @@ worst-case loss by design.
 All four rules share the machinery above — the value test, the Kelly
 fraction (capped at $k \le 0.25$), and the proportional bankroll split.
 They differ only in *which probability they trust* and *which edges they
-act on*. A is staked with real money; C, E and F compute their own
-hypothetical splits on every card, logged and graded but never staked
-(EXPERIMENTS.md entries 9–10; promotion is decided by the pre-registered
-10-event forward record, not by backtests).
+act on*. One rule is staked with real money (A unless a block test has
+switched it); the other three compute their own splits on every card,
+logged and graded but never staked (EXPERIMENTS.md entries 9–11; promotion
+is decided by the forward record, not by backtests).
 
 **The live promotion trial** (previously the explainer card atop the
 dashboard's Experiments tab; moved here 23 Aug 2026). C and E looked
@@ -351,7 +351,22 @@ return *and* a one-sided Wilcoxon signed-rank test on the paired
 per-event net differences rejects "no systematic edge" at α = 0.10
 (`scripts/promotion_test.py`; this replaced the original "ahead on ≥6 of
 10 cards" clause, which a zero-edge rule passed 37.7% of the time by
-chance).
+chance). That trial finished at 10 cards with A staying (E +$99.47,
+p=0.22).
+
+**Rolling block test (entry 11, from 23 Oct 2026).** Cards are cut into
+consecutive blocks of 10; each block is one experiment, judged once when
+its 10th card is scored. For each challenger, the 10 per-card differences
+$d_i = \text{net}_{\text{rule}} - \text{net}_{\text{staked}}$ go into a
+one-sided exact sign-flip permutation test on $\sum d_i$:
+$$p = \frac{\#\{s \in \{\pm1\}^{10} : \sum s_i d_i \ge \sum d_i\}}{2^{10}}.$$
+A challenger passes if $\sum d_i > 0$ and $p < 0.10/3 \approx 0.033$
+(three challengers per block). Several pass: most cards ahead wins, then
+the bigger dollar lead. The winner is staked from the next block on.
+*Plain:* every 10 cards, ask once "did any rule beat the one we're betting
+by more dollars than luck plausibly explains?", and switch only if so.
+Testing once per block, never weekly, keeps luck from eventually forcing a
+switch.
 
 Throughout, $o_r, o_b$ are the two corners' decimal odds, $p$ is the model
 probability for red, and the market's vig-free belief is

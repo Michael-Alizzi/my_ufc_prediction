@@ -17,7 +17,7 @@ results.json: {"winners": ["fighter name", ...],
                "voids": [["fighter1", "fighter2"], ...]}   # cancelled/changed
 Winners are matched case-insensitively. A staked fight must appear in
 winners (either corner) or voids, else this exits asking for it -- silent
-holes would corrupt the 10-event promotion record (EXPERIMENTS.md entry 9).
+holes would corrupt the block promotion record (EXPERIMENTS.md entry 11).
 """
 import argparse
 import json
@@ -28,13 +28,13 @@ import pandas as pd
 
 sys.path.insert(0, ".")
 from predict import load_artifacts, load_history  # noqa: E402
-from send_weekly_predictions import make_predictions  # noqa: E402
+from send_weekly_predictions import RULE_NAMES, make_predictions  # noqa: E402
 
 LEDGER = "ledger.md"
 COLLECTED = "collected_odds.csv"
 CLOSING = "closing_odds.json"
 LEDGER_HEADER = (
-    "# Weekly betting ledger (rule A staked; C/E shadow per entry 9, F per entry 10)\n\n"
+    "# Weekly betting ledger (all four rules graded; staked rule per entry 11)\n\n"
     "| Date | Event | Rule | Staked | Returned | Net | Bets won/placed/void | Flat $1 net | Avg CLV |\n"
     "|---|---|---|---|---|---|---|---|---|\n"
 )
@@ -111,19 +111,10 @@ def main():
                              event_country=args.event_country,
                              bankroll=args.bankroll)
 
-    rules = {"A": [], "C": [], "E": [], "F": []}
-    for p, f in zip(preds, fights):
-        if p.get("stake_amt"):
-            rules["A"].append((p["fighter1"], p["fighter2"], p["bet_on"],
-                               p["bet_odds"], p["stake_amt"]))
-        # shadow strings like "C: $50 on Donte Johnson (@1.40)"
-        for part in (p.get("shadow") or "").split(" / "):
-            if part.startswith(("C:", "E:", "F:")):
-                rule = part[0]
-                amt = int(part.split("$")[1].split(" ")[0])
-                name = part.split(" on ")[1].split(" (@")[0]
-                odds = float(part.split("(@")[1].rstrip(")"))
-                rules[rule].append((p["fighter1"], p["fighter2"], name, odds, amt))
+    rules = {r: [] for r in RULE_NAMES}
+    for p in preds:
+        for rule, (name, odds, amt) in p.get("stakes", {}).items():
+            rules[rule].append((p["fighter1"], p["fighter2"], name, odds, amt))
 
     closing = (json.load(open(CLOSING)) if os.path.exists(CLOSING) else None)
 
