@@ -620,12 +620,9 @@ function tile(k, v, s, vClass) {
   tiles.insertAdjacentHTML("beforeend",
     `<div class="tile"><div class="k">${k}</div><div class="v ${vClass || ""}">${v}</div><div class="s">${s}</div></div>`);
 }
-const doneExp = TRIAL.blocks.length, lastExp = TRIAL.blocks[doneExp - 1];
-tile("Experiment " + (doneExp + 1), TRIAL.current.n + " / " + TRIAL.block,
-  "cards scored · rule " + STAKED + " staked");
-tile("Experiments completed", doneExp,
-  lastExp ? "last: " + (lastExp.winner ? "switched to rule " + lastExp.winner : "rule " + lastExp.staked + " stayed")
-          : "first verdict after " + TRIAL.block + " cards");
+const doneExp = TRIAL.blocks.length;
+tile("Experiment " + (doneExp + 1), TRIAL.current.n + " / " + TRIAL.block, "Current rule: " + STAKED);
+tile("Experiments completed", doneExp, "");
 
 // -- experiment results (EXPERIMENTS.md entry 11 block test) -------------------
 const expEl = document.getElementById("exp-results");
