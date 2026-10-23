@@ -637,18 +637,24 @@ expEl.innerHTML = `<h2>Experiment results</h2>
     if it leads on $ and p &lt; ${pCut} (0.10 split over three challengers). Several pass: most cards ahead wins,
     then the bigger $ lead. The winner is staked from the next experiment on. No p-values for a block in progress.</p>
   <div class="chart-scroll"><table>
-    <tr><th>#</th><th>Cards</th><th>Staked</th><th>Challengers ($ · ahead · p)</th><th>Verdict</th></tr>
-    ${TRIAL.blocks.map(b => `<tr><td>${b.number}</td><td>${b.first} to ${b.last}</td><td>${b.staked}</td>
-      <td>${challengers(b.staked).map(r => {
-        const x = b.results[r], ok = x.edge > 0 && x.p < TRIAL.alpha;
-        return `<span class="rule-dot f${r}"></span>${r} <span class="${cls(x.edge)}">${sign$(x.edge)}</span> · ${x.ahead}/${TRIAL.block} · p ${x.p.toFixed(3)}${ok ? " <strong>pass</strong>" : ""}`;
-      }).join("<br>")}</td>
-      <td>${b.winner ? "<strong>switch to " + b.winner + "</strong>" : b.staked + " stays"}</td></tr>`).join("")}
-    <tr><td>${doneExp + 1}</td><td>${TRIAL.current.n} / ${TRIAL.block} scored</td><td>${STAKED}</td>
-      <td>${TRIAL.current.n ? challengers(STAKED).map(r =>
-        `<span class="rule-dot f${r}"></span>${r} <span class="${cls(TRIAL.current.edges[r])}">${sign$(TRIAL.current.edges[r])}</span>`).join("<br>")
-        : `<span style="color:var(--muted)">first card pending</span>`}</td>
-      <td style="color:var(--muted)">in progress</td></tr>
+    <tr><th>#</th><th>Staked</th><th>Rule</th><th class="num">$ vs staked</th><th class="num">Cards ahead</th>
+      <th class="num">p</th><th>Result</th><th>Verdict</th></tr>
+    ${TRIAL.blocks.map(b => challengers(b.staked).map((r, i) => {
+      const x = b.results[r], ok = x.edge > 0 && x.p < TRIAL.alpha;
+      const head = i ? "" : `<td rowspan="3">${b.number}<div class="stamp">${b.first.slice(5)} to ${b.last.slice(5)}</div></td><td rowspan="3">${b.staked}</td>`;
+      const tail = i ? "" : `<td rowspan="3">${b.winner ? "<strong>switch to " + b.winner + "</strong>" : b.staked + " stays"}</td>`;
+      return `<tr>${head}<td><span class="rule-dot f${r}"></span>${r}</td>
+        <td class="num ${cls(x.edge)}">${sign$(x.edge)}</td><td class="num">${x.ahead} / ${TRIAL.block}</td>
+        <td class="num">${x.p.toFixed(3)}</td><td>${ok ? "<strong>pass</strong>" : "fail"}</td>${tail}</tr>`;
+    }).join("")).join("")}
+    ${challengers(STAKED).map((r, i) => {
+      const edge = TRIAL.current.edges[r];
+      const head = i ? "" : `<td rowspan="3">${doneExp + 1}<div class="stamp">${TRIAL.current.n} / ${TRIAL.block} scored</div></td><td rowspan="3">${STAKED}</td>`;
+      const tail = i ? "" : `<td rowspan="3" style="color:var(--muted)">in progress</td>`;
+      return `<tr>${head}<td><span class="rule-dot f${r}"></span>${r}</td>
+        <td class="num ${edge === undefined ? "" : cls(edge)}">${edge === undefined ? "—" : sign$(edge)}</td>
+        <td class="num">—</td><td class="num">—</td><td style="color:var(--muted)">at ${TRIAL.block} / ${TRIAL.block}</td>${tail}</tr>`;
+    }).join("")}
   </table></div>`;
 
 // -- charts ----------------------------------------------------------------
