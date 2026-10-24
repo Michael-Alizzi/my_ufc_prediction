@@ -1,79 +1,79 @@
 [
  {
-  "fighter1": "Melissa Croden",
-  "fighter2": "Chelsea Chandler",
-  "close1": 1.28,
-  "close2": 3.65,
+  "fighter1": "Aaron Pico",
+  "fighter2": "Losene Keita",
+  "close1": 1.66,
+  "close2": 2.23,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Nikita Krylov",
+  "fighter2": "Abdul Rakhman Yakhyaev",
+  "close1": 5.0,
+  "close2": 1.18,
   "source": "au_median(8 books)"
  },
  {
-  "fighter1": "Cody Chovancek",
-  "fighter2": "Su Young You",
-  "close1": 1.76,
-  "close2": 2.1,
+  "fighter1": "Abubakar Vagaev",
+  "fighter2": "Jacob Malkoun",
+  "close1": 1.64,
+  "close2": 2.25,
+  "source": "au_median(8 books)"
+ },
+ {
+  "fighter1": "Alexander Volkov",
+  "fighter2": "Rizvan Kuniev",
+  "close1": 1.83,
+  "close2": 2.01,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Azamat Murzakanov",
+  "fighter2": "Dominick Reyes",
+  "close1": 1.45,
+  "close2": 2.77,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Bolaji Oki",
+  "fighter2": "Daniel Santos",
+  "close1": 1.93,
+  "close2": 1.87,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Chad Anheliger",
-  "fighter2": "Steven Koslow",
-  "close1": 2.35,
-  "close2": 1.6,
+  "fighter1": "Grant Dawson",
+  "fighter2": "Nurullo Aliev",
+  "close1": 1.85,
+  "close2": 1.97,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Iasmin Lucindo",
+  "fighter2": "Nicolle Caliari",
+  "close1": 1.23,
+  "close2": 4.1,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Kody Steele",
+  "fighter2": "Noah Gugnon",
+  "close1": 1.63,
+  "close2": 2.3,
   "source": "au_median(8 books)"
  },
  {
-  "fighter1": "Joel Faglier",
-  "fighter2": "Javad Mahjoub",
-  "close1": 1.74,
-  "close2": 2.1,
+  "fighter1": "Asaf Chopurov",
+  "fighter2": "Colby Thicknesse",
+  "close1": 1.17,
+  "close2": 5.2,
   "source": "au_median(8 books)"
  },
  {
-  "fighter1": "Julien Leblanc",
-  "fighter2": "Nick Galanti",
-  "close1": 5.6,
-  "close2": 1.14,
-  "source": "au_median(8 books)"
- },
- {
-  "fighter1": "Tanner Boser",
-  "fighter2": "Jhonata Diniz",
-  "close1": 2.8,
-  "close2": 1.44,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Mandel Nallo",
-  "fighter2": "Nate Landwehr",
-  "close1": 1.34,
-  "close2": 3.3,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Marc-Andre Barriault",
-  "fighter2": "Kyle Daukaus",
-  "close1": 2.66,
-  "close2": 1.48,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Kyle Nelson",
-  "fighter2": "Cristian Perez",
-  "close1": 3.8,
-  "close2": 1.27,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Erin Blanchfield",
-  "fighter2": "Jasmine Jasudavicius",
-  "close1": 1.29,
-  "close2": 3.64,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Joaquin Buckley",
-  "fighter2": "Mike Malott",
-  "close1": 2.1,
-  "close2": 1.75,
+  "fighter1": "Petr Yan",
+  "fighter2": "Merab Dvalishvili",
+  "close1": 1.67,
+  "close2": 2.2,
   "source": "sportsbet"
  }
 ]
