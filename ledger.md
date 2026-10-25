@@ -42,3 +42,7 @@
 | 2026-10-17 | UFC Fight Night: Buckley vs. Malott | C | $50 | $0.00 | -50.00 | 0/2/0 | -2.00 | -1.4% |
 | 2026-10-17 | UFC Fight Night: Buckley vs. Malott | E | $50 | $0.00 | -50.00 | 0/2/0 | -2.00 | -1.4% |
 | 2026-10-17 | UFC Fight Night: Buckley vs. Malott | F | $50 | $0.00 | -50.00 | 1/4/0 | -2.38 | -0.6% |
+| 2026-10-24 | UFC 333: Volkanovski vs. Evloev | A | $50 | $26.87 | -23.13 | 2/6/0 | -2.80 | +1.1% |
+| 2026-10-24 | UFC 333: Volkanovski vs. Evloev | C | $50 | $19.30 | -30.70 | 1/4/0 | -2.07 | +0.0% |
+| 2026-10-24 | UFC 333: Volkanovski vs. Evloev | E | $50 | $17.37 | -32.63 | 1/4/0 | -2.07 | +0.0% |
+| 2026-10-24 | UFC 333: Volkanovski vs. Evloev | F | $50 | $26.26 | -23.74 | 2/5/0 | -1.80 | +1.6% |
