@@ -134,8 +134,8 @@ def main():
 
     # Phase-2 training feed: every fight's odds (feature slot preferred),
     # keyed the way fighter_history/odds_train are.
-    rows = [{"r_fighter": f["fighter1"].lower().strip(),
-             "b_fighter": f["fighter2"].lower().strip(),
+    rows = [{"r_fighter": f.get("model_name1", f["fighter1"]).lower().strip(),
+             "b_fighter": f.get("model_name2", f["fighter2"]).lower().strip(),
              "date_d": args.event_date,
              "odds_r": f.get("feat_odds1", f.get("odds1")),
              "odds_b": f.get("feat_odds2", f.get("odds2"))}
