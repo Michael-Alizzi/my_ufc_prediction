@@ -2103,3 +2103,65 @@ Four things worth knowing about that number:
   comparable in kind to the Backtest reference table's Kelly ROI of
   +14.0% for rule A — though at six events the live figure is noise, and
   one card (UFC 331's +106.8%) is doing most of the work.
+
+### Why did the slip show a "$0 on Volkov" row, and where did it go? (Oct 2026)
+
+Rule A splits the bankroll in proportion to each value bet's Kelly fraction
+and rounds to whole dollars. Volkov's edge at UFC 333 was real but tiny
+(Kelly ≈ 0.002), so his share of $50 rounded to $0, which printed as a
+pointless "$0 on Alexander Volkov" bet. Fixed twice (PR #28 and
+`52324bb`/`40468ac`): the weekly split drops any fight whose share rounds to
+$0, and the dashboard's bankroll allocator hides any row that gets $0 or
+less at whatever bankroll you type in. Scoring never counted those rows.
+
+### Why did we keep rule A when E made $99 more over the first 10 cards?
+
+The pre-registered rule needed a lead on dollars **and** statistical
+evidence the lead wasn't luck. Over the 10 cards E was +$99.47 vs A but
+p = 0.22: a rule with no real edge does at least that well about 1 time in
+5. About $90 of the lead came from one card (UFC 331); over the other nine,
+E was only +$9.78 (p = 0.44). Measuring in raw dollars (permutation test,
+p = 0.22; paired t-test, p = 0.18) instead of Wilcoxon ranks gives the same
+answer. Keeping A isn't evidence A is better, only that nothing has beaten
+it convincingly yet.
+
+### What goes into the p-value?
+
+Ten numbers: for each card, the challenger's profit minus the staked rule's
+profit. The question is "if the two rules were equally good, so each card
+were a coin flip, how often would chance produce a lead this big?" Since
+23 Oct 2026 (entry 11) that's an exact sign-flip permutation test on the
+summed dollars: all 2^10 = 1,024 ways of flipping which rule won each card
+are counted, and p is the share that give a lead at least as large as the
+real one.
+
+### How are experiments counted, and when can the staked rule change?
+
+Every block of 10 scored cards is one experiment (cards 1–10 = experiment
+1, 11–20 = experiment 2, ...), tested once when its 10th card is scored,
+never weekly. Testing every week and switching the first time p dipped
+would eventually crown a lucky rule (peeking). A challenger passes if it
+leads on dollars and p < 0.033, which is 0.10 split three ways because
+three rules are tested at once (0.10 each would mean a ~27% chance per
+block of a false switch). If several pass: most cards ahead wins, then the
+bigger dollar lead. The winner becomes the real bet from the next card;
+the old rule keeps being logged and can win its place back. The dashboard's
+Experiments tab shows "Experiment N: k / 10" and "Experiments completed".
+
+### Isn't 0.05 the standard significance level?
+
+In science, yes. Here it would make 10-card blocks almost never switch,
+because reaching 0.05 (0.017 per rule after splitting three ways) takes a
+near-sweep. A false switch is cheap in this setup (the rules mostly back
+the same fighters, and the old rule can win its place back), so the trial
+uses 10% overall. The way to use 0.05 sensibly would be bigger blocks
+(e.g. 20 cards).
+
+### Why couldn't I find "Jeongyeong Lee" at Sportsbet?
+
+That was the training data's spelling. The slip showed it because the
+fighter was renamed on the card so the model could find his history.
+Sportsbet lists him as "Jung Young Lee", and the odds feed as "Jeongyoung
+Lee". Since PR #30 the card keeps the odds feed's spelling for the slip and
+puts the data spelling in a separate `model_name` field. Bookies can still
+use their own variant, so the opponent column is the quickest search.
