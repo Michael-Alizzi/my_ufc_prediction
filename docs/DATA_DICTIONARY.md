@@ -90,7 +90,9 @@ the Paired Comparison cell reads it.
 `predictions_output.md` — the card's predictions, confidences, and the
 bankroll's Kelly split (rule A) plus C/E shadow columns. `card.json` — the
 exact card + odds used (two-slot: `odds1/2` Sportsbet staking prices,
-`feat_odds1/2` de-vigged AU-median feature input), committed beside it so
+`feat_odds1/2` de-vigged AU-median feature input; `fighter1/2` are the
+bookmaker's spelling shown on the slip, with optional `model_name1/2` giving
+the training data's spelling where it differs), committed beside it so
 any future model can replay the same card mechanically (replay metric; see
 EXPERIMENTS.md). `ledger.md` — per-event graded returns for rules A/C/E/F
 (`scripts/score_card.py`; the entry-11 block promotion record),

@@ -8,6 +8,9 @@ Usage:
 card.json is a list of {"fighter1", "fighter2", "weight_class"} dicts, each
 optionally with title_fight (bool), rounds (3 or 5, defaults to 3), and
 odds1/odds2 (decimal bookmaker odds for fighter1/fighter2, used to size bets).
+fighter1/fighter2 are the bookmaker's spelling, shown on the bet slip; when the
+training data spells a fighter differently, model_name1/model_name2 give the
+data's spelling for the history lookup.
 --event-country is the card's host country (feeds the home-crowd features);
 omit it if unknown and they fall back to NaN.
 
@@ -57,8 +60,8 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
 
     for fight in fights:
         try:
-            fighter1 = fight["fighter1"].lower().strip()
-            fighter2 = fight["fighter2"].lower().strip()
+            fighter1 = fight.get("model_name1", fight["fighter1"]).lower().strip()
+            fighter2 = fight.get("model_name2", fight["fighter2"]).lower().strip()
             weight_class = fight.get("weight_class", "Middleweight")
             title_fight = bool(fight.get("title_fight", False))
             rounds = 5 if title_fight else int(fight.get("rounds", 3))
@@ -140,7 +143,7 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                 "fighter1": fight["fighter1"],
                 "fighter2": fight["fighter2"],
                 "weight_class": weight_class,
-                "prediction": winner.title(),
+                "prediction": fight["fighter1"] if winner == fighter1 else fight["fighter2"],
                 "confidence": f"{confidence:.1%}",
                 "has_odds": has_odds,
                 "picks": picks,
@@ -188,10 +191,10 @@ def stake_slip(predictions, staked_rule):
         if staked_rule in p["stakes"]:
             name, o, a = p["stakes"][staked_rule]
             p["stake_amt"] = a
-            p["stake"] = f"${a} on {name.title()} (@{o:.2f}, returns ~${round(a * o)})"
+            p["stake"] = f"${a} on {name} (@{o:.2f}, returns ~${round(a * o)})"
         else:
             p["stake"] = "$0 (no value)" if p["has_odds"] else "-"
-        p["shadow"] = " / ".join(f"{r}: ${a} on {n.title()} (@{o:.2f})"
+        p["shadow"] = " / ".join(f"{r}: ${a} on {n} (@{o:.2f})"
                                  for r, (n, o, a) in p["stakes"].items()
                                  if r != staked_rule) or "-"
     return predictions
