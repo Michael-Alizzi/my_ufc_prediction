@@ -2165,3 +2165,29 @@ Sportsbet lists him as "Jung Young Lee", and the odds feed as "Jeongyoung
 Lee". Since PR #30 the card keeps the odds feed's spelling for the slip and
 puts the data spelling in a separate `model_name` field. Bookies can still
 use their own variant, so the opponent column is the quickest search.
+
+### Why was the calibrator removed, and what changes on the slip? (Nov 2026)
+
+Because it was measured and lost. KAN-57's open question was whether the
+slope-only Platt map σ(4.6·(p−0.5)) between the stacker and the Kelly stake
+was earning its place. Scored on a **mirrored** pool of the 7,869 pooled-OOF
+fights (both orientations of each fight, so the red-corner base rate cancels
+and only genuine over/under-confidence remains), the raw stacked score has
+log-loss 0.6009 and the mapped score 0.6029; a logit-space slope refits to
+exactly 1.000, and the reliability curve is within 1.5 points in every band.
+The stacker is already a logistic fit on these inputs, so there was nothing
+left for a second logistic layer to fix, and its probability-space form could
+only distort.
+
+It also mattered for money: the backtests, rule selection and rule F's λ all
+scored the *raw* score (that is what `oof_export` stores), while the weekly
+job staked on the *mapped* one. Mid-favourites were over-staked about 30%
+(p=0.60 at 1.80: Kelly 0.100 vs 0.130) and underdogs under-staked 20–45%.
+From experiment 2's third card the slip stakes on the same number the
+backtests validated; cards 1–2 of experiment 2 (UFC 333, Moicano vs Nolan)
+were staked on the mapped number, recorded in EXPERIMENTS.md entry 12.
+
+What you will see: confidences shift by up to ~0.04 (0.9 used to display as
+0.86), picks never change (the map was monotone and pinned at 0.5), and
+stakes on 0.55–0.75 favourites shrink while underdog stakes grow. All four
+rules A/C/E/F move together, so the block-2 comparison stays fair.

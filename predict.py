@@ -352,13 +352,13 @@ def blend_proba(X, models, lgbm, lgbm_weight, extra=None, extra_weight=0.0,
 def predict_winner(red, blue, weight_class, title_fight, total_round_number,
                     history, artifacts, event_country=None,
                     odds_r=None, odds_b=None):
-    """Returns (winner_name, calibrated_probability_red_wins).
+    """Returns (winner_name, probability_red_wins).
 
-    The winner is decided on the raw ensemble score at best_th (a dedicated
-    experiment confirmed retuning that decision on calibrated scores doesn't
-    beat it); calibration only reshapes the probability shown to the user so
-    it tracks real win frequency, via Platt scaling fit on pooled walk-forward
-    CV predictions (see the notebook's Probability Calibration section).
+    The probability is the OOF-stacked ensemble score as-is: no post-hoc
+    calibrator (EXPERIMENTS.md entry 12 -- the Platt slope that used to sit
+    here was net-negative on the mirrored OOF pool and was the only reason
+    live stakes differed from every backtest). The winner is decided on the
+    same score at best_th.
     """
     X_pred = build_features(
         red, blue, weight_class, title_fight, total_round_number,
@@ -374,10 +374,4 @@ def predict_winner(red, blue, weight_class, title_fight, total_round_number,
         stacker=artifacts.get("stacker")
     )[0])
     winner = red if raw_proba >= artifacts["best_th"] else blue
-    # Calibrator is fit on the score centered at 0.5 (fit_intercept=False)
-    # so raw=0.5 always maps to calibrated=0.5 -- the decision above and the
-    # displayed confidence can never disagree about who's favored.
-    calibrated_proba = float(
-        artifacts["calibrator"].predict_proba([[raw_proba - 0.5]])[0, 1]
-    )
-    return winner, calibrated_proba
+    return winner, raw_proba

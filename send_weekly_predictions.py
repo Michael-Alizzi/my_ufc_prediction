@@ -217,7 +217,7 @@ def format_predictions_markdown(event_title, predictions, bankroll, staked_rule)
         )
     lines += [
         "",
-        "_XGBoost + LightGBM + CatBoost, stacked on walk-forward OOF; confidence calibrated the same way._",
+        "_XGBoost + LightGBM + CatBoost, stacked on walk-forward OOF; confidence is that stacked probability as-is._",
         f"_Bet column: how to place a total of ${bankroll} — your maximum possible loss "
         f"— across the card. The ${bankroll} is split over the staked rule's value "
         "bets, proportional to Kelly edge; stakes always sum to "

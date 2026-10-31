@@ -150,8 +150,8 @@ if st.button("Predict", type="primary"):
             st.success(f"**{winner}** wins")
             st.metric(f"Confidence ({winner})", f"{confidence:.1%}")
             st.caption(
-                "Calibrated via Platt scaling on pooled walk-forward CV "
-                "predictions — tracks real win frequency, not just ranking."
+                "OOF-stacked ensemble probability, served as-is — the same "
+                "number every backtest scores (no post-hoc calibration)."
             )
             # Value bet: at most one side's model probability can beat the
             # market's implied probability. Same maths as the weekly job.
