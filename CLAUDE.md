@@ -177,7 +177,7 @@ automatically.
 - **XGBoost device is `DEVICE`, probed once at startup** (settings cell: a tiny cuda fit in a
   subprocess with a timeout, because a broken driver — the desktop's current state — can HANG CUDA
   init rather than fail it). All four training sites (`create_xgb_model()`, the Optuna objective,
-  the top-3 refits, the calibration OOF refits) reference `DEVICE`; never hardcode a device at one
+  the top-3 refits, the stacker's pooled-OOF refits) reference `DEVICE`; never hardcode a device at one
   site. The laptop joins BOTH tuning studies via `scripts/shared_study_worker.py` (dispatched over
   ssh; family arg `xgb|lgbm` — eGPU trials for XGBoost after running the same probe on its own
   device, CPU trials for LightGBM) — requires `OPTUNA_STORAGE_URL` and
