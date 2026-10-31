@@ -1,79 +1,79 @@
 [
  {
-  "fighter1": "Aaron Pico",
-  "fighter2": "Losene Keita",
-  "close1": 1.66,
-  "close2": 2.23,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Nikita Krylov",
-  "fighter2": "Abdul Rakhman Yakhyaev",
-  "close1": 5.0,
-  "close2": 1.18,
-  "source": "au_median(8 books)"
- },
- {
-  "fighter1": "Abubakar Vagaev",
-  "fighter2": "Jacob Malkoun",
-  "close1": 1.64,
-  "close2": 2.25,
-  "source": "au_median(8 books)"
- },
- {
-  "fighter1": "Alexander Volkov",
-  "fighter2": "Rizvan Kuniev",
-  "close1": 1.83,
-  "close2": 2.01,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Azamat Murzakanov",
-  "fighter2": "Dominick Reyes",
-  "close1": 1.45,
-  "close2": 2.77,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Bolaji Oki",
-  "fighter2": "Daniel Santos",
-  "close1": 1.93,
-  "close2": 1.87,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Grant Dawson",
-  "fighter2": "Nurullo Aliev",
+  "fighter1": "Cody Durden",
+  "fighter2": "Ode Osbourne",
   "close1": 1.85,
-  "close2": 1.97,
+  "close2": 2.0,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Tainara Lisboa",
+  "fighter2": "Lucia Szabová",
+  "close1": 6.25,
+  "close2": 1.12,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Iasmin Lucindo",
-  "fighter2": "Nicolle Caliari",
-  "close1": 1.23,
-  "close2": 4.1,
+  "fighter1": "Piera Rodriguez",
+  "fighter2": "Talita Alencar",
+  "close1": 1.34,
+  "close2": 3.25,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Kody Steele",
-  "fighter2": "Noah Gugnon",
-  "close1": 1.63,
-  "close2": 2.3,
+  "fighter1": "Joseph Kropschot",
+  "fighter2": "Nick Klein",
+  "close1": 1.3,
+  "close2": 3.55,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Mickey Gall",
+  "fighter2": "Zachary Reese",
+  "close1": 4.1,
+  "close2": 1.25,
   "source": "au_median(8 books)"
  },
  {
-  "fighter1": "Asaf Chopurov",
-  "fighter2": "Colby Thicknesse",
-  "close1": 1.17,
-  "close2": 5.2,
-  "source": "au_median(8 books)"
+  "fighter1": "Theodor Berggren",
+  "fighter2": "Rodrigo Sezinando",
+  "close1": 2.43,
+  "close2": 1.56,
+  "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Petr Yan",
-  "fighter2": "Merab Dvalishvili",
-  "close1": 1.67,
-  "close2": 2.2,
+  "fighter1": "Dakota Hope",
+  "fighter2": "Francis Marshall",
+  "close1": 2.7,
+  "close2": 1.47,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Farman Hasanov",
+  "fighter2": "Jean-Paul Lebosnoyani",
+  "close1": 3.42,
+  "close2": 1.32,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Luana Santos",
+  "fighter2": "Yana Santos",
+  "close1": 1.3,
+  "close2": 3.56,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Jacobe Smith",
+  "fighter2": "Randy Brown",
+  "close1": 1.37,
+  "close2": 3.14,
+  "source": "sportsbet"
+ },
+ {
+  "fighter1": "Tom Nolan",
+  "fighter2": "Renato Moicano",
+  "close1": 2.08,
+  "close2": 1.78,
   "source": "sportsbet"
  }
 ]
