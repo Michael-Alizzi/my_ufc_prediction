@@ -247,3 +247,117 @@ trial freeze at Michael's discretion. Nothing surveyed justifies touching
 the model or features this month; the TabPFN-3.5 speedups are the most
 interesting external development and are still blocked by licence and by
 8g's value finding.
+
+---
+
+## 2026-11-01 — third run
+
+**Surveyed** (WebSearch sweep, roughly Aug–Oct 2026, plus the repo's own
+October record):
+
+*Tabular ML*: no October release of note. Revisions only — [ScoringBench](https://arxiv.org/abs/2603.29928)
+(v4, 12 Oct; proper-scoring-rule benchmark, regression-only),
+[TabFORGE](https://arxiv.org/abs/2605.09424) (generative TFM, NeurIPS 2026),
+[High performance, low reliability: uncertainty benchmarking for TFMs](https://arxiv.org/pdf/2605.28554),
+[one-bit calibration estimation](https://arxiv.org/html/2609.05125) (Sep;
+threshold-feedback setting, not ours). Leaderboard noise: [Mitra-v2](https://arxiv.org/html/2609.04540v1),
+[TabPFN-3.5](https://arxiv.org/pdf/2609.17895) and [TabFM](https://arxiv.org/pdf/2609.37959)
+each claim the top of TabArena on their own reference pools; none is on the
+official board yet, and every one is a non-commercial-licensed TFM — the
+serving retread closed in 8f/8g and re-confirmed last month. No new
+gradient-boosting, stacking or calibration method with credible tabular
+evidence appeared in the window.
+*Betting/markets*: [The profit-bias identity in sports betting](https://arxiv.org/abs/2609.06739)
+(Dmochowski, Sep 2026): bookmaker margin = hold + shading×public-lean +
+cov(bet share, outcome); a public lean earns the book nothing without
+price shading, and in 1,139 MLB games the realised margin was
+indistinguishable from the hold (no shading found). Conceptually useful —
+it says a visible public bias is not an exploitable edge unless prices are
+shaded — and consistent with Miller & Nichols finding MMA "largely
+efficient". No new MMA-specific market paper; nothing new on Kelly/staking
+beyond the Baker–McHale shrinkage line we already cover with rules E/F.
+*UFC news (data-generating process)*: (1) The ABC's
+[Unified Rules 8.2026](https://www.abcboxing.com/wp-content/uploads/2026/08/Unified-Rules-of-MMA-8.2026.pdf)
+(amended 5 Aug 2026, **requested implementation November 2027**) are the
+two agenda items from last month, now adopted: loss of bodily function in
+a round = TKO (medical stoppage), with a bucket/physician procedure when a
+foul causes it; accidental-foul stoppages after 2 of 3 / 3 of 5 rounds go
+to a Technical Decision on the cards. Edge-case outcomes only, a year
+away, state-by-state. (2) CSAC's UFC 331 debrief
+([fighthub](https://fighthub-app.com/en/ufc-331-scorecards-csac-debrief-rule-changes/)):
+Foster called a 50-45 card "not possible"; discussion items were a lateral
+knee-kick foul, a cut-closing peptide, and reclassifying fouls as
+incidental/reckless/malicious — none adopted. (3) Ki MMA formally asked
+CSAC (1 Dec stakeholders meeting) to legalise knees to a grounded
+opponent's head ([Bloody Elbow](https://bloodyelbow.com/2026/10/21/mmas-unified-rules-could-be-changed-with-formal-request-made-over-currently-banned-strikes/));
+UFC/ABC position unknown — watch item. (4) Finish rate: 2026 YTD 56.9% on
+425 fights ([mma.social](https://mma.social/stats/finish-rates)); UFC 332
+set a modern record with 11 KOs / 9 first-round KOs; UFC Vegas 122 had 9
+finishes in 12. (5) Roster: a 16-0 bantamweight (Basharat) released 14 Oct
+plus the usual Contender Series purge — Bloody Elbow's read is that the
+promotion is shedding decision-winners; commentary, not policy. (6) No new
+weight class (165 lb remains a perennial rumour, denied). (7) Paramount+
+takes Canadian numbered cards from 2027; 2027 schedule starts Dallas 16 Jan.
+*Data sources*: same ufcstats-derived mirrors as last month (Kaggle refresh
+to Sep 2026 with round splits; UFCalendar per-round API; a paid
+"UFC Intelligence API"). Nothing new in shape beyond queue item R4.
+
+**Repo record since 1 Oct (what actually changed the picture):**
+
+- **Entry 9's trial closed at 10 cards with A retained** (E +$99.47 vs A,
+  p=0.22; C +$43.07, p=0.27; F −$7.29, p=0.78). Michael replaced the
+  re-tested-weekly promotion test with **entry 11's rolling 10-card blocks**
+  (one exact sign-flip test per block, Bonferroni over three challengers,
+  switch only at block boundaries). Experiment 2 began at UFC 333 with A
+  staked; card 2 (Moicano vs Nolan, 31 Oct) is logged, not yet scored.
+- **Rule A's run**: −$5.35 net over 11 cards (C +$30.15, E +$84.62,
+  F −$13.25), including four straight losing cards in October (−17.5,
+  −12.6, −45.1, −23.1). **Avg CLV for A on the 8 cards with snapshots:
+  +1.3, +1.4, +1.4, +0.7, +0.8, +0.3, −0.6, +1.1 → mean +0.8%**, positive on
+  7 of 8. That is the most interesting number this month: the prices we
+  take are, on average, slightly better than the close, while results run
+  behind. Too few bets (~35) to call it edge, but it is the direction CLV
+  logging was added to detect, and it argues for patience rather than
+  rule-tinkering.
+- **The October adopt-candidate (drop the calibrator) has not been acted
+  on** — `predict.py` still applies σ(4.615·(p−0.5)) to the staked
+  probability. Its queue entry was logged as "11" and collided with entry
+  11 (the block test); renumbered R1–R4 today. Timing note updated: the
+  "after the trial" window no longer exists under rolling blocks, so the
+  clean options are the block-2 boundary (~late Dec) or merging now as a
+  bug fix with the affected cards recorded.
+
+**Verdicts:**
+
+1. **Drop the probability calibrator (R1) — still the ADOPT-CANDIDATE,
+   unchanged, awaiting Michael's go.** Nothing in this sweep weakens the
+   October evidence (raw stacked score calibrated on the mirrored pool;
+   calibrator net-negative; it alone makes live stakes differ from every
+   backtest). Not re-proposed as new work — it is the same single change,
+   carried over. Recommended timing: block-2 boundary (after card 20 is
+   scored) unless Michael prefers the bug-fix route now.
+2. **TFM members / new TFM releases (Mitra-v2, TabPFN-3.5, TabFM, EXAONE
+   Tabular) — rejected (retread).** Licence and CPU-serving constraints
+   unchanged; no new evidence on the value side.
+3. **Profit-bias identity — no change.** Confirms the design stance (no
+   favourite-longshot or public-lean exploitation without shading evidence);
+   worth citing in the FAQ if the FLB question returns.
+4. **ABC 8.2026 amendments / CSAC proposals / Ki MMA request — no change;
+   watch items.** Adopted changes are DQ/NC/TKO edge cases with a Nov-2027
+   implementation date; the grounded-knee request is the only item that
+   would materially change the DGP and it is a California discussion item
+   on 1 Dec. The 4th `rules_era` level stays queued without new evidence.
+5. **Finish-rate / roster-turnover drift — no change.** The 2026 finish
+   rate (56.9%) and the Contender-Series intake are visible to the market
+   and to the finish-rate and win-time features; no mechanism vs the
+   market.
+6. **Fractional Kelly (R3) — queue, now eligible at the block-2 boundary**
+   (a staking change under entry 11 belongs at a boundary, same slot as R1).
+7. **Per-round trajectories (R4), distillation (R2) — queue, unchanged.**
+
+**Judgement call: NO retrain, NO new change this month.** The only
+qualifying change on the board is October's R1, which is still waiting on
+Michael; this run adds nothing to it and manufactures nothing beside it.
+Most interesting finding: rule A is beating the close (+0.8% average CLV,
+7 of 8 cards) while running −$5 over 11 cards — exactly the pattern CLV
+logging exists to separate from bad luck.

@@ -111,9 +111,9 @@ entry records the full market comparison.
 market tie-break — see entries 3-4 at the bottom of this log; the notes
 below are those investigations' history.)
 
-### Queue additions from the 2026-10-01 research run (docs/RESEARCH_LOG.md)
+### Research-queue items R1–R4 (from docs/RESEARCH_LOG.md; renumbered 2026-11-01 — they were logged as 11–14 and collided with entry 11, the rolling block test)
 
-**11. Drop the probability calibrator (serving/betting code; NO retrain) — pre-registered 2026-10-01, awaiting Michael's go.**
+**R1. Drop the probability calibrator (serving/betting code; NO retrain) — pre-registered 2026-10-01, awaiting Michael's go.**
 Change (one variable): `predict_winner` returns the raw stacked probability;
 the notebook's Probability Calibration cell and the artifact's `calibrator`
 key are removed (loading an artifact without the key must not fall back —
@@ -134,16 +134,22 @@ Expectation (written before the change): backtested numbers do not move
 the served probability improves 0.002 on the pool. Gate: none of the
 accuracy gates apply (picks unchanged); the entry records the mirrored-pool
 log-loss/Brier before/after and the stake deltas on the next card.
-Timing: the 10-event staking trial (entry 9; 7 graded) froze its inputs —
-clean path is merge after event 10 is graded (~19 Oct 2026); if merged
-earlier, the entry must note which trial cards staked on raw.
+Timing: originally "after entry 9's 10th card"; that trial closed 17 Oct with
+A retained and entry 11's rolling blocks began at UFC 333 (24 Oct), so there
+is no longer a between-trials window. Status 2026-11-01: still awaiting
+Michael's go (predict.py unchanged). Two clean options: (a) merge at the
+block-2 boundary (after card 20 is scored, ~late Dec 2026), so every card
+inside a block is staked off one probability; or (b) merge now as a bug
+fix — all four rules share the input, so the within-block paired
+comparison stays fair — and record in entry 11's block-2 result which
+cards staked on raw.
 Not a retread: KAN-57 flagged the in-sample regression and the
 backtest/live mismatch as open questions; this is the measurement it asked
 for, decided.
 
-**12. TFM→GBT distillation (TabTune `TabDistiller`, TabICLv2 teacher) — queue, demoted (expected gain ≤0.001 at 267 features; see research log 2026-10-01 verdict 2).**
-**13. Fractional Kelly (replace the 0.25 cap) — queue, post-trial, entry-9 pre-registration pattern on pooled OOF.**
-**14. Per-round stat trajectories (round-by-round splits from ufcstats via the sibling scraper) — queue, behind 11–12.**
+**R2. TFM→GBT distillation (TabTune `TabDistiller`, TabICLv2 teacher) — queue, demoted (expected gain ≤0.001 at 267 features; see research log 2026-10-01 verdict 2).**
+**R3. Fractional Kelly (replace the 0.25 cap) — queue; under entry 11 a staking change belongs at a block boundary (first eligible: after card 20 is scored).**
+**R4. Per-round stat trajectories (round-by-round splits from ufcstats via the sibling scraper) — queue, behind R1–R2.**
 (Withdrawn: favourite-longshot-bias staking filter — the cited paper found no such bias in MMA.)
 Data note (2026-10-01): ufcstats lists the WINNER as red for 95–100% of
 fights 1994–2009 (normal 54–62% favourite-as-red from 2010). Model and
