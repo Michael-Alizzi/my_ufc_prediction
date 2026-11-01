@@ -46,3 +46,7 @@
 | 2026-10-24 | UFC 333: Volkanovski vs. Evloev | C | $50 | $19.30 | -30.70 | 1/4/0 | -2.07 | +0.0% |
 | 2026-10-24 | UFC 333: Volkanovski vs. Evloev | E | $50 | $17.37 | -32.63 | 1/4/0 | -2.07 | +0.0% |
 | 2026-10-24 | UFC 333: Volkanovski vs. Evloev | F | $50 | $26.26 | -23.74 | 2/5/0 | -1.80 | +1.6% |
+| 2026-10-31 | UFC Fight Night: Moicano vs. Nolan | A | $50 | $62.66 | +12.66 | 4/5/0 | +0.98 | -0.0% |
+| 2026-10-31 | UFC Fight Night: Moicano vs. Nolan | C | $50 | $60.60 | +10.60 | 1/2/0 | +0.02 | -2.9% |
+| 2026-10-31 | UFC Fight Night: Moicano vs. Nolan | E | $50 | $78.78 | +28.78 | 1/2/0 | +0.02 | -2.9% |
+| 2026-10-31 | UFC Fight Night: Moicano vs. Nolan | F | $50 | $65.02 | +15.02 | 3/4/0 | +0.66 | -0.4% |
