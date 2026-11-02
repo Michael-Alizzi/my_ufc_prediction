@@ -172,15 +172,64 @@ def _event_rule_stats(fights, preds):
     return offered, stats
 
 
+_BET = re.compile(r"\$(\d+) on (.+?) \(@([\d.]+)")
+
+
+def _slip_preds(slip_md, fights, staked_rule):
+    """Rebuild the per-fight prediction dicts _card_fights_rows() and
+    _event_rule_stats() consume from a logged predictions_output.md table.
+    Rows are in card.json order (the slip is generated from it); the two
+    stake columns hold "$6 on Name (@1.29, returns ~$8)", "$0 (no value)"
+    or "-", and "C: $50 on Name (@1.40) / E: ..." for the shadows."""
+    rows = [l for l in slip_md.splitlines() if l.startswith("| ") and not l.startswith("| Red corner")]
+    preds = []
+    for f, line in zip(fights, rows):
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 7 or cells[0] != f["fighter1"]:
+            raise ValueError(f"slip row does not match card.json: {line!r} vs {f['fighter1']}")
+        pick = cells[3].strip("*")
+        # exact odds from card.json (the slip prints them rounded to 2 dp);
+        # a $0 stake is a Kelly share that rounded away, i.e. no bet
+        def bet(text):
+            m = _BET.search(text)
+            if not m or int(m.group(1)) == 0:
+                return None
+            name = m.group(2)  # slips title-case names; card.json is the source
+            odds = float(f["odds1"] if name.lower() == f["fighter1"].lower() else f["odds2"])
+            return name, odds, int(m.group(1))
+        stakes = {}
+        if bet(cells[5]):
+            stakes[staked_rule] = bet(cells[5])
+        for part in cells[6].split(" / "):
+            rm = re.match(r"([A-Z]): (.*)", part.strip())
+            if rm and bet(rm.group(2)):
+                stakes[rm.group(1)] = bet(rm.group(2))
+        p = {"prediction": pick, "weight_class": cells[2], "confidence": cells[4],
+             "bet_on": None, "bet_odds": None, "kelly": 0.0, "stake_amt": 0,
+             "shadow": " / ".join(f"{r}: ${a} on {n} (@{o:.2f})" for r, (n, o, a) in stakes.items()
+                                  if r != staked_rule) or "-",
+             "stakes": stakes}
+        if staked_rule in stakes:
+            n, o, a = stakes[staked_rule]
+            p.update(bet_on=n, bet_odds=o, stake_amt=a)
+        preds.append(p)
+    if len(preds) != len(fights):
+        raise ValueError(f"slip has {len(preds)} rows for {len(fights)} fights")
+    return preds
+
+
 def event_history(events, staked_by, artifact_path="ensemble.joblib", history_path="fighter_history.parquet"):
     """Per-fight betting detail AND per-rule aggregate stats (bet count,
-    avg market-implied win%, fights offered) for every ledger event: which
-    card.json posted it (walking weekly-predictions-log's history, since
-    the branch's HEAD has usually moved on to a newer card by the time this
-    builds), replayed through the exact same prediction code. Returns
-    ({} , {}) if artifacts are missing; an event with no matching commit is
-    silently skipped in both (its row renders "detail unavailable")."""
-    if not events or not (os.path.exists(artifact_path) and os.path.exists(history_path)):
+    avg market-implied win%, fights offered) for every ledger event, read
+    from the LOGGED slip (predictions_output.md) in the commit that posted
+    the card -- walking weekly-predictions-log's history, since the branch's
+    HEAD has usually moved on to a newer card by the time this builds. The
+    slip is what was actually staked and graded; re-predicting the card
+    through the current code (the pre-Nov-2026 approach) drifts from the
+    ledger whenever serving changes (EXPERIMENTS.md entry 12) and leaks the
+    event's own outcome through current history. An event with no matching
+    commit is silently skipped (its row renders "detail unavailable")."""
+    if not events:
         return {}, {}
     import subprocess
     fetch_log_branch()
@@ -189,11 +238,6 @@ def event_history(events, staked_by, artifact_path="ensemble.joblib", history_pa
     shas = [s for s in log.stdout.split() if s] if log.returncode == 0 else []
     if not shas:
         return {}, {}
-
-    sys.path.insert(0, ".")
-    from predict import load_artifacts, load_history
-    from send_weekly_predictions import make_predictions, stake_slip
-    artifacts, history = load_artifacts(), load_history()
 
     detail, stats = {}, {}
     for e in events:
@@ -209,11 +253,8 @@ def event_history(events, staked_by, artifact_path="ensemble.joblib", history_pa
         if not raw:
             continue
         fights = json.loads(raw)
-        bankroll_m = re.search(r"risking \$(\d+)", match_pred)
-        bankroll = int(bankroll_m.group(1)) if bankroll_m else 50
         key = e["date"] + "|" + e["event"]
-        preds = stake_slip(make_predictions(fights, history, artifacts, bankroll=bankroll),
-                           staked_by[key])
+        preds = _slip_preds(match_pred, fights, staked_by[key])
         detail[key] = _card_fights_rows(fights, preds)
         offered, rule_stats = _event_rule_stats(fights, preds)
         stats[key] = {"offered": offered, "rules": rule_stats}
