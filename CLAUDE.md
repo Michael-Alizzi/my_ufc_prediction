@@ -145,8 +145,11 @@ automatically.
   Any new feature must follow the `r_*`/`b_*`/`*_diff` naming convention or the swap silently skips it.
 - **The decision threshold is fixed at 0.5 on purpose**, not tuned or calibrated. An earlier version
   fit Platt scaling and a tuned threshold on the ~120-fight validation slice and it cost 6 points of
-  test accuracy from overfitting that small a sample. Don't reintroduce calibration without pooling
-  many out-of-fold predictions first (see the `ponytail:` comment in the Threshold Selection cell).
+  test accuracy from overfitting that small a sample. **There is no post-hoc calibrator at all since
+  Nov 2026** (EXPERIMENTS.md entry 12): a pooled-OOF Platt slope was measured net-negative on the
+  mirrored OOF pool and was the only reason live stakes differed from the backtests. The OOF
+  stacker's output is served as-is; don't reintroduce calibration without that mirrored-pool
+  measurement showing a gain.
 - **`last_row()`** (`predict.py`) must reorient a fighter's most recent fight row when they fought in
   the blue corner last time — otherwise the `r_`-prefixed columns silently describe their opponent
   instead of them. This was a real bug, only caught by `test_predict.py`'s corner-swap symmetry check.
@@ -174,7 +177,7 @@ automatically.
 - **XGBoost device is `DEVICE`, probed once at startup** (settings cell: a tiny cuda fit in a
   subprocess with a timeout, because a broken driver — the desktop's current state — can HANG CUDA
   init rather than fail it). All four training sites (`create_xgb_model()`, the Optuna objective,
-  the top-3 refits, the calibration OOF refits) reference `DEVICE`; never hardcode a device at one
+  the top-3 refits, the stacker's pooled-OOF refits) reference `DEVICE`; never hardcode a device at one
   site. The laptop joins BOTH tuning studies via `scripts/shared_study_worker.py` (dispatched over
   ssh; family arg `xgb|lgbm` — eGPU trials for XGBoost after running the same probe on its own
   device, CPU trials for LightGBM) — requires `OPTUNA_STORAGE_URL` and

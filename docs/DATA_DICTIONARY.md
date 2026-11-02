@@ -69,7 +69,7 @@ Shared context columns (no r/b pair, untouched by mirroring): `gender`,
 | `models` | list of 3 refit XGBoost classifiers (top Optuna trials) |
 | `lgbm`, `lgbm_weight` | LightGBM model and its validation-chosen blend weight |
 | `best_th` | decision threshold (fixed 0.5) |
-| `calibrator` | centered no-intercept Platt logistic (display only) |
+| `calibrator` | legacy (removed Nov 2026, EXPERIMENTS.md entry 12): artifacts trained before then still carry the slope-only Platt logistic; serving ignores it |
 | `feature_names`, `dtypes` | training matrix schema (order + dtypes incl. categoricals) |
 | `diff_pairs` | exact `{diff_col: (r_col, b_col)}` source map, verified `d = r − b` at export |
 | `train_end`, `data_max_date` | provenance: training cutoff and data recency |

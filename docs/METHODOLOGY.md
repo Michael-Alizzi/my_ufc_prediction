@@ -7,7 +7,7 @@ data, or algorithm updates this file in the same commit.
 
 Pipeline order (notebook `ufc_prediction_claude.ipynb`): load/clean → merge
 → feature engineering → target/feature selection → window search → Optuna
-tuning → holdout split → ensemble + calibration → decision layer →
+tuning → holdout split → ensemble (OOF stacker) → decision layer →
 stability/paired checks → export for serving.
 
 ---
@@ -263,20 +263,28 @@ OOF — but stays OUT: its pickle is only servable on a GPU, and the weekly
 job runs on cloud CPU where its inference is infeasibly slow (entry 8f's
 packaging post-mortem). A budget sweep (entry 8g) closed the file: at CPU-servable compute its coefficient degrades to noise (+0.207 best-feasible, negative at single-estimator configs) and the market metrics regress. Revisit only if serving gains a GPU.
 
-## 10. Probability calibration (Platt, centered)
+## 10. Probability calibration — none (removed Nov 2026, entry 12)
 
-**Math.** A logistic regression with no intercept fit on centered pooled-OOF
-scores: $\hat{p}_{\text{cal}} = \sigma(\beta (p_{\text{raw}} - 0.5))$, so
-$p_{\text{raw}} = 0.5 \Rightarrow \hat{p}_{\text{cal}} = 0.5$ exactly.
-Gated by a Brier-score non-regression assertion on the OOF pool.
+**Math.** The served probability is the stacker output of §9, unchanged.
+Until November 2026 a slope-only logistic map
+$\hat{p} = \sigma(\beta (p - 0.5))$, $\beta \approx 4.6$, fit on the pooled
+OOF, sat between the stacker and the Kelly stake. Scored on the *mirrored*
+OOF pool (both orientations of every fight, so the red-corner base rate
+cancels), the raw stacked score has log-loss 0.6009 / Brier 0.2083 and the
+mapped score 0.6029 / 0.2087; a logit-space slope refits to exactly 1.000
+and the reliability curve is within 1.5 points in every band. The stacker
+is itself a logistic fit on these inputs, so a further logistic layer has
+nothing to correct, and the prob-space form cannot express the identity —
+it can only distort.
 
-**Plain.** Boosted trees rank fights well but their raw scores aren't
-frequencies ("0.7" might win 65% or 80% of the time). Calibration reshapes
-the displayed confidence so that fights shown as 70% really win about 70%
-of the time — fit on thousands of pooled walk-forward predictions, never on
-the tiny validation slice. Pinning 0.5→0.5 guarantees the displayed
-favourite always matches the decision (§11). Example: raw 0.62 might
-display as 0.68 after calibration; raw 0.50 always displays as 0.50.
+**Plain.** The ensemble's probability already means what it says: fights it
+calls 70% win about 70% of the time. The old "calibration" step made that
+slightly worse and, because the weekly job staked on its output while every
+backtest scored the raw score, it was the one reason live stakes differed
+from the validated rules (mid-favourites over-staked ~30%, underdogs
+under-staked 20–45%). It was removed rather than replaced: the backtests
+and the live job now bet off the same number. Artifacts trained before the
+change still carry a `calibrator` key; serving ignores it.
 
 ## 11. The fixed 0.5 decision threshold
 
@@ -286,8 +294,8 @@ the training prior exactly 0.5, so 0.5 is the natural operating point.
 **Plain.** An earlier version tuned the threshold on ~120 validation fights
 and lost 6 points of test accuracy — a textbook case of fitting noise in a
 small sample (±9-point CI, §12). The threshold stays at the symmetric
-default; probability quality is handled by calibration, not by moving the
-cutoff.
+default; probability quality is handled by the OOF stacker (§9), not by
+moving the cutoff.
 
 ## 12. Evaluating a run
 

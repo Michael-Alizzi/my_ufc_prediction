@@ -113,7 +113,7 @@ below are those investigations' history.)
 
 ### Research-queue items R1–R4 (from docs/RESEARCH_LOG.md; renumbered 2026-11-01 — they were logged as 11–14 and collided with entry 11, the rolling block test)
 
-**R1. Drop the probability calibrator (serving/betting code; NO retrain) — pre-registered 2026-10-01, awaiting Michael's go.**
+**R1. Drop the probability calibrator (serving/betting code; NO retrain) — DECIDED: shipped as entry 12 (Michael approved 2026-11-01, bug-fix route).**
 Change (one variable): `predict_winner` returns the raw stacked probability;
 the notebook's Probability Calibration cell and the artifact's `calibrator`
 key are removed (loading an artifact without the key must not fall back —
@@ -1431,3 +1431,37 @@ Pre-registered before card 11 (UFC 333, 24 Oct) is scored:
 - **Expectation, stated now**: at 10-card blocks and this noise (a +$99 lead
   gave p=0.22), most blocks end with no switch; a switch needs a strong,
   consistent edge.
+
+### 12. Drop the probability calibrator        2026-11-01, decided (no retrain; PR, bug-fix route)
+Change (one variable): `predict_winner` returns the OOF-stacked probability
+as-is. The notebook's Probability Calibration cell (slope-only Platt on
+pooled OOF) and the artifact's `calibrator` key are gone; serving ignores
+the key on artifacts trained before this change (the current 8e artifact
+keeps it until the next retrain). Decision rule, stacker, antisymmetry,
+`kelly_edge` and all four staking rules untouched.
+Evidence (research log 2026-10-01; shipped 8e artifact, 7,869 pooled-OOF
+fights scored on the MIRRORED pool so the red-corner base rate cancels):
+    raw stacked score      log-loss 0.6009  Brier 0.2083
+    live calibrator        log-loss 0.6029  Brier 0.2087   (σ(4.615·(p−0.5)))
+    logit-space slope refit  = 1.000 exactly (identity)
+    reliability by band within 1.5 points everywhere; 2010+ subset identical
+    chronological 5-block cross-fit: raw 0.6009, live form 0.6030, isotonic 0.6050
+Mechanism: the stacker is already a logistic fit on these inputs, so a
+second logistic layer has nothing to correct, and the prob-space form
+cannot express the identity. It was the only place the live job diverged
+from the backtests: `oof_export` stores raw scores, so entries 5–10, rule
+F's λ, `betting_rule_compare.py` and the History replay all bet off raw,
+while `send_weekly_predictions.py` staked on the mapped number.
+Stake impact at typical prices (raw → mapped Kelly fraction):
+    p=0.60 @1.80  0.100 → 0.130     p=0.45 @2.40  0.057 → 0.044
+    p=0.70 @1.55  0.155 → 0.199     p=0.35 @3.20  0.055 → 0.031
+Gates: none of the accuracy gates apply (picks are identical — the map was
+monotone and pinned at 0.5); market comparison unchanged by construction
+(it already scored raw). $100 replay: not applicable (no model change).
+Trial bookkeeping (entry 11): experiment 2 cards 1–2 (UFC 333, Moicano vs
+Nolan) staked all four rules on the mapped probability; from card 3 on, raw.
+All four rules share the input, so the within-block paired comparison stays
+fair; recorded here so the block-2 verdict can say so.
+Decision: ACCEPTED as a bug fix (Michael, 2026-11-01). The calibration
+question is CLOSED: reopen only with a mirrored-pool measurement that
+shows a gain over the raw stacked score.
