@@ -194,6 +194,11 @@ automatically.
   session — the FAQ is the project's running Q&A record. Republish the
   dashboard artifact with it when practical (the Monday Routine republishes
   it weekly regardless).
+- **Only bet fights Sportsbet offers** (Michael, 6 Nov 2026): he bets only at
+  Sportsbet, so a fight Sportsbet doesn't list is removed from the slip and its
+  share re-split over the rest. The odds feed's Sportsbet flag is NOT a reliable
+  test: on the Cortes-Acosta card it showed no Sportsbet price for Ko and Karine
+  Silva, both of which Sportsbet did list.
 - **Docs and dashboard commits merge straight to master, no PR** (standing
   permission, Aug 2026): changes touching only `docs/*`, `CLAUDE.md`, or
   `scripts/build_dashboard.py`. Anything touching the model, pipeline,
