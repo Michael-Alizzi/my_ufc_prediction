@@ -139,6 +139,9 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                     if k > 0:
                         picks["F"] = (n, o_, k)
 
+            # Michael bets only at Sportsbet: no rule stakes a fight the odds
+            # feed doesn't show a Sportsbet price for (CLAUDE.md, 6 Nov 2026).
+            at_sportsbet = fight.get("odds_source") == "sportsbet"
             predictions.append({
                 "fighter1": fight["fighter1"],
                 "fighter2": fight["fighter2"],
@@ -146,7 +149,8 @@ def make_predictions(fights, history, artifacts, event_country=None, bankroll=10
                 "prediction": fight["fighter1"] if winner == fighter1 else fight["fighter2"],
                 "confidence": f"{confidence:.1%}",
                 "has_odds": has_odds,
-                "picks": picks,
+                "at_sportsbet": at_sportsbet,
+                "picks": picks if at_sportsbet else {},
                 "stakes": {},
             })
         except Exception as e:
@@ -193,7 +197,8 @@ def stake_slip(predictions, staked_rule):
             p["stake_amt"] = a
             p["stake"] = f"${a} on {name} (@{o:.2f}, returns ~${round(a * o)})"
         else:
-            p["stake"] = "$0 (no value)" if p["has_odds"] else "-"
+            p["stake"] = ("-" if not p["has_odds"] else "not at Sportsbet"
+                          if not p["at_sportsbet"] else "$0 (no value)")
         p["shadow"] = " / ".join(f"{r}: ${a} on {n} (@{o:.2f})"
                                  for r, (n, o, a) in p["stakes"].items()
                                  if r != staked_rule) or "-"

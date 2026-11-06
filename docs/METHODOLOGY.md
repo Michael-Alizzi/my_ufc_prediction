@@ -323,7 +323,8 @@ same ratio would be 1-2 fights and meaningless.
 **Math.** For decimal odds $o$ and model probability $p$, edge $= po - 1$;
 the Kelly fraction is
 $$k = \frac{po - 1}{o - 1}\ \text{if } po > 1,\ \text{else } 0.$$
-The weekly job splits a fixed $100 bankroll across all value sides
+The weekly job splits a fixed bankroll across all value sides on fights
+Sportsbet prices (the only book Michael bets at; since Nov 2026)
 proportionally to $k$ (stakes sum to $100 — total risk, not per-bet risk).
 
 **Plain.** Bet only when the model thinks a side is likelier than the price
