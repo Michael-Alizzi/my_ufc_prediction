@@ -2191,3 +2191,13 @@ What you will see: confidences shift by up to ~0.04 (0.9 used to display as
 0.86), picks never change (the map was monotone and pinned at 0.5), and
 stakes on 0.55–0.75 favourites shrink while underdog stakes grow. All four
 rules A/C/E/F move together, so the block-2 comparison stays fair.
+
+### Why couldn't I find José Henrique at Sportsbet? (Nov 2026)
+
+Sportsbet didn't offer Parsons vs. José Henrique at all; only TABtouch,
+Unibet, Bet Right, PointsBet, Betr, Ladbrokes and Betfair did. The fight was
+removed from the Cortes-Acosta slip and its $11 re-split over the other four
+bets. Since PR #32, no rule stakes a fight the odds feed doesn't show a
+Sportsbet price for. The feed's flag isn't perfect (it missed Sportsbet's
+Ko and Karine Silva markets that week), but skipping a bet you could have
+placed is safer than sending one you can't.
