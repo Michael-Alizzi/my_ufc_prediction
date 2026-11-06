@@ -196,9 +196,11 @@ automatically.
   it weekly regardless).
 - **Only bet fights Sportsbet offers** (Michael, 6 Nov 2026): he bets only at
   Sportsbet, so a fight Sportsbet doesn't list is removed from the slip and its
-  share re-split over the rest. The odds feed's Sportsbet flag is NOT a reliable
-  test: on the Cortes-Acosta card it showed no Sportsbet price for Ko and Karine
-  Silva, both of which Sportsbet did list.
+  share re-split over the rest. Enforced in `send_weekly_predictions.py`: only
+  fights whose `odds_source` is `sportsbet` get a stake, under every rule. The
+  feed's Sportsbet flag misses some markets Sportsbet does list (Ko and Karine
+  Silva on the Cortes-Acosta card); Michael chose to accept skipping those over
+  being sent bets he can't place.
 - **Docs and dashboard commits merge straight to master, no PR** (standing
   permission, Aug 2026): changes touching only `docs/*`, `CLAUDE.md`, or
   `scripts/build_dashboard.py`. Anything touching the model, pipeline,

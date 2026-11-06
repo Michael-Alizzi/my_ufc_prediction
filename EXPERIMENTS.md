@@ -1465,3 +1465,11 @@ fair; recorded here so the block-2 verdict can say so.
 Decision: ACCEPTED as a bug fix (Michael, 2026-11-01). The calibration
 question is CLOSED: reopen only with a mirrored-pool measurement that
 shows a gain over the raw stacked score.
+
+**Entry 11 addendum, 6 Nov 2026 (Sportsbet-only staking).** From experiment 2's
+4th card on, no rule stakes a fight the odds feed doesn't show a Sportsbet
+price for (`odds_source == "sportsbet"`), because Michael bets only at
+Sportsbet. It applies to all four rules alike, so the block comparison stays
+paired. Effect: fewer eligible fights, so each rule's $50 concentrates on
+fewer bets. On card 3 (Cortes-Acosta vs. Walker) the fight Sportsbet didn't
+list was removed by hand and the slip re-split, as the first use of the rule.
