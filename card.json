@@ -8,7 +8,7 @@
   "odds2": 2.875,
   "feat_odds1": 1.496,
   "feat_odds2": 3.017,
-  "odds_source": "au_median(8 books)",
+  "odds_source": "sportsbet",
   "commence": "2026-11-07T22:00:00Z",
   "title_fight": false
  },
@@ -47,7 +47,7 @@
   "odds2": 5.75,
   "feat_odds1": 1.198,
   "feat_odds2": 6.044,
-  "odds_source": "au_median(7 books)",
+  "odds_source": "sportsbet",
   "commence": "2026-11-07T22:00:00Z",
   "title_fight": false,
   "model_name1": "Seokhyeon Ko"
