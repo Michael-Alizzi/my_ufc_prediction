@@ -50,3 +50,7 @@
 | 2026-10-31 | UFC Fight Night: Moicano vs. Nolan | C | $50 | $60.60 | +10.60 | 1/2/0 | +0.02 | -2.9% |
 | 2026-10-31 | UFC Fight Night: Moicano vs. Nolan | E | $50 | $78.78 | +28.78 | 1/2/0 | +0.02 | -2.9% |
 | 2026-10-31 | UFC Fight Night: Moicano vs. Nolan | F | $50 | $65.02 | +15.02 | 3/4/0 | +0.66 | -0.4% |
+| 2026-11-07 | UFC Fight Night: Cortes-Acosta vs. Walker | A | $50 | $63.78 | +13.78 | 4/4/0 | +1.34 | -0.0% |
+| 2026-11-07 | UFC Fight Night: Cortes-Acosta vs. Walker | C | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
+| 2026-11-07 | UFC Fight Night: Cortes-Acosta vs. Walker | E | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
+| 2026-11-07 | UFC Fight Night: Cortes-Acosta vs. Walker | F | $50 | $65.00 | +15.00 | 1/1/0 | +0.30 | +1.6% |
