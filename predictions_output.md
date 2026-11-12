@@ -1,5 +1,5 @@
-## UFC Predictions: x
-_Generated 2026-11-12 22:51_
+## UFC Predictions: UFC 334: Gane vs. Hokit (Nov 14, 2026)
+_Generated 2026-11-12 22:52_
 
 | Red corner | Blue corner | Weight class | Predicted winner | Confidence | Your bet: rule A kelly value (risking $50 total) | Shadow rules (C vig floor / E shrunk staking / F fitted blend, not staked) |
 |---|---|---|---|---|---|---|
