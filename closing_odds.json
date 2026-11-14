@@ -1,100 +1,93 @@
 [
  {
-  "fighter1": "Karine Silva",
-  "fighter2": "Gabriella Fernandes",
-  "close1": 1.45,
-  "close2": 2.8,
-  "source": "au_median(8 books)"
+  "fighter1": "Heili Alateng",
+  "fighter2": "Juan Diaz",
+  "close1": 4.25,
+  "close2": 1.24,
+  "source": "au_median(6 books)"
  },
  {
-  "fighter1": "Jose Delano",
-  "fighter2": "Murtazali Magomedov",
-  "close1": 1.83,
-  "close2": 1.98,
+  "fighter1": "Evan Elder",
+  "fighter2": "Samuel Sanches",
+  "close1": 2.05,
+  "close2": 1.83,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Keiichiro Nakamura",
-  "fighter2": "Ollie Schmid",
-  "close1": 1.26,
-  "close2": 3.9,
-  "source": "sportsbet"
+  "fighter1": "Macy Chiasson",
+  "fighter2": "Beatriz Mesquita",
+  "close1": 3.05,
+  "close2": 1.38,
+  "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Seok Hyun Ko",
-  "fighter2": "Wellington Turman",
-  "close1": 1.14,
-  "close2": 5.75,
-  "source": "au_median(8 books)"
+  "fighter1": "Jared Gordon",
+  "fighter2": "Melquizael Costa",
+  "close1": 4.1,
+  "close2": 1.25,
+  "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Jonny Parsons",
-  "fighter2": "José Henrique",
-  "close1": 2.88,
-  "close2": 1.42,
-  "source": "au_median(5 books)"
+  "fighter1": "Donte Johnson",
+  "fighter2": "Cesar Almeida",
+  "close1": 1.47,
+  "close2": 2.7,
+  "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Andre Petroski",
-  "fighter2": "Mantas Kondratavicius",
-  "close1": 3.4,
-  "close2": 1.32,
-  "source": "au_median(8 books)"
+  "fighter1": "Jim Miller",
+  "fighter2": "Terrance Mckinney",
+  "close1": 2.75,
+  "close2": 1.45,
+  "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Austin Bashi",
-  "fighter2": "Carlos Calderon",
-  "close1": 1.14,
-  "close2": 5.6,
-  "source": "au_median(8 books)"
+  "fighter1": "Drew Dober",
+  "fighter2": "Chris Duncan",
+  "close1": 2.5,
+  "close2": 1.53,
+  "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Thomas Petersen",
-  "fighter2": "Gabriel Lourenco",
-  "close1": 1.63,
+  "fighter1": "Stephen Thompson",
+  "fighter2": "Charlie Radtke",
+  "close1": 1.75,
+  "close2": 2.08,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Luis Gurule",
+  "fighter2": "Bilal Hasan",
+  "close1": 7.5,
+  "close2": 1.1,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Uros Medic",
+  "fighter2": "Kevin Holland",
+  "close1": 1.62,
   "close2": 2.3,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Billy Elekana",
-  "fighter2": "Lucas Fernando",
-  "close1": 3.78,
-  "close2": 1.27,
+  "fighter1": "Caio Borralho",
+  "fighter2": "Yousri Belgaroui",
+  "close1": 1.62,
+  "close2": 2.3,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Kayla Harrison",
+  "fighter2": "Amanda Nunes",
+  "close1": 1.59,
+  "close2": 2.36,
   "source": "sportsbet"
  },
  {
-  "fighter1": "Davey Grant",
-  "fighter2": "Elijah Smith",
-  "close1": 3.7,
-  "close2": 1.28,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Mitch Raposo",
-  "fighter2": "Marcos Degli",
-  "close1": 2.86,
-  "close2": 1.43,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Priscila Cachoeira",
-  "fighter2": "Nina Milošević",
-  "close1": 4.75,
-  "close2": 1.19,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Tatiana Suarez",
-  "fighter2": "Virna Jandiroba",
-  "close1": 1.48,
-  "close2": 2.67,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Waldo Cortes-Acosta",
-  "fighter2": "Johnny Walker",
-  "close1": 1.42,
-  "close2": 2.89,
+  "fighter1": "Ciryl Gane",
+  "fighter2": "Josh Hokit",
+  "close1": 1.43,
+  "close2": 2.86,
   "source": "sportsbet"
  }
 ]
