@@ -54,3 +54,7 @@
 | 2026-11-07 | UFC Fight Night: Cortes-Acosta vs. Walker | C | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
 | 2026-11-07 | UFC Fight Night: Cortes-Acosta vs. Walker | E | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
 | 2026-11-07 | UFC Fight Night: Cortes-Acosta vs. Walker | F | $50 | $65.00 | +15.00 | 1/1/0 | +0.30 | +1.6% |
+| 2026-11-14 | UFC 334: Gane vs. Hokit | A | $50 | $76.50 | +26.50 | 1/1/0 | +0.53 | -3.8% |
+| 2026-11-14 | UFC 334: Gane vs. Hokit | C | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
+| 2026-11-14 | UFC 334: Gane vs. Hokit | E | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
+| 2026-11-14 | UFC 334: Gane vs. Hokit | F | $50 | $76.50 | +26.50 | 1/1/0 | +0.53 | -3.8% |

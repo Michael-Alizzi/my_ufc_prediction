@@ -212,5 +212,27 @@
    "José Henrique"
   ],
   "voids": []
+ },
+ "2026-11-14|UFC 334: Gane vs. Hokit": {
+  "winners": [
+   "Ciryl Gane",
+   "Kayla Harrison",
+   "Caio Borralho",
+   "Luis Gurule",
+   "Stephen Thompson",
+   "Chris Duncan",
+   "Terrance Mckinney",
+   "Cesar Almeida",
+   "Melquizael Costa",
+   "Beatriz Mesquita",
+   "Juan Diaz",
+   "Evan Elder"
+  ],
+  "voids": [
+   [
+    "Uros Medic",
+    "Kevin Holland"
+   ]
+  ]
  }
 }
