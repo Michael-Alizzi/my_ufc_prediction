@@ -2201,3 +2201,13 @@ bets. Since PR #32, no rule stakes a fight the odds feed doesn't show a
 Sportsbet price for. The feed's flag isn't perfect (it missed Sportsbet's
 Ko and Karine Silva markets that week), but skipping a bet you could have
 placed is safer than sending one you can't.
+
+### Why was there nothing for Harrison vs. Nunes under Past events? (Nov 2026)
+
+The dashboard finds each past card's logged slip by looking at the commits
+that changed `card.json` on `weekly-predictions-log`. UFC 334's first slip
+commit carried a wrong title (a debug run had overwritten it), and the fix
+went into a later commit that only changed `predictions_output.md`, which the
+dashboard never looked at, so the card showed no detail. The lookup now
+searches commits touching either file, so a slip corrected after the fact is
+found. Scoring and the ledger were never affected.

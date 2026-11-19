@@ -234,7 +234,8 @@ def event_history(events, staked_by, artifact_path="ensemble.joblib", history_pa
     import subprocess
     fetch_log_branch()
     log = subprocess.run(["git", "log", "--format=%H", "origin/weekly-predictions-log",
-                          "--", "card.json"], capture_output=True, text=True)
+                          "--", "card.json", "predictions_output.md"],
+                         capture_output=True, text=True)
     shas = [s for s in log.stdout.split() if s] if log.returncode == 0 else []
     if not shas:
         return {}, {}
