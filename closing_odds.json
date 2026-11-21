@@ -1,93 +1,86 @@
 [
  {
-  "fighter1": "Heili Alateng",
-  "fighter2": "Juan Diaz",
-  "close1": 4.25,
-  "close2": 1.24,
-  "source": "au_median(6 books)"
- },
- {
-  "fighter1": "Evan Elder",
-  "fighter2": "Samuel Sanches",
-  "close1": 2.05,
-  "close2": 1.83,
+  "fighter1": "Shoaib Yousaf",
+  "fighter2": "John Mitchell",
+  "close1": 2.1,
+  "close2": 1.72,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Macy Chiasson",
-  "fighter2": "Beatriz Mesquita",
-  "close1": 3.05,
+  "fighter1": "Alik Lorenz",
+  "fighter2": "Diyar Nurgozhay",
+  "close1": 3.1,
   "close2": 1.38,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Jared Gordon",
-  "fighter2": "Melquizael Costa",
-  "close1": 4.1,
-  "close2": 1.25,
+  "fighter1": "Dom Mar Fan",
+  "fighter2": "Nikolas Motta",
+  "close1": 1.6,
+  "close2": 2.35,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Donte Johnson",
-  "fighter2": "Cesar Almeida",
+  "fighter1": "Jake Matthews",
+  "fighter2": "Tahir Abdullayev",
+  "close1": 1.4,
+  "close2": 3.0,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Amir Albazi",
+  "fighter2": "Alessandro Costa",
+  "close1": 1.91,
+  "close2": 1.91,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Shamil Gaziev",
+  "fighter2": "Tallison Teixeira",
+  "close1": 1.5,
+  "close2": 2.6,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Santiago Luna",
+  "fighter2": "Aleksandre Topuria",
+  "close1": 3.3,
+  "close2": 1.34,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Jared Cannonier",
+  "fighter2": "Ikram Aliskerov",
+  "close1": 3.35,
+  "close2": 1.33,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Kyoji Horiguchi",
+  "fighter2": "Asu Almabaev",
+  "close1": 1.49,
+  "close2": 2.6,
+  "source": "au_median(7 books)"
+ },
+ {
+  "fighter1": "Daniel Hooker",
+  "fighter2": "Brian Ortega",
   "close1": 1.47,
-  "close2": 2.7,
+  "close2": 2.65,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Jim Miller",
-  "fighter2": "Terrance Mckinney",
-  "close1": 2.75,
-  "close2": 1.45,
+  "fighter1": "Aljamain Sterling",
+  "fighter2": "Kevin Vallejos",
+  "close1": 2.05,
+  "close2": 1.77,
   "source": "au_median(7 books)"
  },
  {
-  "fighter1": "Drew Dober",
-  "fighter2": "Chris Duncan",
+  "fighter1": "Jiri Prochazka",
+  "fighter2": "Navajo Stirling",
   "close1": 2.5,
-  "close2": 1.53,
+  "close2": 1.56,
   "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Stephen Thompson",
-  "fighter2": "Charlie Radtke",
-  "close1": 1.75,
-  "close2": 2.08,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Luis Gurule",
-  "fighter2": "Bilal Hasan",
-  "close1": 7.5,
-  "close2": 1.1,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Uros Medic",
-  "fighter2": "Kevin Holland",
-  "close1": 1.62,
-  "close2": 2.3,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Caio Borralho",
-  "fighter2": "Yousri Belgaroui",
-  "close1": 1.62,
-  "close2": 2.3,
-  "source": "au_median(7 books)"
- },
- {
-  "fighter1": "Kayla Harrison",
-  "fighter2": "Amanda Nunes",
-  "close1": 1.59,
-  "close2": 2.36,
-  "source": "sportsbet"
- },
- {
-  "fighter1": "Ciryl Gane",
-  "fighter2": "Josh Hokit",
-  "close1": 1.43,
-  "close2": 2.86,
-  "source": "sportsbet"
  }
 ]
