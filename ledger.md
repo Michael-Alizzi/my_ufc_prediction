@@ -58,3 +58,7 @@
 | 2026-11-14 | UFC 334: Gane vs. Hokit | C | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
 | 2026-11-14 | UFC 334: Gane vs. Hokit | E | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
 | 2026-11-14 | UFC 334: Gane vs. Hokit | F | $50 | $76.50 | +26.50 | 1/1/0 | +0.53 | -3.8% |
+| 2026-11-21 | UFC Fight Night: Prochazka vs. Stirling | A | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
+| 2026-11-21 | UFC Fight Night: Prochazka vs. Stirling | C | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
+| 2026-11-21 | UFC Fight Night: Prochazka vs. Stirling | E | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
+| 2026-11-21 | UFC Fight Night: Prochazka vs. Stirling | F | $0 | $0.00 | +0.00 | 0/0/0 | +0.00 | - |
