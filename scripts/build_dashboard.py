@@ -748,7 +748,7 @@ function buildSeries(rules) {
 
 function drawMetricChart(svg, rules, metricKey, series) {
   const def = METRIC_DEFS[metricKey];
-  const W = 940, H = 300, L = 14, R = 76, T = 16, B = 40, ticks = 4;
+  const W = 940, H = 300, L = 14, R = 76, T = 16, B = 16, ticks = 4;
   const cum = {}; rules.forEach(r => cum[r] = series[metricKey][r]);
   const allY = rules.flatMap(r => cum[r]);
   const yMax = Math.max(metricKey === "net" ? 5 : metricKey === "flatnet" ? 1 : 10, ...allY), yMin = Math.min(0, ...allY);
@@ -764,8 +764,6 @@ function drawMetricChart(svg, rules, metricKey, series) {
     g += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>`;
   }
   g += `<line class="zero" x1="${L}" x2="${W - R}" y1="${ySc(0)}" y2="${ySc(0)}"/>`;
-  g += `<text x="${xSc(0)}" y="${H - B + 18}" text-anchor="middle">start</text>`;
-  ev.forEach((e, i) => g += `<text x="${xSc(i + 1)}" y="${H - B + 18}" text-anchor="middle">${shortName(e.event)}</text>`);
   for (const r of rules) {
     const pts = cum[r].map((v, i) => xSc(i).toFixed(1) + "," + ySc(v).toFixed(1)).join(" ");
     g += `<polyline class="s${r}" points="${pts}" fill="none" stroke-width="2" stroke-linejoin="round"/>`;

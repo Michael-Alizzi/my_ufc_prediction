@@ -2214,6 +2214,7 @@ found. Scoring and the ledger were never affected.
 
 ### Why do the line charts have no vertical axis labels? (Nov 2026)
 
-Michael asked for them removed on the Performance and Experiments charts.
-The gridlines stay; read exact values from the end labels and the tooltips
-(hover or tap a point).
+Michael asked for the axis labels removed on the Performance and Experiments
+charts: first the vertical (value) labels, then the event names along the
+bottom, which I had misread him as not wanting touched. The gridlines stay;
+read values from the end labels and the tooltips (hover or tap a point).
