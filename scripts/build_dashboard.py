@@ -748,7 +748,7 @@ function buildSeries(rules) {
 
 function drawMetricChart(svg, rules, metricKey, series) {
   const def = METRIC_DEFS[metricKey];
-  const W = 940, H = 300, L = 14, R = 76, T = 16, B = 16, ticks = 4;
+  const W = 940, H = 300, L = 46, R = 76, T = 16, B = 16, ticks = 4;
   const cum = {}; rules.forEach(r => cum[r] = series[metricKey][r]);
   const allY = rules.flatMap(r => cum[r]);
   const yMax = Math.max(metricKey === "net" ? 5 : metricKey === "flatnet" ? 1 : 10, ...allY), yMin = Math.min(0, ...allY);
@@ -761,7 +761,8 @@ function drawMetricChart(svg, rules, metricKey, series) {
   let g = "";
   for (let i = 0; i <= ticks; i++) {
     const v = yMin + (yMax - yMin) * i / ticks, y = ySc(v);
-    g += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>`;
+    g += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>
+          <text x="${L - 8}" y="${y + 4}" text-anchor="end">${def.axisFmt(v)}</text>`;
   }
   g += `<line class="zero" x1="${L}" x2="${W - R}" y1="${ySc(0)}" y2="${ySc(0)}"/>`;
   for (const r of rules) {

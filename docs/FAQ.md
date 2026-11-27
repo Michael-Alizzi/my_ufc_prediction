@@ -2212,9 +2212,9 @@ dashboard never looked at, so the card showed no detail. The lookup now
 searches commits touching either file, so a slip corrected after the fact is
 found. Scoring and the ledger were never affected.
 
-### Why do the line charts have no vertical axis labels? (Nov 2026)
+### Why do the line charts show a dollar scale but no event names? (Nov 2026)
 
-Michael asked for the axis labels removed on the Performance and Experiments
-charts: first the vertical (value) labels, then the event names along the
-bottom, which I had misread him as not wanting touched. The gridlines stay;
-read values from the end labels and the tooltips (hover or tap a point).
+Michael asked for the event names along the bottom of the Performance and
+Experiments charts to be removed (I first misread this as the dollar scale and
+removed that; he asked for it back). The dollar scale on the left and the
+gridlines stay. To see which event a point is, hover or tap it for the tooltip.
