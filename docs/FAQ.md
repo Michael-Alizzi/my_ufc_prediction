@@ -2211,3 +2211,9 @@ went into a later commit that only changed `predictions_output.md`, which the
 dashboard never looked at, so the card showed no detail. The lookup now
 searches commits touching either file, so a slip corrected after the fact is
 found. Scoring and the ledger were never affected.
+
+### Why do the line charts have no vertical axis labels? (Nov 2026)
+
+Michael asked for them removed on the Performance and Experiments charts.
+The gridlines stay; read exact values from the end labels and the tooltips
+(hover or tap a point).
